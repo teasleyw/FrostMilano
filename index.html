@@ -8,11 +8,12 @@
   =======================================================================
    HOW TO MAKE THIS YOURS (quick edits):
    - Stage name: search this file for "Frost Milano" and replace.
-   - Music links: find the MUSIC section, drop in your real
-     Spotify / YouTube / SoundCloud URLs (look for href="#REPLACE").
+   - Music links: find the MUSIC section, swap the Spotify album IDs in
+     the embed src and the release-card hrefs.
    - Tour dates: edit the rows in the TOUR table.
    - Booking email: search for "frostmilano42@gmail.com".
-   - Socials: search for "SOCIALS" and swap the href="#REPLACE" links.
+   - Socials: search for "SOCIALS" and edit the badge links.
+   - Video clips: drop .mp4s into video/ — see video/README.txt.
   =======================================================================
 -->
 <meta charset="UTF-8" />
@@ -77,7 +78,8 @@
       <p class="section-sub">The recorded side — hip-hop, out on Spotify.<br />
         <span style="font-size:.95rem">(Coming to a show? That's Dirty Whiskey — blues and classic rock. <a href="#tour">See the tour →</a>)</span></p>
 
-      <!-- LIVE Spotify player :: latest release "Lately" (auto-updates from Spotify) -->
+      <!-- Spotify embed, pinned to the "Lately" EP. Swap the album ID in the
+           src when a newer release should headline this spot. -->
       <div class="player-frame">
         <div class="player-frame__bar">
           <span class="player-frame__light" aria-hidden="true"></span>
@@ -317,12 +319,15 @@
             <p class="form-msg" id="signup-msg" role="status"></p>
           </form>
 
-          <h3 class="minihead">🔗 <!-- SOCIALS -->SOCIALS</h3>
+          <h3 class="minihead">🔗 SOCIALS</h3>
+          <!--
+            Only real accounts go here. TikTok currently mirrors Instagram and
+            there's no YouTube worth linking yet — dead or duplicate links are
+            worse than none. Add a badge back when there's something behind it.
+          -->
           <div class="socials">
             <a class="badge" href="https://instagram.com/frost_milano" target="_blank" rel="noopener">📸 Instagram</a>
             <a class="badge badge--spotify" href="https://open.spotify.com/artist/0SKY221pDeeTJUgkqmYWiM" target="_blank" rel="noopener">🎧 Spotify</a>
-            <a class="badge" href="#REPLACE">🎵 TikTok</a>
-            <a class="badge" href="#REPLACE">▶ YouTube</a>
           </div>
         </div>
 

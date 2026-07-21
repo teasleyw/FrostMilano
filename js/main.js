@@ -1,7 +1,7 @@
 /* =======================================================================
    FROST MILANO :: main.js
-   Snow, a visitor counter, a working guestbook, and the ice-list form.
-   All client-side. No servers were harmed. ❄
+   Snow, the video vault, a visitor counter, a working guestbook, and the
+   ice-list form. All client-side. No servers were harmed. ❄
    ======================================================================= */
 (function () {
   "use strict";
@@ -169,11 +169,14 @@
     var list = document.getElementById("guestbook");
     if (!form || !list) return;
 
-    var KEY = "frost_guestbook";
+    /* _v2 retires anyone's locally-saved copy of the old fabricated seed
+       entries. Bump again if the seed ever needs to be force-refreshed. */
+    var KEY = "frost_guestbook_v2";
+    /* One entry, so the guestbook isn't empty on first load.
+       No invented fans and no invented song titles — the old seed had
+       strangers raving about a track called "SUBZERO" that doesn't exist. */
     var seed = [
-      { name: "iceMC_99", msg: "yo this site is FROZEN solid 🥶 sick beats fam", ts: "2001-01-04" },
-      { name: "SnowQueen", msg: "played SUBZERO on repeat all winter. certified banger.", ts: "2001-01-02" },
-      { name: "webmaster", msg: "welcome to my crib. sign below & stay cold ❄", ts: "2001-01-01" }
+      { name: "webmaster", msg: "site's up. sign below. ❄", ts: "1999-08-14" }
     ];
 
     function load() {

@@ -25,7 +25,10 @@ then visit `http://localhost:8000`.)
 - **Live Spotify player** in the Music section, featuring your latest EP **Lately**.
 - **Release cards**: Lately, Monster, 42 Weeks, MyFurCoat — each links to the real album.
 - **"Full discography" button** → your Spotify artist page.
-- **Socials**: real Instagram (@frost_milano) + Spotify links.
+- **Socials**: Instagram (@frost_milano) + Spotify. Only real accounts are
+  listed — TikTok currently mirrors Instagram and there's no YouTube worth
+  linking yet, so neither is on the site. A dead link reads worse than a
+  missing one; add a badge back when there's something behind it.
 - **Booking email**: frostmilano42@gmail.com.
 - **Tour**: Jul 30 — Valhalla, Austin TX, w/ **Dirty Whiskey** (the "INFO" button links to your Instagram).
 - **The live act**: Dirty Whiskey, blues + classic rock. Introduced in its own
@@ -44,7 +47,7 @@ Open `index.html` in any text editor and search for these:
 
 | Search for | What it is |
 |---|---|
-| `href="#REPLACE"` | Remaining placeholder links — TikTok/YouTube socials. Swap in real URLs or delete. |
+| `data-ig="#REPLACE"` | On each Video Vault TV. Set one to a real Instagram post URL and that TV's "POST" badge un-hides itself. |
 | The `TOUR` table rows | Add more shows as you book them (one real date is in now: Jul 30, Austin) |
 | The `VIDEO VAULT` TVs | Drop `clip-01.mp4`…`clip-03.mp4` into `video/`. Full how-to in `video/README.txt` |
 | The `ABOUT` bio paragraphs | Now written around the MC/blues-guitarist duality and Detroit blues lineage — personalize the details when you're ready |
