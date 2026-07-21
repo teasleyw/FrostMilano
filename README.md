@@ -44,7 +44,7 @@ Open `index.html` in any text editor and search for these:
 | `href="#REPLACE"` | Remaining placeholder links — TikTok/YouTube socials. Swap in real URLs or delete. |
 | The `TOUR` table rows | Add more shows as you book them (one real date is in now: Jul 30, Austin) |
 | The `VIDEO VAULT` TVs | Drop `clip-01.mp4`…`clip-03.mp4` into `video/`. Full how-to in `video/README.txt` |
-| The `ABOUT` bio paragraphs | Swap the sample bio for your real story |
+| The `ABOUT` bio paragraphs | Now written around the MC/blues-guitarist duality and Detroit blues lineage — personalize the details when you're ready |
 | `Frost Milano` | Your stage name (only if you ever rebrand) |
 
 ### The About photo
