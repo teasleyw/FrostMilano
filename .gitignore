@@ -1,0 +1,13 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code machine-local settings (launch.json is intentionally tracked)
+.claude/settings.local.json
+
+# NOTE: video/*.mp4 is intentionally NOT ignored — Cloudflare Pages and
+# GitHub Pages both deploy straight from this repo, so the clips have to be
+# committed for them to appear on the live site. Keep each clip small
+# (~8 MB, see video/README.txt); git keeps every version of a binary
+# forever, so re-exporting a clip repeatedly will grow the repo permanently.
