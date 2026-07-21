@@ -462,11 +462,24 @@ a{ color:var(--ice-bright); }
   font-size:1.9rem; flex:0 0 auto; line-height:1;
   filter:drop-shadow(0 0 10px rgba(255,190,60,.6));
 }
+.live-note__body{ min-width:0; }
+.live-note__band{
+  margin:0 0 3px !important;
+  font-family:var(--display); letter-spacing:2px;
+  font-size:1.45rem !important; color:#ffd257 !important;
+  text-shadow:0 0 14px rgba(255,190,60,.45), 0 2px 0 #1a1200;
+}
 .live-note p{
   margin:0; font-size:1rem; color:#ffe9c2;
   text-shadow:0 1px 0 rgba(0,0,0,.5);
 }
 .live-note b{ color:#ffd257; }
+
+/* band billing under the venue name in the tour table */
+.tour__band{
+  font-family:var(--pixel); font-size:1rem; letter-spacing:1px;
+  color:#ffd257; text-shadow:0 0 8px rgba(255,190,60,.35);
+}
 
 @media (max-width:520px){
   .live-note{ flex-direction:column; text-align:center; gap:8px; }

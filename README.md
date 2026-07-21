@@ -27,7 +27,10 @@ then visit `http://localhost:8000`.)
 - **"Full discography" button** → your Spotify artist page.
 - **Socials**: real Instagram (@frost_milano) + Spotify links.
 - **Booking email**: frostmilano42@gmail.com.
-- **Tour**: Jul 30 — Valhalla, Austin TX (the "INFO" button links to your Instagram).
+- **Tour**: Jul 30 — Valhalla, Austin TX, w/ **Dirty Whiskey** (the "INFO" button links to your Instagram).
+- **The live act**: Dirty Whiskey, blues + classic rock. Introduced in its own
+  callout above the tour table, and named in the bio, marquee, and Music section
+  so nobody mistakes the recorded hip-hop for the live set.
 - **About photo**: pulled from your Instagram → `images/frost-milano.jpg`.
 
 Your Spotify IDs (for future edits):
