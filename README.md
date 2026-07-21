@@ -38,8 +38,25 @@ then visit `http://localhost:8000`.)
 
 Your Spotify IDs (for future edits):
 - Artist: `0SKY221pDeeTJUgkqmYWiM`
-- Lately (EP): `0p7ccxrvwKAXG1b87CLXlG` · Monster: `5qdNeLApuvRMmsv8lkjMsP`
-- 42 Weeks: `7631QbIOpt4ZkJjOigzkze` · MyFurCoat: `6kSDr8PKWdu8udaE1cb7L3`
+
+**Track** IDs — the site links songs, not releases, on purpose:
+
+| Track | Track ID |
+|---|---|
+| Lately | `6mukDcsHBhetIhoVBlOLMi` |
+| Monster | `5V717i6TcXnAAMFzJzrXnk` |
+| Demon | `7Dv865zUTFgDOKMgYo78iH` |
+| MyFurCoat | `16bEq8UIqQZfgOBSWpNrma` |
+
+Other tracks on the *Lately* EP, if you ever want to feature one:
+MMP `2sVXc9HVwc9WD5S2PfCFOB` · Aint that life `6TFSEMl3ulR9PvbFKtvdUW` ·
+Beshiono `1uhGZ5CIrhyBajRVjAF75F` · Suede `430aqna8MbB7V74TVT9BSL`
+
+Release (album) IDs, kept only for reference: Lately EP
+`0p7ccxrvwKAXG1b87CLXlG` · Monster `5qdNeLApuvRMmsv8lkjMsP` ·
+MyFurCoat `6kSDr8PKWdu8udaE1cb7L3`
+
+To feature a different song, swap the ID in the `embed/track/...` iframe src.
 
 ## ✎ What's still a placeholder
 
