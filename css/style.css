@@ -19,9 +19,16 @@
   --warm-2:     #ff9d00;
   --line:       #4bb4d8;
 
-  --display: "Anton", "Impact", "Haettenschweiler", sans-serif;
-  --pixel:   "VT323", "Courier New", monospace;
-  --body:    "Space Grotesk", Verdana, Geneva, sans-serif;
+  /* Every stack ends in the color-emoji fonts on purpose. None of the display
+     fonts contain emoji, so the browser falls back — and on Windows, Segoe UI
+     SYMBOL (flat monochrome outlines) wins that race before Segoe UI EMOJI
+     (color). Naming the emoji fonts explicitly forces the color versions.
+     Without this, anything past the ~2010 emoji set renders as a grey glyph
+     that reads like a broken image. */
+  --emoji:   "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  --display: "Anton", "Impact", "Haettenschweiler", var(--emoji), sans-serif;
+  --pixel:   "VT323", "Courier New", var(--emoji), monospace;
+  --body:    "Space Grotesk", Verdana, Geneva, var(--emoji), sans-serif;
 }
 
 *{ box-sizing:border-box; }
