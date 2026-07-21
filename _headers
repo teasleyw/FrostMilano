@@ -1,0 +1,83 @@
+# =======================================================================
+#  FROST MILANO :: _headers  (Cloudflare Pages)
+#
+#  Tells browsers how long they may reuse a file before asking for it
+#  again. The point: a repeat visitor should NOT re-download ~24 MB of
+#  video every time they open the site.
+#
+#  Cloudflare reads this file at deploy time and applies it to responses.
+#  It is not served as a page. Rules run top to bottom; later matches
+#  override earlier ones, so the catch-all goes first.
+# =======================================================================
+
+
+# ---------- DEFAULT: everything not matched below ----------
+# max-age=0 + must-revalidate means the browser always asks "changed?"
+# before reusing. It still gets a tiny 304 Not Modified when nothing has
+# changed, so this is cheap — it just guarantees nobody is ever stuck
+# looking at a stale page.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+
+# ---------- HTML ----------
+# The entry point. Must never be cached hard, or visitors keep landing on
+# an old page that points at files you've already replaced.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+
+# ---------- CSS + JS ----------
+# These change whenever the site is edited, and the filenames never change
+# (no content hash), so a long cache would serve stale styles after a
+# deploy. One hour, then stale-while-revalidate lets the browser paint
+# instantly from cache while it quietly fetches the update in the
+# background. Edits reach everyone within the hour, worst case.
+/css/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/js/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+
+# ---------- IMAGES ----------
+# Small and rarely touched. 30 days.
+/images/*
+  Cache-Control: public, max-age=2592000
+
+
+# ---------- VIDEO ----------
+# The whole reason this file exists. Each clip is several MB, so caching
+# these is where essentially all the bandwidth savings come from — a
+# returning visitor re-downloads nothing.
+#
+# 30 days, deliberately NOT "immutable". See the note below before you
+# change that.
+/video/*
+  Cache-Control: public, max-age=2592000
+
+
+# =======================================================================
+#  IF YOU REPLACE A CLIP
+#
+#  Caching is a promise: you've told browsers "this file is good for 30
+#  days." If you overwrite video/clip-01.mp4 with different footage, a
+#  visitor who already has the old one may keep seeing it for up to a
+#  month. Deleting your own cache won't fix it for them.
+#
+#  The fix is to change the FILENAME, which makes it a different file as
+#  far as every cache on earth is concerned:
+#
+#      video/clip-01.mp4   ->   video/clip-01-v2.mp4
+#
+#  ...then update the matching <source src="..."> in index.html. New name,
+#  no cached copy, everyone gets it immediately.
+#
+#  This is also why max-age is 30 days and not a year with "immutable".
+#  A year would save marginally more bandwidth and turn every forgotten
+#  rename into a months-long problem. If you ever move to hashed
+#  filenames (clip-01.a3f9c2.mp4) that changes — then immutable is safe,
+#  because the name always changes when the content does.
+# =======================================================================

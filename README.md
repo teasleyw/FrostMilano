@@ -9,6 +9,7 @@ Website/
 ├─ css/style.css   ← all the styling (colors, layout, effects)
 ├─ js/main.js      ← snow, video vault, visitor counter, guestbook, signup form
 ├─ video/          ← drop your Instagram clips here (see video/README.txt)
+├─ _headers        ← browser caching rules for Cloudflare Pages
 └─ README.md       ← you are here
 ```
 
@@ -90,10 +91,29 @@ To collect real emails/messages, point the forms at a free service like
 set the form's `action` to their endpoint.
 
 ## 🌍 Putting it online (free)
-Any of these host static sites for free — drag-and-drop this whole folder:
-- **Netlify** — netlify.com → "Add new site" → drag the folder
-- **GitHub Pages** — push to a repo, enable Pages
-- **Cloudflare Pages** — pages.cloudflare.com
+
+Hosted on **Cloudflare Pages**, connected to `github.com/teasleyw/FrostMilano`.
+Every `git push` deploys automatically. Cloudflare's free tier has unlimited
+bandwidth, which matters here because video is heavy — most other free tiers
+cap around 15–100 GB/month and bill hard past it.
+
+Build settings (there is **no build step** — it's plain HTML/CSS/JS):
+
+| Setting | Value |
+|---|---|
+| Framework preset | None |
+| Build command | *(empty)* |
+| Build output directory | `/` |
+
+### Caching (`_headers`)
+`_headers` tells browsers how long to reuse each file, so returning visitors
+don't re-download the videos every visit. HTML always revalidates, CSS/JS
+cache for an hour, images and video for 30 days.
+
+⚠️ **If you replace a video or photo, change its filename** (`clip-01.mp4` →
+`clip-01-v2.mp4`) and update the `src` in `index.html`. Otherwise visitors who
+already have the old file may keep seeing it for up to a month. The full
+explanation is in the comments at the bottom of `_headers`.
 
 ## ♿ Notes
 - Fully responsive (the tour table becomes cards on phones).
