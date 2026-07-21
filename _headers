@@ -6,27 +6,36 @@
 #  video every time they open the site.
 #
 #  Cloudflare reads this file at deploy time and applies it to responses.
-#  It is not served as a page. Rules run top to bottom; later matches
-#  override earlier ones, so the catch-all goes first.
+#  It is not served as a page.
+#
+#  ⚠️  IMPORTANT — HOW MATCHING ACTUALLY WORKS
+#  Cloudflare Pages APPENDS the headers from every rule that matches a
+#  request. It does NOT override. So if /* sets Cache-Control and /css/*
+#  also sets Cache-Control, a request for /css/style.css gets BOTH,
+#  concatenated into one header:
+#
+#      Cache-Control: public, max-age=0, must-revalidate, public, max-age=3600
+#
+#  The most restrictive directive wins, so the max-age=0 silently beats
+#  the real rule and nothing gets cached. This file was broken exactly
+#  that way once — don't reintroduce it.
+#
+#  RULE: only ONE rule may set Cache-Control for any given path.
+#  The catch-all below therefore sets security headers ONLY.
 # =======================================================================
 
 
-# ---------- DEFAULT: everything not matched below ----------
-# max-age=0 + must-revalidate means the browser always asks "changed?"
-# before reusing. It still gets a tiny 304 Not Modified when nothing has
-# changed, so this is cheap — it just guarantees nobody is ever stuck
-# looking at a stale page.
+# ---------- EVERYTHING: security headers only, never Cache-Control ----------
 /*
-  Cache-Control: public, max-age=0, must-revalidate
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
 
 # ---------- HTML ----------
-# The entry point. Must never be cached hard, or visitors keep landing on
-# an old page that points at files you've already replaced.
-/index.html
-  Cache-Control: public, max-age=0, must-revalidate
+# Intentionally absent. Cloudflare Pages already defaults HTML to
+# "public, max-age=0, must-revalidate", which is what we want: the page
+# always revalidates so nobody lands on a stale entry point. Adding a rule
+# here would collide with the asset rules per the warning above.
 
 
 # ---------- CSS + JS ----------
@@ -53,8 +62,7 @@
 # these is where essentially all the bandwidth savings come from — a
 # returning visitor re-downloads nothing.
 #
-# 30 days, deliberately NOT "immutable". See the note below before you
-# change that.
+# 30 days, deliberately NOT "immutable". See the note below.
 /video/*
   Cache-Control: public, max-age=2592000
 
