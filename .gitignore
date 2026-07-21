@@ -6,6 +6,11 @@ desktop.ini
 # Claude Code machine-local settings (launch.json is intentionally tracked)
 .claude/settings.local.json
 
+# Editor / IDE config
+.idea/
+.vscode/
+*.swp
+
 # NOTE: video/*.mp4 is intentionally NOT ignored — Cloudflare Pages and
 # GitHub Pages both deploy straight from this repo, so the clips have to be
 # committed for them to appear on the live site. Keep each clip small
