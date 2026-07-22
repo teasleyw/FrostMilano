@@ -24,6 +24,14 @@
     if (!layer) return;
     var GLYPHS = ["❄", "❅", "❆", "✦", "•"];
     var MAX = 40;
+    /* Seconds for the band of sunlight to cross the screen. Every flake
+       shares this one period — vary it per flake and the phases drift apart,
+       which turns the sweep back into unrelated twinkling. */
+    var SWEEP = 7;
+    /* Nudge each flake off the sweep line so the light reads as a soft shaft
+       rather than a ruler edge. Small next to the lit window (24% of SWEEP),
+       so the band still holds together. */
+    var JITTER = 0.08;
 
     function spawn() {
       if (layer.childElementCount >= MAX) return;
@@ -32,10 +40,18 @@
       f.textContent = GLYPHS[(Math.random() * GLYPHS.length) | 0];
       var size = 8 + Math.random() * 18;
       var dur = 6 + Math.random() * 8;
-      f.style.left = Math.random() * 100 + "vw";
+      /* Phase the glint by how far right the flake sits: a flake at the left
+         edge is a full sweep "ahead" of one at the right edge, so the lit
+         window walks left → right and wraps. The delay is negative because
+         the flake has to enter the sweep already in progress — it can't wait
+         for the light to start over. */
+      var x = Math.random() * 100;
+      var phase = -(1 - x / 100) * SWEEP + (Math.random() - 0.5) * JITTER * SWEEP;
+      f.style.left = x + "vw";
       f.style.fontSize = size + "px";
       f.style.opacity = 0.4 + Math.random() * 0.6;
-      f.style.animationDuration = dur + "s";
+      f.style.animationDuration = dur + "s, " + SWEEP + "s";
+      f.style.animationDelay = "0s, " + phase + "s";
       layer.appendChild(f);
       setTimeout(function () {
         if (f.parentNode) f.parentNode.removeChild(f);

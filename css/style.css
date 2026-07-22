@@ -65,12 +65,37 @@ a{ color:var(--ice-bright); }
 .flake{
   position:absolute; top:-20px; color:#fff; user-select:none;
   text-shadow:0 0 6px rgba(160,225,255,.9);
-  animation:fall linear forwards;
+  /* Two animations run at once: the fall, and the glint. JS supplies a
+     duration + delay pair for each (see spawn() in js/main.js). */
+  animation-name:fall, glint;
+  animation-timing-function:linear, ease-in-out;
+  animation-iteration-count:1, infinite;
+  animation-fill-mode:forwards, none;
 }
 @keyframes fall{
   0%{ transform:translateY(-20px) rotate(0deg); opacity:0; }
   10%{ opacity:.9; }
   100%{ transform:translateY(105vh) rotate(360deg); opacity:.15; }
+}
+/* A band of sunlight crossing the field. Every flake runs this on one shared
+   clock and JS offsets the phase by how far right the flake sits, so the lit
+   window travels left → right. The flat stretch is the flake in shade; the
+   rise and fall are deliberately symmetric (12% each side of the peak) so the
+   light arrives and leaves at the same rate, the way a sweep does.
+   No opacity or transform in here; `fall` owns both. */
+@keyframes glint{
+  0%, 76%, 100%{
+    text-shadow:0 0 6px rgba(160,225,255,.9);
+    filter:brightness(1);
+  }
+  88%{
+    text-shadow:
+      0 0 3px #fff,
+      0 0 10px rgba(255,246,222,.95),
+      0 0 20px rgba(255,214,138,.75),
+      0 0 34px rgba(255,190,90,.4);
+    filter:brightness(1.85);
+  }
 }
 
 /* ---------- TOP TICKER ---------- */
