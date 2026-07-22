@@ -262,7 +262,7 @@
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
 <p>click a tile to walk &mdash; step up to the <b>DECKS</b> to build a loop &mdash;
 click a cabinet for <b>BRICK SMASH</b> or <b>SNAKE</b> &mdash; click the boombox
-for the track</p>
+for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
 
@@ -612,19 +612,40 @@ for the track</p>
   var DECKS = [0, 1];
 
   /* ================= scenes =================
-     The lounge, and the bar you reach through the doorway in its back wall.
-     Both rooms are 9x9 so every bit of iso machinery below is shared; only the
-     contents differ. A door lives on the back-right wall (the one with the
-     wallQuad art helpers). `at` is the threshold tile that sends you to the
-     other room; `into` is where you LAND when you arrive here - one tile in
-     front of the door, so stepping in doesn't bounce you straight back out. */
+     The lounge and the two rooms you reach through doorways in its back wall:
+     the bar, and the record room. Every room is 9x9 so all the iso machinery
+     below is shared; only the contents differ. Doors live on the back-right
+     wall (the one with the wallQuad art helpers). Each room lists its `doors`;
+     a door is { col: wall column of its threshold, to: destination room,
+     label + glow: the neon sign over its lintel }. Stepping onto a door's
+     threshold tile [col, 0] carries you to `to`; you LAND one tile in front of
+     that room's door leading back here, so you never bounce straight through. */
   var scene = "lounge";
-  var LOUNGE_DOOR = 4;   /* wall column of the BAR door, between poster(3) and SNAKE(6) */
-  var BAR_DOOR = 1;      /* wall column of the LOUNGE door back out of the bar */
+  var LOUNGE_DOOR = 4;       /* lounge's BAR door, between poster(3) and SNAKE(6) */
+  var LOUNGE_REC_DOOR = 2;   /* lounge's RECORD ROOM door, left of the poster */
+  var BAR_DOOR = 1;          /* bar's door back to the lounge */
+  var REC_DOOR = 1;          /* record room's door back to the lounge */
   var ROOMS = {
-    lounge: { at: [LOUNGE_DOOR, 0], into: [LOUNGE_DOOR, 1] },
-    bar:    { at: [BAR_DOOR, 0],    into: [BAR_DOOR, 1] }
+    lounge:  { doors: [
+      { col: LOUNGE_DOOR,     to: "bar",     label: "BAR",     glow: "#ff8a1a" },
+      { col: LOUNGE_REC_DOOR, to: "records", label: "RECORDS", glow: "#ff5aa0" }
+    ] },
+    bar:     { doors: [ { col: BAR_DOOR, to: "lounge", label: "LOUNGE", glow: HEX.bright } ] },
+    records: { doors: [ { col: REC_DOOR, to: "lounge", label: "LOUNGE", glow: "#c9b3ff" } ] }
   };
+
+  /* The record room's wall of singles - the real catalogue, one framed sleeve
+     per column of the back-right wall. Click a sleeve and its Spotify track
+     opens in a new tab. Colours are the sleeve's own art, not tied to the room
+     palette, so each cover reads as a distinct record. Keep the ids in sync
+     with the release cards on index.html. */
+  var REC_BENCH = [[4, 5], [5, 5]];
+  var RECORDS = [
+    { title: "LATELY",    col: 3, url: "https://open.spotify.com/track/6mukDcsHBhetIhoVBlOLMi", a: "#7ad9ff", b: "#2b6f96" },
+    { title: "MONSTER",   col: 4, url: "https://open.spotify.com/track/5V717i6TcXnAAMFzJzrXnk", a: "#ffb066", b: "#a24b00" },
+    { title: "DEMON",     col: 5, url: "https://open.spotify.com/track/7Dv865zUTFgDOKMgYo78iH", a: "#ff7ab0", b: "#a11f5a" },
+    { title: "MYFURCOAT", col: 6, url: "https://open.spotify.com/track/16bEq8UIqQZfgOBSWpNrma", a: "#d8c2ff", b: "#6a4bb0" }
+  ];
 
   /* Bar-room furniture (drawn in renderBar). The counter sits one tile off the
      back wall so the bartender can stand behind it; the strip directly behind
@@ -644,6 +665,8 @@ for the track</p>
       }
       STOOLS.forEach(function (s) { block(s[0], s[1]); });
       for (var y = STAGE.y0; y <= STAGE.y1; y++) block(STAGE.x, y);
+    } else if (scene === "records") {
+      REC_BENCH.forEach(function (b) { block(b[0], b[1]); });
     } else {
       block(SPEAKER[0], SPEAKER[1]);
       BENCH.forEach(function (b) { block(b[0], b[1]); });
@@ -855,13 +878,37 @@ for the track</p>
     }
     return inside;
   }
-  function doorCol() { return scene === "bar" ? BAR_DOOR : LOUNGE_DOOR; }
   function doorRegion(tx) {
     return [wallPoint(tx, 0.14, 1), wallPoint(tx, 0.86, 1),
             wallPoint(tx, 0.86, WALL_H), wallPoint(tx, 0.14, WALL_H)]
            .map(function (q) { return [q.x, q.y]; });
   }
-  function inDoor(p) { return pointInPoly(p.x, p.y, doorRegion(doorCol())); }
+  /* The door under the cursor in the current room, or null. Rooms can hold more
+     than one door now (the lounge opens onto both the bar and the record room),
+     so this returns WHICH door was hit, not just whether one was. */
+  function doorAt(p) {
+    var ds = ROOMS[scene].doors;
+    for (var i = 0; i < ds.length; i++) {
+      if (pointInPoly(p.x, p.y, doorRegion(ds[i].col))) return ds[i];
+    }
+    return null;
+  }
+
+  /* The record room's sleeves are wall art like the poster: a framed square on
+     one wall column. sleeveRegion is its clickable parallelogram; recordAt maps
+     a cursor point to the record under it (only in the record room). */
+  function sleeveRegion(tx) {
+    return [wallPoint(tx, 0.12, 15), wallPoint(tx, 0.88, 15),
+            wallPoint(tx, 0.88, 41), wallPoint(tx, 0.12, 41)]
+           .map(function (q) { return [q.x, q.y]; });
+  }
+  function recordAt(p) {
+    if (scene !== "records") return null;
+    for (var i = 0; i < RECORDS.length; i++) {
+      if (pointInPoly(p.x, p.y, sleeveRegion(RECORDS[i].col))) return RECORDS[i];
+    }
+    return null;
+  }
 
   /* ================= arcade cabinets =================
      BRICK SMASH and SNAKE are both drawn as standing boxes (same trick as the
@@ -1377,6 +1424,9 @@ for the track</p>
       var keep = new Guest(BARKEEP[0], BARKEEP[1], barkeepSet, false);
       keep.dir = "SW";   /* faces the room across the bar */
       guests = [player, keep, new Guest(6, 4, patronSet, true)];
+    } else if (scene === "records") {
+      /* One crate-digger browsing the wall of singles. */
+      guests = [player, new Guest(7, 6, loungeWander[0], true)];
     } else {
       guests = [player,
                 new Guest(2, 1, loungeWander[0], true),
@@ -1480,10 +1530,12 @@ for the track</p>
   var snakeHover = false;
   var decksHover = false;
   var boomHover = false;
-  var doorHover = false;
+  var hoveredDoor = null;     /* the door object under the cursor, or null */
+  var hoveredRecord = null;   /* the record-room sleeve under the cursor, or null */
 
   function render() {
     if (scene === "bar") { renderBar(); return; }
+    if (scene === "records") { renderRecords(); return; }
     renderLounge();
   }
 
@@ -1508,7 +1560,9 @@ for the track</p>
     chkWall(GW, "R", 0.72, HEX.chkLight, HEX.chkDark);  /* back-right, more light */
 
     poster(3);
-    doorway(LOUNGE_DOOR, "#ff8a1a", "BAR", doorHover);
+    ROOMS.lounge.doors.forEach(function (dr) {
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col);
+    });
 
     floorCheck(HEX.chkLight, HEX.chkDark, "rgba(120,160,185,.35)");
     drawHover();
@@ -1572,7 +1626,9 @@ for the track</p>
     chkWall(GW, "R", 0.82, "#4a3722", "#2c1f13");
 
     backBar();
-    doorway(BAR_DOOR, HEX.bright, "LOUNGE", doorHover);
+    ROOMS.bar.doors.forEach(function (dr) {
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col);
+    });
 
     floorCheck("#3a2a1a", "#281c11", "rgba(150,110,70,.28)");
     drawHover();
@@ -1598,20 +1654,93 @@ for the track</p>
     guests.forEach(function (g) { g.drawBubble(); });
   }
 
-  /* Walk onto a doorway threshold and you pass into the other room. The player
-     is dropped one tile in front of the destination door (so it can't instantly
-     re-trigger), and that room's furniture + wanderers are rebuilt. */
+  /* One framed single on the record-room wall. Built like the poster: a bright
+     frame, then the sleeve split into two bands of the cover's own colours,
+     with the poster's diagonal flash across it. Hover lifts the frame to the
+     cover colour so it reads as pickable. */
+  function recordSleeve(rec, hovered) {
+    var tx = rec.col;
+    wallQuad(tx, 0.12, 0.88, 15, 41, hovered ? rec.a : "#0c0718");        /* frame */
+    wallQuad(tx, 0.17, 0.83, 17, 39, css(shade(rgb(rec.a), 0.35)));       /* inner mat */
+    wallQuad(tx, 0.17, 0.83, 17, 28, rec.a);                             /* cover, top band */
+    wallQuad(tx, 0.17, 0.83, 28, 39, rec.b);                             /* cover, low band */
+    wallQuad(tx, 0.28, 0.40, 17, 39, css(shade(rgb(rec.a), 1.35)));      /* diagonal flash */
+    wallQuad(tx, 0.46, 0.52, 17, 39, HEX.light);
+  }
+
+  /* Floating title over a hovered sleeve, same chip as cabinetLabelAt but
+     anchored to a point on the wall rather than above a floor tile. */
+  function recordLabelAt(tx, label) {
+    var p = wallPoint(tx, 0.5, 12);
+    var lx = p.x, ly = p.y - 14;
+    ctx.font = '8px ui-monospace,Consolas,monospace';
+    ctx.textBaseline = "top";
+    var w = Math.ceil(ctx.measureText(label).width) + 8;
+    var bx = Math.max(2, Math.min(cv.width - w - 2, Math.round(lx - w / 2)));
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillRect(bx - 1, ly - 1, w + 2, 13);
+    ctx.fillStyle = HEX.bright;
+    ctx.fillRect(bx, ly, w, 11);
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillText(label, bx + 4, ly + 2);
+  }
+
+  /* The record room: a violet after-hours listening room off the lounge. Same
+     iso grammar as the other two - papered walls, checked floor, wandering
+     guest - but the back-right wall is a row of clickable single sleeves and a
+     pair of benches sit facing them. */
+  function renderRecords() {
+    ctx.fillStyle = "#0d0716";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    chkWall(GH, "L", 0.6, "#2a1840", "#160b26");
+    chkWall(GW, "R", 0.8, "#2a1840", "#160b26");
+
+    ROOMS.records.doors.forEach(function (dr) {
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col);
+    });
+    RECORDS.forEach(function (rec) { recordSleeve(rec, hoveredRecord === rec); });
+
+    floorCheck("#241536", "#160b26", "rgba(150,90,190,.30)");
+    drawHover();
+
+    var items = [];
+    REC_BENCH.forEach(function (b) {
+      items.push({ d: b[0] + b[1], f: function () {
+        drawBox(b[0], b[1], 7, "#3a2856", css(shade(rgb("#2a1840"), 0.8)), "#2a1840");
+      } });
+    });
+    guests.forEach(function (g) {
+      items.push({ d: g.depth(), f: function () { g.draw(); } });
+    });
+    items.sort(function (a, b) { return a.d - b.d; });
+    items.forEach(function (it) { it.f(); });
+
+    /* the hovered sleeve names its track, on top of everything */
+    if (hoveredRecord) recordLabelAt(hoveredRecord.col, "▶ " + hoveredRecord.title);
+
+    guests.forEach(function (g) { g.drawBubble(); });
+  }
+
+  /* Walk onto a doorway threshold and you pass into the room it leads to. The
+     player is dropped one tile in front of the door that leads back the way it
+     came (so it can't instantly re-trigger), and the new room's furniture +
+     wanderers are rebuilt. Rooms can hold several doors now, so the landing
+     spot is found from the destination's door pointing back at the old room. */
   function enterScene(target) {
+    var prev = scene;
     scene = target;
     buildBlocked();
-    var into = ROOMS[target].into;
-    player.tx = player.px = into[0];
-    player.ty = player.py = into[1];
+    var ds = ROOMS[target].doors, back = ds[0];
+    for (var i = 0; i < ds.length; i++) if (ds[i].to === prev) { back = ds[i]; break; }
+    player.tx = player.px = back.col;
+    player.ty = player.py = 1;
     player.path = [];
     player.dir = "SW";
     buildGuests();
     hover = null;
-    arcadeHover = snakeHover = decksHover = boomHover = doorHover = false;
+    arcadeHover = snakeHover = decksHover = boomHover = false;
+    hoveredDoor = null;
+    hoveredRecord = null;
   }
 
   /* ================= input ================= */
@@ -1630,15 +1759,18 @@ for the track</p>
     } else {
       arcadeHover = snakeHover = decksHover = boomHover = false;
     }
-    doorHover = !arcadeHover && !snakeHover && !decksHover && !boomHover && inDoor(p);
-    /* Suppress the tile highlight while over a fixture or the door, so the room
-       doesn't advertise a walk to a spot the click won't actually walk to. */
-    hover = (arcadeHover || snakeHover || decksHover || boomHover || doorHover)
+    var overFixture = arcadeHover || snakeHover || decksHover || boomHover;
+    hoveredRecord = overFixture ? null : recordAt(p);
+    hoveredDoor = (overFixture || hoveredRecord) ? null : doorAt(p);
+    /* Suppress the tile highlight while over a fixture, a sleeve or a door, so
+       the room doesn't advertise a walk to a spot the click won't walk to. */
+    hover = (overFixture || hoveredRecord || hoveredDoor)
       ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
     hover = null; arcadeHover = false; snakeHover = false;
-    decksHover = false; boomHover = false; doorHover = false;
+    decksHover = false; boomHover = false;
+    hoveredDoor = null; hoveredRecord = null;
   });
   cv.addEventListener("click", function (ev) {
     var p = toCanvas(ev);
@@ -1650,9 +1782,13 @@ for the track</p>
       if (inDecks(p))  { if (window.FrostDecks)  window.FrostDecks.open();  return; }
       if (inBoombox(p)) { toggleMusic(); return; }
     }
-    /* Click the doorway and you walk to its threshold; arriving there carries
-       you through to the other room (see the tick loop). */
-    if (inDoor(p)) { var d = ROOMS[scene].at; player.goto(d[0], d[1]); return; }
+    /* Click a record sleeve to open its track on Spotify in a new tab. */
+    var rec = recordAt(p);
+    if (rec) { window.open(rec.url, "_blank", "noopener"); return; }
+    /* Click a doorway and you walk to its threshold; arriving there carries you
+       through to the room it leads to (see the tick loop). */
+    var dr = doorAt(p);
+    if (dr) { player.goto(dr.col, 0); return; }
     var t = screenToTile(p.x, p.y);
     if (walkable(t.x, t.y)) player.goto(t.x, t.y);
   });
@@ -1683,12 +1819,13 @@ for the track</p>
       if (notes[n].life <= 0) notes.splice(n, 1);
     }
     guests.forEach(function (g) { g.update(dt); });
-    /* Step onto the active room's doorway threshold and pass through. Only the
-       player triggers it; a wandering guest just steps over the sill. */
-    if (!player.path.length) {
-      var exit = ROOMS[scene].at;
-      if (player.tx === exit[0] && player.ty === exit[1]) {
-        enterScene(scene === "lounge" ? "bar" : "lounge");
+    /* Step onto any of the active room's doorway thresholds and pass through to
+       the room that door leads to. Only the player triggers it; a wandering
+       guest just steps over the sill. */
+    if (!player.path.length && player.ty === 0) {
+      var ds = ROOMS[scene].doors;
+      for (var di = 0; di < ds.length; di++) {
+        if (player.tx === ds[di].col) { enterScene(ds[di].to); break; }
       }
     }
     render();
@@ -1718,6 +1855,7 @@ for the track</p>
     },
     musicPlaying: musicPlaying, tapeMissing: tapeMissing,
     toggleMusic: toggleMusic, notes: notes,
+    doorAt: doorAt, recordAt: recordAt, records: RECORDS, rooms: ROOMS,
     dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H,
             BOOMBOX: BOOMBOX, SPEAKER: SPEAKER, SNAKE: SNAKE, ARCADE: ARCADE,
             DECKS: DECKS }
