@@ -37,13 +37,147 @@
     background:#05131f; cursor:pointer;
   }
   #hud{ font-size:.72rem; color:#2b6f96; }
+
+  /* ================= BRICK SMASH overlay =================
+     A modal cabinet that covers the room while you play. Kept in this file's
+     own idiom (deep-blue chrome, ridged cyan borders, monospace) so it reads
+     as the same place as the lounge, not a bolted-on widget. */
+  .arcade{
+    position:fixed; inset:0; z-index:50;
+    display:none; align-items:center; justify-content:center;
+    padding:16px; box-sizing:border-box;
+    background:rgba(3,10,18,.94);
+    /* The room behind is busy; a soft blur keeps the eye on the game. */
+    backdrop-filter:blur(3px);
+  }
+  .arcade.is-open{ display:flex; }
+  .arcade__cab{
+    width:min(720px,100%); max-height:100%; overflow:auto;
+    box-sizing:border-box;
+    display:flex; flex-direction:column; gap:12px;
+    padding:14px; border-radius:10px;
+    background:linear-gradient(180deg,#0b2a40,#061826);
+    border:3px ridge #6bb8dd;
+    box-shadow:0 0 0 2px #02101c, 0 0 26px rgba(56,230,255,.35);
+  }
+  .arcade__marquee{
+    text-align:center; font-size:1rem; letter-spacing:4px; font-weight:bold;
+    color:#eafcff; padding:8px; border-radius:6px;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    border:2px outset #4bb4d8; text-shadow:0 0 8px rgba(56,230,255,.7);
+  }
+  .arcade__body{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+  .arcade__stage{ flex:1 1 320px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .arcade__hud{
+    display:flex; justify-content:space-between; gap:8px;
+    font-size:.72rem; letter-spacing:1px; color:#6bb8dd;
+  }
+  .arcade__hud b{ color:#38e6ff; }
+  .arcade__screen{ position:relative; line-height:0; }
+  /* Beats the file-wide canvas{} rule: this one is a smooth game, not pixel
+     art, and it sizes to its stage instead of the 680px room canvas. */
+  #bs-canvas{
+    image-rendering:auto;
+    width:100%; height:auto; display:block;
+    border:3px ridge #6bb8dd; border-radius:6px;
+    background:#05131f; cursor:none;
+  }
+  /* Faint CRT scanlines, echoing the video-vault TVs on the main site. */
+  .arcade__screen::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    border-radius:6px;
+    background:repeating-linear-gradient(
+      to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.16) 2px 3px);
+  }
+  .arcade__msg{
+    position:absolute; inset:0; display:flex; pointer-events:none;
+    flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    text-align:center; color:#eafcff; padding:16px; box-sizing:border-box;
+    background:rgba(3,10,18,.72);
+  }
+  .arcade__msg[hidden]{ display:none; }
+  .arcade__msg b{ font-size:1.1rem; letter-spacing:3px; color:#38e6ff;
+    text-shadow:0 0 10px rgba(56,230,255,.6); }
+  .arcade__msg small{ font-size:.72rem; color:#6bb8dd; letter-spacing:1px; }
+  .arcade__msg .blink{ animation:arcadeBlink 1s steps(1) infinite; }
+  @keyframes arcadeBlink{ 50%{ opacity:.25; } }
+  @media (prefers-reduced-motion:reduce){
+    .arcade__msg .blink, .arcade__scores li.is-new .who{ animation:none; }
+  }
+  /* The new-high-score initials entry re-enters pointer events. */
+  .arcade__enter{ pointer-events:auto; display:flex; gap:8px; align-items:center; }
+  .arcade__enter input{
+    width:4.5em; text-transform:uppercase; text-align:center;
+    font:bold 1.1rem ui-monospace,Consolas,monospace; letter-spacing:6px;
+    color:#05131f; background:#eafcff; border:2px inset #4bb4d8;
+    border-radius:4px; padding:4px 6px;
+  }
+  .arcade__hint{ font-size:.66rem; color:#2b6f96; letter-spacing:1px;
+    text-align:center; margin:0; }
+  .arcade__scores{
+    flex:0 1 220px; min-width:180px;
+    background:rgba(2,16,28,.6); border:2px ridge #2b6f96; border-radius:6px;
+    padding:10px 12px;
+  }
+  .arcade__scores h3{
+    margin:0 0 8px; font-size:.78rem; letter-spacing:2px; color:#b8ecff;
+    text-align:center;
+  }
+  .arcade__scores ol{ margin:0; padding:0; list-style:none;
+    font-size:.76rem; color:#6bb8dd; }
+  .arcade__scores li{
+    display:flex; justify-content:space-between; gap:8px;
+    padding:3px 0; border-bottom:1px dotted rgba(107,184,221,.25);
+  }
+  .arcade__scores li .rank{ color:#2b6f96; width:1.4em; }
+  .arcade__scores li .who{ flex:1; letter-spacing:2px; color:#eafcff; }
+  .arcade__scores li .pts{ color:#38e6ff; font-variant-numeric:tabular-nums; }
+  .arcade__scores li.is-new .who{ color:#ffd68a; animation:arcadeBlink 1s steps(1) infinite; }
+  /* Reuse the .back button's look for the exit control. */
+  .arcade__exit{
+    align-self:center; font:inherit; font-size:.78rem; letter-spacing:1px;
+    color:#eafcff; padding:7px 16px; border-radius:6px; cursor:pointer;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    border:2px outset #4bb4d8; text-shadow:0 1px 0 #02101c;
+    transition:filter .12s ease, transform .08s ease;
+  }
+  .arcade__exit:hover{ filter:brightness(1.25); color:#fff; transform:translateY(-1px); }
+  .arcade__exit:active{ border-style:inset; transform:translateY(1px); }
+  .arcade__exit:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
-<p>click a tile to walk there &mdash; prototype</p>
+<p>click a tile to walk &mdash; click the arcade cabinet to play <b>BRICK SMASH</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
+
+<!-- ================= BRICK SMASH ================= -->
+<div id="arcade" class="arcade" role="dialog" aria-modal="true"
+     aria-label="Brick Smash" aria-hidden="true">
+  <div class="arcade__cab">
+    <div class="arcade__marquee">&#10052; BRICK SMASH &#10052;</div>
+    <div class="arcade__body">
+      <div class="arcade__stage">
+        <div class="arcade__hud">
+          <span>SCORE <b id="bs-score">0</b></span>
+          <span>LEVEL <b id="bs-level">1</b></span>
+          <span>BALLS <b id="bs-lives">3</b></span>
+        </div>
+        <div class="arcade__screen">
+          <canvas id="bs-canvas" width="340" height="440"></canvas>
+          <div class="arcade__msg" id="bs-msg"></div>
+        </div>
+        <p class="arcade__hint">&#9664; &#9654; / mouse to move &middot; SPACE or click to launch &middot; ESC to exit</p>
+      </div>
+      <aside class="arcade__scores">
+        <h3>&#127942; HIGH SCORES</h3>
+        <ol id="bs-board"></ol>
+      </aside>
+    </div>
+    <button type="button" class="arcade__exit" id="bs-exit">&#10005; EXIT TO LOUNGE</button>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -283,8 +417,14 @@
   var BLOCKED = {};
   function block(x, y) { BLOCKED[x + "," + y] = true; }
   var SPEAKER = [8, 0], BENCH = [[1, 7], [2, 7]];
+  /* The one interactive fixture: an arcade cabinet against the empty back-left
+     wall (the back-right already carries the speaker and the poster). Clicking
+     it opens BRICK SMASH. Blocked so guests route around it and can't stand
+     inside the machine. */
+  var ARCADE = [0, 4];
   block(SPEAKER[0], SPEAKER[1]);
   BENCH.forEach(function (b) { block(b[0], b[1]); });
+  block(ARCADE[0], ARCADE[1]);
 
   function walkable(x, y) {
     return x >= 0 && y >= 0 && x < GW && y < GH && !BLOCKED[x + "," + y];
@@ -366,7 +506,7 @@
   /* A framed record sleeve on the wall - the one warm object in the room, so
      the eye has somewhere to land that isn't black, white or cyan. */
   function poster(tx) {
-    /* Hangs below the frieze, which occupies v 3..15. */
+    /* Sits low on the checkered wall so its gold frame has clear air above. */
     wallQuad(tx, 0.08, 0.92, 18, 41, HEX.gold);
     wallQuad(tx, 0.12, 0.88, 20, 39, css(shade(rgb(HEX.gold), 0.55)));
     wallQuad(tx, 0.16, 0.84, 22, 37, HEX.O);
@@ -375,6 +515,87 @@
     /* the sleeve's diagonal flash, echoing the sun glint on the snow */
     wallQuad(tx, 0.27, 0.39, 22, 37, HEX.bright);
     wallQuad(tx, 0.43, 0.49, 22, 37, HEX.chkLight);
+  }
+
+  /* ================= arcade cabinet =================
+     The launcher for BRICK SMASH, drawn as a standing box (same trick as the
+     speaker) with a lit screen on its SE face - the one that turns toward the
+     camera from anywhere in the room. CAB_H is the body's rise in px. */
+  var CAB_H = 42;
+
+  /* A point on the SE (right) face of the cabinet in face-local coordinates:
+     u runs 0..1 back->front along the top edge, v runs 0..1 top->bottom down
+     the body. The face is a parallelogram, so this affine map is exact - it
+     lets flat screen artwork sit on the angled face without solving corners by
+     hand, the same idea as wallPoint() for the poster. */
+  function cabFace(u, v) {
+    var c = centre(ARCADE[0], ARCADE[1]);
+    return { x: c.x + u * (TW / 2),
+             y: (c.y + TH / 2 - CAB_H) - u * (TH / 2) + v * CAB_H };
+  }
+  function cabQuad(u0, u1, v0, v1, fill) {
+    var a = cabFace(u0, v0), b = cabFace(u1, v0);
+    var d = cabFace(u1, v1), e = cabFace(u0, v1);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.lineTo(d.x, d.y); ctx.lineTo(e.x, e.y);
+    ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  }
+
+  /* Screen `glow` (0..1) rides an idle pulse so the machine reads as powered-on
+     and invites a click; it swells further on hover. */
+  var cabPulse = 0;
+  function arcadeCab(hovered) {
+    var tx = ARCADE[0], ty = ARCADE[1];
+    /* Cool near-black body so the cyan screen is the only thing that glows. */
+    drawBox(tx, ty, CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
+            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.92)));
+
+    var glow = 0.6 + 0.4 * Math.sin(cabPulse) * 0.5 + (hovered ? 0.35 : 0);
+    glow = Math.max(0, Math.min(1, glow));
+
+    /* marquee light across the top of the face */
+    cabQuad(0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.bright), 0.4 + glow * 0.5)));
+    /* screen bezel, then the dark screen itself */
+    cabQuad(0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
+    cabQuad(0.14, 0.86, 0.24, 0.58, "#02171f");
+    /* two rows of mini bricks + a paddle + a ball: a game caught mid-play */
+    var rowC = [HEX.chkLight, HEX.bright, HEX.f3];
+    for (var r = 0; r < 3; r++) {
+      for (var col = 0; col < 4; col++) {
+        var bu0 = 0.18 + col * 0.165, bv0 = 0.27 + r * 0.05;
+        cabQuad(bu0, bu0 + 0.13, bv0, bv0 + 0.035,
+                css(shade(rgb(rowC[r]), 0.55 + glow * 0.6)));
+      }
+    }
+    cabQuad(0.4, 0.6, 0.53, 0.565, css(shade(rgb(HEX.bright), 0.6 + glow * 0.5)));
+    cabQuad(0.62, 0.66, 0.45, 0.49, css(shade(rgb(HEX.light), 0.7 + glow * 0.4)));
+
+    /* On hover, a floating label so the fixture names itself before the click. */
+    if (hovered) {
+      var c = centre(tx, ty);
+      var lx = c.x, ly = c.y - TH / 2 - CAB_H - 12;
+      var label = "▶ BRICK SMASH";
+      ctx.font = '8px ui-monospace,Consolas,monospace';
+      ctx.textBaseline = "top";
+      var w = Math.ceil(ctx.measureText(label).width) + 8;
+      var bx = Math.max(2, Math.min(cv.width - w - 2, Math.round(lx - w / 2)));
+      ctx.fillStyle = HEX.bubbleInk;
+      ctx.fillRect(bx - 1, ly - 1, w + 2, 13);
+      ctx.fillStyle = HEX.bright;
+      ctx.fillRect(bx, ly, w, 11);
+      ctx.fillStyle = HEX.bubbleInk;
+      ctx.fillText(label, bx + 4, ly + 2);
+    }
+  }
+
+  /* Screen-space box the cabinet occupies, for hit-testing. The tall art rises
+     over off-grid tiles, so we click the machine we can see rather than its
+     footprint diamond. */
+  function inArcade(p) {
+    var c = centre(ARCADE[0], ARCADE[1]);
+    return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
+           p.y >= c.y - TH / 2 - CAB_H && p.y <= c.y + TH / 2;
   }
 
   /* ================= A* ================= */
@@ -550,36 +771,31 @@
 
   /* ================= render ================= */
   var hover = null;
+  var arcadeHover = false;
 
   function render() {
     ctx.fillStyle = HEX.O;
     ctx.fillRect(0, 0, cv.width, cv.height);
 
-    /* Walls are quiet on purpose. With a hard black-and-white floor carrying
-       the room, patterning these too would leave the eye nowhere to rest. */
-    wallBand(0, GH, "L", 0, WALL_H, HEX.deep2);
-    wallBand(0, GW, "R", 0, WALL_H, css(shade(rgb(HEX.mid), 0.8)));
+    /* Both back walls are papered top-to-floor in the same black-and-white
+       check as the floor, so the pattern wraps the whole room instead of
+       clinging to a thin stripe near the ceiling.
 
-    /* Checkered frieze: two stacked rows, offset per column, so it reads as a
-       real checkerboard band rather than a dashed stripe.
-
-       It runs along the TOP of the wall, not the bottom. Sat at skirting
-       height it butted straight into the checkerboard floor and the two
-       patterns dissolved into each other - as a frieze it has dark wall on
-       both sides and stays legible. */
-    var TRIM = 6, TOP = 3;
-    for (var w = 0; w < GH; w++) {
-      wallBand(w, w + 1, "L", TOP, TRIM,
-               w % 2 ? HEX.chkLight : HEX.chkDark);
-      wallBand(w, w + 1, "L", TOP + TRIM, TRIM,
-               w % 2 ? HEX.chkDark : HEX.chkLight);
+       Each face is dimmed by its own lighting factor: the check still reads,
+       but as a surface in shadow. That is also what stops the wall squares
+       dissolving into the identical floor squares where the two planes meet -
+       the shaded wall check sits a clear step darker than the lit floor. */
+    var WROWS = 4, WCELL = WALL_H / WROWS;
+    function chkWall(len, side, face) {
+      for (var col = 0; col < len; col++) {
+        for (var row = 0; row < WROWS; row++) {
+          var base = rgb((col + row) % 2 === 0 ? HEX.chkLight : HEX.chkDark);
+          wallBand(col, col + 1, side, row * WCELL, WCELL, css(shade(base, face)));
+        }
+      }
     }
-    for (var w2 = 0; w2 < GW; w2++) {
-      wallBand(w2, w2 + 1, "R", TOP, TRIM,
-               w2 % 2 ? HEX.chkLight : HEX.chkDark);
-      wallBand(w2, w2 + 1, "R", TOP + TRIM, TRIM,
-               w2 % 2 ? HEX.chkDark : HEX.chkLight);
-    }
+    chkWall(GH, "L", 0.5);   /* back-left wall, deeper in shadow */
+    chkWall(GW, "R", 0.72);  /* back-right wall, catching more light */
 
     poster(3);
 
@@ -630,6 +846,8 @@
         drawBox(b[0], b[1], 7, HEX.f3, css(shade(rgb(HEX.f4), 0.8)), HEX.f4);
       } });
     });
+    items.push({ d: ARCADE[0] + ARCADE[1],
+                 f: function () { arcadeCab(arcadeHover); } });
     guests.forEach(function (g) {
       items.push({ d: g.depth(), f: function () { g.draw(); } });
     });
@@ -649,11 +867,23 @@
   }
   cv.addEventListener("mousemove", function (ev) {
     var p = toCanvas(ev);
-    hover = screenToTile(p.x, p.y);
+    arcadeHover = inArcade(p);
+    /* Suppress the tile highlight while over the cabinet, so the room doesn't
+       advertise a walk to a spot the click won't actually walk to. */
+    hover = arcadeHover ? null : screenToTile(p.x, p.y);
   });
-  cv.addEventListener("mouseleave", function () { hover = null; });
+  cv.addEventListener("mouseleave", function () {
+    hover = null; arcadeHover = false;
+  });
   cv.addEventListener("click", function (ev) {
-    var p = toCanvas(ev), t = screenToTile(p.x, p.y);
+    var p = toCanvas(ev);
+    /* The cabinet wins the click before the floor does: its art overlaps
+       tiles you would otherwise walk to. */
+    if (inArcade(p)) {
+      if (window.FrostArcade) window.FrostArcade.open();
+      return;
+    }
+    var t = screenToTile(p.x, p.y);
     if (walkable(t.x, t.y)) player.goto(t.x, t.y);
   });
 
@@ -663,6 +893,7 @@
   function tick(now) {
     var dt = Math.min((now - last) / 1000, 0.05);
     last = now;
+    cabPulse += dt * 2.4;   /* drives the arcade screen's idle glow */
     guests.forEach(function (g) { g.update(dt); });
     render();
     hud.textContent = "tile " + player.tx + "," + player.ty +
@@ -688,6 +919,452 @@
       render();
     },
     dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H }
+  };
+})();
+</script>
+
+<script>
+/* =======================================================================
+   BRICK SMASH :: the lounge's arcade cabinet
+   A self-contained Breakout, opened from the isometric room. The board of
+   high scores persists in localStorage, the same trick the guestbook and the
+   visitor counter use on the main site - no server, it's the 90s.
+   ======================================================================= */
+(function () {
+  "use strict";
+
+  var overlay = document.getElementById("arcade");
+  var cv = document.getElementById("bs-canvas");
+  if (!overlay || !cv) return;
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+
+  var elScore = document.getElementById("bs-score");
+  var elLevel = document.getElementById("bs-level");
+  var elLives = document.getElementById("bs-lives");
+  var elMsg = document.getElementById("bs-msg");
+  var elBoard = document.getElementById("bs-board");
+  var elExit = document.getElementById("bs-exit");
+
+  /* ---- palette: the lounge's ice tones ---- */
+  var BG = "#05131f", INK = "#02101c";
+  var PADDLE = "#38e6ff", PADDLE_HI = "#b8ecff", BALL = "#eafcff";
+  /* Rows top->bottom: lighter and worth more up top, the classic gradient. */
+  var ROW = [
+    { c: "#eafcff", s: 50 }, { c: "#b8ecff", s: 40 }, { c: "#38e6ff", s: 30 },
+    { c: "#5bc7ec", s: 20 }, { c: "#6bb8dd", s: 10 }
+  ];
+
+  /* ---- geometry ---- */
+  var COLS = 9, ROWS = ROW.length;      /* 9 columns nods to the 9x9 room */
+  var SIDE = 10, TOPGAP = 46, GAP = 3, BRICK_H = 15;
+  var BRICK_W = (W - SIDE * 2 - GAP * (COLS - 1)) / COLS;
+  var PW = 62, PH = 10, PADDLE_Y = H - 24;
+  var BALL_R = 5;
+
+  /* ---- tuning ---- */
+  var BASE_SPEED = 200;                 /* px/sec, level 1 */
+  var LEVEL_MULT = 1.09;                /* ball speed per level */
+  var MAX_BOUNCE = 1.05;                /* rad, steepest paddle deflection */
+  var PADDLE_KEYS = 430;                /* px/sec for arrow-key steering */
+  var START_LIVES = 3;
+
+  /* ---- leaderboard (localStorage; entries escaped on render) ---- */
+  var KEY = "frost_bricksmash_v1";
+  var MAX_SCORES = 8;
+  /* Obvious factory defaults, arcade-style, so the board is never empty. Not
+     invented people - initials on a machine nobody has beaten yet. */
+  var SEED = [
+    { i: "FRO", s: 2500 }, { i: "ICE", s: 1800 }, { i: "MIL", s: 1200 },
+    { i: "SNO", s: 800 }, { i: "AAA", s: 400 }
+  ];
+
+  function loadScores() {
+    var list = SEED.slice();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var v = JSON.parse(raw);
+        if (Array.isArray(v)) list = v;
+      }
+    } catch (e) {}
+    /* Sort and cap on the way in too, so a legacy or hand-edited store can
+       never render an over-long or out-of-order board. */
+    return list.filter(function (e) { return e && typeof e.s === "number"; })
+               .sort(function (a, b) { return b.s - a.s; })
+               .slice(0, MAX_SCORES);
+  }
+  function saveScores(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function renderBoard(highlight) {
+    elBoard.innerHTML = scores.map(function (e, idx) {
+      return '<li' + (idx === highlight ? ' class="is-new"' : "") + ">" +
+        '<span class="rank">' + (idx + 1) + "</span>" +
+        '<span class="who">' + esc(e.i) + "</span>" +
+        '<span class="pts">' + e.s + "</span></li>";
+    }).join("");
+  }
+  /* A score makes the table if the board isn't full or it beats the last row. */
+  function qualifies(sc) {
+    if (sc <= 0) return false;
+    return scores.length < MAX_SCORES || sc > scores[scores.length - 1].s;
+  }
+  function submit(initials, sc) {
+    var name = (initials || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
+    scores.push({ i: name, s: sc });
+    scores.sort(function (a, b) { return b.s - a.s; });
+    scores = scores.slice(0, MAX_SCORES);
+    saveScores(scores);
+    var at = scores.indexOf(scores.filter(function (e) {
+      return e.i === name && e.s === sc;
+    })[0]);
+    renderBoard(at);
+    return at;
+  }
+
+  var scores = loadScores();
+
+  /* ================= game state ================= */
+  var STATE = { IDLE: 0, SERVE: 1, PLAY: 2, OVER: 3, ENTER: 4 };
+  var state = STATE.IDLE;
+  var score = 0, level = 1, lives = START_LIVES;
+  var bricks = [], liveCount = 0;
+  var paddleX = (W - PW) / 2, paddleVX = 0;
+  var ball = { x: W / 2, y: PADDLE_Y - BALL_R, vx: 0, vy: 0 };
+  var speed = BASE_SPEED;
+  var keyLeft = false, keyRight = false;
+  var raf = null, lastT = 0, running = false;
+
+  function buildLevel() {
+    bricks = []; liveCount = 0;
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        bricks.push({
+          x: SIDE + c * (BRICK_W + GAP), y: TOPGAP + r * (BRICK_H + GAP),
+          w: BRICK_W, h: BRICK_H, alive: true, c: ROW[r].c, s: ROW[r].s
+        });
+        liveCount++;
+      }
+    }
+  }
+
+  function resetBallOnPaddle() {
+    ball.x = paddleX + PW / 2;
+    ball.y = PADDLE_Y - BALL_R - 1;
+    ball.vx = 0; ball.vy = 0;
+  }
+
+  function launch() {
+    /* Always up, with a small random lean so no two serves are identical. */
+    var ang = (Math.random() * 0.5 - 0.25);   /* +/- ~14deg off vertical */
+    ball.vx = speed * Math.sin(ang);
+    ball.vy = -speed * Math.cos(ang);
+    state = STATE.PLAY;
+    showMsg(null);
+  }
+
+  function newGame() {
+    score = 0; level = 1; lives = START_LIVES;
+    speed = BASE_SPEED;
+    paddleX = (W - PW) / 2;
+    buildLevel();
+    resetBallOnPaddle();
+    syncHud();
+    state = STATE.IDLE;
+    showMsg('<b>BRICK SMASH</b>' +
+      '<small class="blink">CLICK OR PRESS SPACE TO START</small>');
+  }
+
+  function nextLevel() {
+    level++;
+    speed = BASE_SPEED * Math.pow(LEVEL_MULT, level - 1);
+    buildLevel();
+    paddleX = (W - PW) / 2;
+    resetBallOnPaddle();
+    syncHud();
+    state = STATE.SERVE;
+    showMsg('<b>LEVEL ' + level + '</b>' +
+      '<small class="blink">CLICK OR PRESS SPACE</small>');
+  }
+
+  function loseLife() {
+    lives--;
+    syncHud();
+    if (lives <= 0) { gameOver(); return; }
+    resetBallOnPaddle();
+    state = STATE.SERVE;
+    showMsg('<b>BALL LOST</b><small class="blink">' + lives +
+      ' LEFT &middot; CLICK OR PRESS SPACE</small>');
+  }
+
+  function gameOver() {
+    if (qualifies(score)) {
+      state = STATE.ENTER;
+      showMsg('<b>NEW HIGH SCORE!</b>' +
+        '<small>' + score + ' points &middot; enter your initials</small>' +
+        '<form class="arcade__enter" id="bs-enter">' +
+        '<input id="bs-initials" maxlength="3" autocomplete="off" ' +
+        'aria-label="Your initials" placeholder="AAA">' +
+        '<button type="submit" class="arcade__exit">OK</button></form>');
+      var form = document.getElementById("bs-enter");
+      var inp = document.getElementById("bs-initials");
+      if (inp) inp.focus();
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          submit(inp ? inp.value : "", score);
+          state = STATE.OVER;
+          showMsg('<b>GAME OVER</b><small>' + score +
+            ' points</small><small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+        });
+      }
+    } else {
+      state = STATE.OVER;
+      showMsg('<b>GAME OVER</b><small>' + score +
+        ' points</small><small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+    }
+  }
+
+  function syncHud() {
+    elScore.textContent = score;
+    elLevel.textContent = level;
+    elLives.textContent = lives;
+  }
+  function showMsg(html) {
+    if (html == null) { elMsg.hidden = true; elMsg.innerHTML = ""; return; }
+    elMsg.hidden = false; elMsg.innerHTML = html;
+  }
+
+  /* ================= physics ================= */
+  function movePaddle(dt) {
+    if (keyLeft) paddleX -= PADDLE_KEYS * dt;
+    if (keyRight) paddleX += PADDLE_KEYS * dt;
+    paddleX = Math.max(0, Math.min(W - PW, paddleX));
+    if (state === STATE.SERVE || state === STATE.IDLE) {
+      ball.x = paddleX + PW / 2;
+    }
+  }
+
+  function reflectBrick(b) {
+    /* Reflect on the axis of shallower penetration: the side the ball more
+       likely came through. Cheap, and correct for nearly every hit. */
+    var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    var ox = (b.w / 2 + BALL_R) - Math.abs(ball.x - cx);
+    var oy = (b.h / 2 + BALL_R) - Math.abs(ball.y - cy);
+    if (ox < oy) {
+      ball.vx = -ball.vx;
+      ball.x += ball.x < cx ? -ox : ox;
+    } else {
+      ball.vy = -ball.vy;
+      ball.y += ball.y < cy ? -oy : oy;
+    }
+  }
+
+  function hitBricks() {
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      if (!b.alive) continue;
+      if (ball.x + BALL_R > b.x && ball.x - BALL_R < b.x + b.w &&
+          ball.y + BALL_R > b.y && ball.y - BALL_R < b.y + b.h) {
+        b.alive = false; liveCount--;
+        score += b.s; syncHud();
+        reflectBrick(b);
+        if (liveCount <= 0) nextLevel();
+        return;   /* one brick per step keeps reflection unambiguous */
+      }
+    }
+  }
+
+  function stepBall(dt) {
+    var dist = Math.hypot(ball.vx, ball.vy) * dt;
+    /* Substep so a fast ball can't tunnel through a thin brick or the paddle. */
+    var steps = Math.max(1, Math.ceil(dist / (BALL_R * 0.9)));
+    var sdt = dt / steps;
+    for (var s = 0; s < steps; s++) {
+      ball.x += ball.vx * sdt;
+      ball.y += ball.vy * sdt;
+
+      if (ball.x - BALL_R < 0) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
+      else if (ball.x + BALL_R > W) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
+      if (ball.y - BALL_R < 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+
+      /* paddle: only while descending, so a ball leaving the paddle isn't
+         re-caught on the same frame */
+      if (ball.vy > 0 &&
+          ball.y + BALL_R >= PADDLE_Y && ball.y + BALL_R <= PADDLE_Y + PH + 6 &&
+          ball.x >= paddleX - BALL_R && ball.x <= paddleX + PW + BALL_R) {
+        var off = (ball.x - (paddleX + PW / 2)) / (PW / 2);
+        off = Math.max(-1, Math.min(1, off));
+        var ang = off * MAX_BOUNCE;
+        ball.vx = speed * Math.sin(ang);
+        ball.vy = -speed * Math.cos(ang);
+        ball.y = PADDLE_Y - BALL_R;
+      }
+
+      hitBricks();
+
+      if (ball.y - BALL_R > H) { loseLife(); return; }
+    }
+  }
+
+  /* ================= draw ================= */
+  function draw() {
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      if (!b.alive) continue;
+      ctx.fillStyle = b.c;
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      /* top bevel: a lighter lip so the wall reads as stacked blocks */
+      ctx.fillStyle = "rgba(255,255,255,.28)";
+      ctx.fillRect(b.x, b.y, b.w, 2);
+      ctx.fillStyle = "rgba(2,16,28,.35)";
+      ctx.fillRect(b.x, b.y + b.h - 2, b.w, 2);
+    }
+
+    /* paddle */
+    ctx.fillStyle = PADDLE;
+    ctx.fillRect(paddleX, PADDLE_Y, PW, PH);
+    ctx.fillStyle = PADDLE_HI;
+    ctx.fillRect(paddleX, PADDLE_Y, PW, 3);
+
+    /* ball, with a soft glow */
+    ctx.save();
+    ctx.shadowColor = PADDLE;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = BALL;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ================= loop ================= */
+  function update(dt) {
+    movePaddle(dt);
+    if (state === STATE.PLAY) stepBall(dt);
+  }
+  function frame(now) {
+    if (!running) return;
+    var dt = Math.min((now - lastT) / 1000, 0.033);
+    lastT = now;
+    update(dt);
+    draw();
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* ================= input ================= */
+  function pressLaunch() {
+    if (state === STATE.IDLE || state === STATE.SERVE) launch();
+    else if (state === STATE.OVER) newGame();
+    /* PLAY and ENTER swallow it: no relaunch mid-flight, no skipping entry. */
+  }
+
+  function pointerX(clientX) {
+    var r = cv.getBoundingClientRect();
+    return (clientX - r.left) * (W / r.width);
+  }
+  function movePaddleTo(px) {
+    paddleX = Math.max(0, Math.min(W - PW, px - PW / 2));
+  }
+
+  cv.addEventListener("mousemove", function (e) {
+    movePaddleTo(pointerX(e.clientX));
+  });
+  cv.addEventListener("mousedown", function (e) {
+    e.preventDefault(); pressLaunch();
+  });
+  cv.addEventListener("touchstart", function (e) {
+    if (e.touches[0]) movePaddleTo(pointerX(e.touches[0].clientX));
+    e.preventDefault(); pressLaunch();
+  }, { passive: false });
+  cv.addEventListener("touchmove", function (e) {
+    if (e.touches[0]) movePaddleTo(pointerX(e.touches[0].clientX));
+    e.preventDefault();
+  }, { passive: false });
+
+  /* Key handling lives at document level but only bites while the cabinet is
+     open, so the room's own controls are untouched when it's closed. */
+  function onKeyDown(e) {
+    if (!running) return;
+    var k = e.key;
+    if (k === "ArrowLeft") { keyLeft = true; e.preventDefault(); }
+    else if (k === "ArrowRight") { keyRight = true; e.preventDefault(); }
+    else if (k === " " || k === "Spacebar") {
+      /* Don't hijack Space while typing initials into the entry field. */
+      if (state !== STATE.ENTER) { pressLaunch(); e.preventDefault(); }
+    } else if (k === "Escape") { close(); }
+  }
+  function onKeyUp(e) {
+    if (e.key === "ArrowLeft") keyLeft = false;
+    else if (e.key === "ArrowRight") keyRight = false;
+  }
+
+  /* ================= open / close ================= */
+  var lastFocus = null;
+  function open() {
+    if (running) return;
+    lastFocus = document.activeElement;
+    scores = loadScores();
+    renderBoard(-1);
+    overlay.classList.add("is-open");
+    overlay.removeAttribute("aria-hidden");
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    running = true;
+    lastT = performance.now();
+    newGame();
+    raf = requestAnimationFrame(frame);
+    elExit.focus();
+  }
+  function close() {
+    if (!running) return;
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    keyLeft = keyRight = false;
+    document.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("keyup", onKeyUp);
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  elExit.addEventListener("click", close);
+  /* Pause the ball if the tab is hidden mid-rally, so it doesn't drain a life
+     against a frozen paddle while you're away. */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === STATE.PLAY) {
+      state = STATE.SERVE;
+      resetBallOnPaddle();
+      showMsg('<b>PAUSED</b><small class="blink">CLICK OR PRESS SPACE</small>');
+    }
+  });
+
+  /* step/draw/peek are exposed for the same reason the room exposes them:
+     requestAnimationFrame is suspended in a hidden tab, so a headless check
+     needs a synchronous way to advance and inspect the game. */
+  window.FrostArcade = {
+    open: open, close: close,
+    step: function (dt, n) {
+      for (var i = 0; i < (n || 1); i++) update(dt || 0.016);
+      draw();
+    },
+    launch: pressLaunch,
+    setPaddle: function (px) { movePaddleTo(px); },
+    peek: function () {
+      return { state: state, score: score, level: level, lives: lives,
+               liveCount: liveCount, paddleX: paddleX,
+               ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy },
+               scores: scores.slice() };
+    }
   };
 })();
 </script>
