@@ -795,22 +795,26 @@ for the track</p>
     }
   }
 
-  /* Neon lettering centred at (cx, cy): no plate or frame - just lit tubing on
-     the wall. The coloured blur spills AROUND the glyphs as room glow, then a
-     bright near-white core is laid on top last so the letters stay readable. */
+  /* Neon lettering centred at (cx, cy): no plate or frame - just small lit
+     tubing sheared into the back-right wall's plane (baseline follows the
+     wall's TH/TW slope while the strokes stay upright), so it reads as a
+     decoration ON the wall. Kept small and dim: a tight coloured halo spills
+     onto the wall around the glyphs and a lightly-lifted core keeps the
+     letters legible without blooming into a light source. */
   function neonSign(cx, cy, text, glow) {
     ctx.save();
-    ctx.font = 'bold 11px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+    ctx.translate(cx, cy + 0.5);
+    ctx.transform(1, TH / TW, 0, 1, 0, 0);   /* lie flat on the SE wall */
+    ctx.font = 'bold 8px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    var y = cy + 0.5;
+    var g = rgb(glow);
     ctx.shadowColor = glow;
-    ctx.fillStyle = glow;
-    ctx.shadowBlur = 9; ctx.fillText(text, cx, y);   /* soft halo */
-    ctx.shadowBlur = 4; ctx.fillText(text, cx, y);   /* tube colour */
-    ctx.shadowBlur = 2;                              /* crisp lit core */
-    ctx.fillStyle = css(shade(rgb(glow), 1.75));
-    ctx.fillText(text, cx, y);
+    ctx.fillStyle = rgba(g, 0.5);
+    ctx.shadowBlur = 4; ctx.fillText(text, 0, 0);   /* tight halo on the wall */
+    ctx.shadowBlur = 0;                             /* crisp core, no bleed */
+    ctx.fillStyle = css(shade(g, 1.3));
+    ctx.fillText(text, 0, 0);
     ctx.restore();
   }
 
