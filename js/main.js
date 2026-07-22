@@ -151,44 +151,87 @@
   })();
 
   /* ----------------------------------------------------------------- *
-   * Visitor counter (persisted in localStorage — it's the 90s, baby)
+   * Visitor counter — a real shared tally via /api/visits, counted once
+   * per session. Falls back to a private localStorage count when the API
+   * isn't there (opened as a file, or before KV is bound), so the counter
+   * never sits blank.
    * ----------------------------------------------------------------- */
   (function counter() {
     var el = document.getElementById("counter");
     if (!el) return;
     var BASE = 1337; // starting hype number
-    var n = BASE;
-    try {
-      var stored = parseInt(localStorage.getItem("frost_visits"), 10);
-      n = (isNaN(stored) ? BASE : stored) + 1;
-      localStorage.setItem("frost_visits", String(n));
-    } catch (e) { /* private mode — just show the base */ }
-    el.textContent = String(n).padStart(6, "0");
+    function show(n) { el.textContent = String(n).padStart(6, "0"); }
+
+    function localCount() {
+      var n = BASE;
+      try {
+        var stored = parseInt(localStorage.getItem("frost_visits"), 10);
+        n = (isNaN(stored) ? BASE : stored) + 1;
+        localStorage.setItem("frost_visits", String(n));
+      } catch (e) { /* private mode — just show the base */ }
+      return n;
+    }
+
+    var counted = false;
+    try { counted = sessionStorage.getItem("frost_counted") === "1"; } catch (e) {}
+    /* POST bumps the tally; GET only reads. Count the first hit of a session,
+       then read on later page loads so a refresh doesn't inflate it. */
+    fetch("/api/visits", { method: counted ? "GET" : "POST" })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (typeof d.count !== "number") throw 0;
+        try { sessionStorage.setItem("frost_counted", "1"); } catch (e) {}
+        show(d.count);
+      })
+      .catch(function () { show(localCount()); });
   })();
 
   /* ----------------------------------------------------------------- *
-   * Ice-list signup (front-end only — wire up to a real service later)
+   * Ice-list signup — POSTs the email to /api/subscribe, which stores it
+   * in KV. If the API isn't reachable (opened as a file, or before KV is
+   * bound) it still shows the friendly confirmation, so the form never
+   * looks broken.
    * ----------------------------------------------------------------- */
   (function signup() {
     var form = document.getElementById("signup-form");
     if (!form) return;
     var msg = document.getElementById("signup-msg");
+    var hp = form.querySelector('input[name="website"]');
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var input = document.getElementById("signup-email");
-      msg.textContent = "❄ YOU'RE ON THE ICE LIST, " +
-        input.value.split("@")[0].toUpperCase() + "! STAY FROSTY. ❄";
-      form.reset();
+      var email = document.getElementById("signup-email").value.trim();
+      var who = (email.split("@")[0] || "friend").toUpperCase();
+      function welcome() {
+        msg.textContent = "❄ YOU'RE ON THE ICE LIST, " + who + "! STAY FROSTY. ❄";
+        form.reset();
+      }
+      msg.textContent = "❄ adding you to the ice list… ❄";
+      fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email, website: hp ? hp.value : "" })
+      })
+        .then(function (r) {
+          if (r.ok) { welcome(); return; }
+          return r.json().then(function (d) {
+            msg.textContent = "❄ " + ((d && d.error) || "try that again").toUpperCase() + " ❄";
+          });
+        })
+        .catch(function () { welcome(); });   /* offline/static — keep the old behaviour */
     });
   })();
 
   /* ----------------------------------------------------------------- *
-   * Guestbook (persisted in localStorage; text is escaped on render)
+   * Guestbook — a real shared book via /api/guestbook when it's reachable,
+   * otherwise the visitor's own localStorage copy (opened as a file, or
+   * before KV is bound). Text is always escaped on render, so a message
+   * can't inject markup no matter where it came from.
    * ----------------------------------------------------------------- */
   (function guestbook() {
     var form = document.getElementById("guestbook-form");
     var list = document.getElementById("guestbook");
     if (!form || !list) return;
+    var hp = form.querySelector('input[name="website"]');
 
     /* _v2 retires anyone's locally-saved copy of the old fabricated seed
        entries. Bump again if the seed ever needs to be force-refreshed. */
@@ -199,15 +242,16 @@
     var seed = [
       { name: "webmaster", msg: "site's up. sign below. ❄", ts: "1999-08-14" }
     ];
+    var apiOK = false;   /* flips true once the shared book answers */
 
-    function load() {
+    function localLoad() {
       try {
         var raw = localStorage.getItem(KEY);
         if (raw) return JSON.parse(raw);
       } catch (e) {}
       return seed.slice();
     }
-    function save(entries) {
+    function localSave(entries) {
       try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) {}
     }
     function esc(s) {
@@ -225,22 +269,48 @@
       }).join("");
     }
 
-    var entries = load();
+    var entries = localLoad();
     render(entries);
+
+    /* Prefer the shared book. If it answers, it becomes the source of truth. */
+    fetch("/api/guestbook")
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.entries)) throw 0;
+        apiOK = true;
+        entries = d.entries.length ? d.entries : seed.slice();
+        render(entries);
+      })
+      .catch(function () { /* API absent — the local copy already shows */ });
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var name = document.getElementById("gb-name").value.trim();
       var text = document.getElementById("gb-msg").value.trim();
       if (!name || !text) return;
-      entries.unshift({
-        name: name,
-        msg: text,
-        ts: new Date().toISOString().slice(0, 10)
-      });
-      save(entries);
-      render(entries);
-      form.reset();
+      var entry = { name: name, msg: text, ts: new Date().toISOString().slice(0, 10) };
+
+      function localAppend() {
+        entries.unshift(entry);
+        localSave(entries);
+        render(entries);
+        form.reset();
+      }
+
+      if (!apiOK) { localAppend(); return; }
+      fetch("/api/guestbook", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name, msg: text, website: hp ? hp.value : "" })
+      })
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .then(function (d) {
+          if (!d || !Array.isArray(d.entries)) throw 0;
+          entries = d.entries;
+          render(entries);
+          form.reset();
+        })
+        .catch(function () { localAppend(); });   /* rate-limited or offline — keep it local */
     });
   })();
 

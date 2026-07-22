@@ -322,6 +322,9 @@
 
           <h3 class="minihead">📬 JOIN THE ICE LIST</h3>
           <form class="signup" id="signup-form">
+            <!-- Honeypot: hidden from people, irresistible to bots. A real
+                 visitor never sees or fills this, so any value = spam. -->
+            <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
             <label class="sr-only" for="signup-email">Email</label>
             <input id="signup-email" type="email" required placeholder="your@email.com" />
             <button type="submit" class="btn btn--sm">SUBSCRIBE ❄</button>
@@ -345,6 +348,8 @@
           <h3 class="minihead">📖 SIGN THE GUESTBOOK</h3>
           <p class="section-sub" style="margin:0 0 8px">Leave your mark. Keep it cold.</p>
           <form class="guestbook-form" id="guestbook-form">
+            <!-- Honeypot (see the signup form) -->
+            <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
             <label class="sr-only" for="gb-name">Name</label>
             <input id="gb-name" type="text" maxlength="24" required placeholder="Handle / name" />
             <label class="sr-only" for="gb-msg">Message</label>

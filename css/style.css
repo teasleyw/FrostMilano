@@ -67,6 +67,14 @@ a{ color:var(--ice-bright); }
   overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
 }
 
+/* Honeypot field: pushed off-screen rather than display:none, because many
+   bots skip hidden fields but happily fill a visible-to-them one. People
+   never see it; if it comes back with a value, the submission is a bot. */
+.hp{
+  position:absolute; left:-9999px; top:-9999px;
+  width:1px; height:1px; opacity:0; pointer-events:none;
+}
+
 /* ---------- SNOW ---------- */
 #snow{ position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden; }
 .flake{
