@@ -81,6 +81,8 @@
     width:100%; height:auto; display:block;
     border:3px ridge #6bb8dd; border-radius:6px;
     background:#05131f; cursor:none;
+    /* Own the touch: dragging the paddle must never scroll or zoom the page. */
+    touch-action:none;
   }
   /* Snake is grid/blocky, so unlike bs-canvas it keeps the file-wide
      pixelated rendering and pointer cursor - just needs the modal's sizing. */
@@ -88,6 +90,8 @@
     width:100%; height:auto; display:block;
     border:3px ridge #6bb8dd; border-radius:6px;
     background:#05131f;
+    /* Own the touch: swipe-to-steer must never scroll or zoom the page. */
+    touch-action:none;
   }
   /* Faint CRT scanlines, echoing the video-vault TVs on the main site. */
   .arcade__screen::after{
@@ -240,6 +244,18 @@
   @media (prefers-reduced-motion:reduce){
     .decks__cell{ transition:none; }
   }
+  /* ---- phones: 16 finger-sized pads can't fit across a phone, so give them
+     real size and let the row scroll sideways. The ruler scrolls in lock-step,
+     so the steps stay countable, and the beat gaps keep your place. ---- */
+  @media (max-width:560px){
+    .decks__row{ grid-template-columns:40px repeat(16, 1fr); }
+    .decks__grid{ min-width:588px; }
+    .decks__label{ font-size:.58rem; padding-right:3px; letter-spacing:0; }
+    .decks__cell{ height:30px; }
+    .decks__gridwrap{ -webkit-overflow-scrolling:touch; }
+    /* Bigger, thumb-friendly transport and exit controls. */
+    .decks__btn, .arcade__exit{ padding:10px 16px; font-size:.8rem; }
+  }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
@@ -275,7 +291,7 @@ for the track</p>
           <canvas id="bs-canvas" width="340" height="440"></canvas>
           <div class="arcade__msg" id="bs-msg"></div>
         </div>
-        <p class="arcade__hint">&#9664; &#9654; / mouse to move &middot; SPACE or click to launch &middot; ESC to exit</p>
+        <p class="arcade__hint">drag or &#9664;&#9654; / mouse to move &middot; tap or SPACE to launch &middot; ESC to exit</p>
       </div>
       <aside class="arcade__scores">
         <h3>&#127942; HIGH SCORES</h3>
@@ -302,7 +318,7 @@ for the track</p>
           <canvas id="sn-canvas" width="340" height="340"></canvas>
           <div class="arcade__msg" id="sn-msg"></div>
         </div>
-        <p class="arcade__hint">&#9650; &#9660; &#9664; &#9654; / WASD to steer &middot; SPACE or click to start &middot; ESC to exit</p>
+        <p class="arcade__hint">swipe or &#9650;&#9660;&#9664;&#9654; / WASD to steer &middot; tap or SPACE to start &middot; ESC to exit</p>
       </div>
       <aside class="arcade__scores">
         <h3>&#127942; HIGH SCORES</h3>
@@ -2132,8 +2148,26 @@ for the track</p>
   cv.addEventListener("mousedown", function (e) {
     e.preventDefault(); pressStart();
   });
+  /* Touch steering: tap to start, then drag or flick a thumb to turn. The
+     origin resets on every registered turn, so one continuous drag can chain
+     turns - without this there is no way to steer Snake on a phone at all. */
+  var swipeX = 0, swipeY = 0, SWIPE_MIN = 18;
   cv.addEventListener("touchstart", function (e) {
+    var t = e.touches[0];
+    if (t) { swipeX = t.clientX; swipeY = t.clientY; }
     e.preventDefault(); pressStart();
+  }, { passive: false });
+  cv.addEventListener("touchmove", function (e) {
+    var t = e.touches[0];
+    if (t) {
+      var dx = t.clientX - swipeX, dy = t.clientY - swipeY;
+      if (Math.abs(dx) > SWIPE_MIN || Math.abs(dy) > SWIPE_MIN) {
+        if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0);
+        else turn(0, dy > 0 ? 1 : -1);
+        swipeX = t.clientX; swipeY = t.clientY;
+      }
+    }
+    e.preventDefault();
   }, { passive: false });
 
   /* Key handling lives at document level but only bites while the cabinet is
