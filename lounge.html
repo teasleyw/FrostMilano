@@ -151,12 +151,102 @@
   .arcade__exit:hover{ filter:brightness(1.25); color:#fff; transform:translateY(-1px); }
   .arcade__exit:active{ border-style:inset; transform:translateY(1px); }
   .arcade__exit:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+
+  /* ================= THE DECKS (step sequencer) =================
+     Reuses the .arcade backdrop, cabinet, marquee and exit chrome so it reads
+     as the same room, but the body is a toggle grid rather than a game canvas.
+     Guests light pads to build an icy loop; the pattern is packed into the page
+     URL, so the link itself is the loop. */
+  .decks__sub{
+    text-align:center; font-size:.72rem; letter-spacing:1px; color:#6bb8dd;
+    margin:-4px 0 2px;
+  }
+  .decks__sub b{ color:#38e6ff; }
+  /* The grid can be wider than a phone; let it scroll rather than crush the
+     pads below a tappable size. */
+  .decks__gridwrap{ overflow-x:auto; padding-bottom:2px; }
+  .decks__grid{ display:flex; flex-direction:column; gap:4px; min-width:340px; }
+  .decks__row{
+    display:grid; grid-template-columns:56px repeat(16, 1fr); gap:3px;
+    align-items:center;
+  }
+  /* A little air before each beat (steps 1,5,9,13) so the eye can count in
+     fours. The ruler carries the same gap so its numbers stay over the pads. */
+  .decks__cell.beatstart, .decks__tick.beatstart{ margin-left:7px; }
+  .decks__ruler .decks__tick{
+    text-align:center; font-size:.56rem; color:#2b6f96;
+    font-variant-numeric:tabular-nums; padding-bottom:1px;
+  }
+  .decks__ruler .decks__tick.on-beat{ color:#6bb8dd; }
+  .decks__ruler .decks__tick.playcol{ color:#eafcff; }
+  .decks__label{
+    font-size:.66rem; letter-spacing:1px; color:#b8ecff; text-align:right;
+    padding-right:4px; white-space:nowrap;
+  }
+  .decks__cell{
+    height:24px; border:1px solid #17415c; border-radius:4px;
+    background:#0a1f30; cursor:pointer; padding:0; position:relative;
+    -webkit-tap-highlight-color:transparent;
+    transition:background .06s ease, box-shadow .06s ease, transform .04s ease;
+  }
+  .decks__cell:hover{ border-color:#38e6ff; }
+  /* An "on" pad glows in its row's colour, carried in --rc from the markup. */
+  .decks__cell[aria-pressed="true"]{
+    background:var(--rc,#38e6ff); border-color:#eafcff;
+    box-shadow:0 0 7px var(--rc,#38e6ff), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  /* The sweeping playhead: the current column is outlined, and an on-pad under
+     it kicks up and brightens as it fires. */
+  .decks__cell.playcol{ outline:2px solid rgba(234,252,255,.85); outline-offset:-1px; }
+  .decks__cell[aria-pressed="true"].playcol{
+    transform:translateY(-1px);
+    box-shadow:0 0 12px var(--rc,#38e6ff), inset 0 1px 0 rgba(255,255,255,.6);
+  }
+  .decks__cell:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+
+  .decks__transport, .decks__share{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    justify-content:center;
+  }
+  .decks__transport{ margin-top:4px; }
+  .decks__share{ margin-top:2px; }
+  .decks__btn{
+    font:inherit; font-size:.74rem; letter-spacing:1px; color:#eafcff;
+    padding:7px 14px; border-radius:6px; cursor:pointer;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    border:2px outset #4bb4d8; text-shadow:0 1px 0 #02101c;
+    transition:filter .12s ease, transform .08s ease;
+  }
+  .decks__btn:hover{ filter:brightness(1.25); color:#fff; transform:translateY(-1px); }
+  .decks__btn:active{ border-style:inset; transform:translateY(1px); }
+  .decks__btn:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .decks__btn--play{ min-width:104px; }
+  .decks__tempo{
+    display:flex; align-items:center; gap:7px; font-size:.68rem;
+    letter-spacing:1px; color:#6bb8dd;
+  }
+  .decks__tempo input[type=range]{ width:96px; accent-color:#38e6ff; }
+  .decks__tempo b{ color:#38e6ff; font-variant-numeric:tabular-nums; }
+  .decks__link{
+    flex:1 1 240px; min-width:0; max-width:420px;
+    font:inherit; font-size:.68rem; color:#b8ecff;
+    background:#02141f; border:2px inset #17415c; border-radius:5px;
+    padding:6px 8px;
+  }
+  .decks__hint{
+    text-align:center; font-size:.64rem; color:#2b6f96; letter-spacing:1px;
+    margin:0;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .decks__cell{ transition:none; }
+  }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
-<p>click a tile to walk &mdash; click a cabinet to play <b>BRICK SMASH</b> or
-<b>SNAKE</b> &mdash; click the boombox for the track</p>
+<p>click a tile to walk &mdash; step up to the <b>DECKS</b> to build a loop &mdash;
+click a cabinet for <b>BRICK SMASH</b> or <b>SNAKE</b> &mdash; click the boombox
+for the track</p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
 
@@ -220,6 +310,39 @@
       </aside>
     </div>
     <button type="button" class="arcade__exit" id="sn-exit">&#10005; EXIT TO LOUNGE</button>
+  </div>
+</div>
+
+<!-- ================= THE DECKS (step sequencer) ================= -->
+<div id="decks" class="arcade" role="dialog" aria-modal="true"
+     aria-label="The Decks step sequencer" aria-hidden="true">
+  <div class="arcade__cab">
+    <div class="arcade__marquee">&#10052; THE DECKS &#10052;</div>
+    <p class="decks__sub">build an icy loop &middot; <b>your pattern lives in the link</b></p>
+
+    <div class="decks__gridwrap">
+      <div class="decks__grid" id="dk-grid" role="group" aria-label="Step sequencer grid"></div>
+    </div>
+
+    <div class="decks__transport">
+      <button type="button" class="decks__btn decks__btn--play" id="dk-play">&#9654; PLAY</button>
+      <button type="button" class="decks__btn" id="dk-random">&#10052; RANDOM</button>
+      <button type="button" class="decks__btn" id="dk-clear">&#10005; CLEAR</button>
+      <label class="decks__tempo">TEMPO
+        <input type="range" id="dk-tempo" min="60" max="180" step="1" value="110"
+               aria-label="Tempo in beats per minute" />
+        <b id="dk-bpm">110</b> BPM
+      </label>
+    </div>
+
+    <div class="decks__share">
+      <input type="text" class="decks__link" id="dk-link" readonly
+             aria-label="Shareable link to this loop" onclick="this.select()" />
+      <button type="button" class="decks__btn" id="dk-copy">&#128279; COPY LINK</button>
+    </div>
+    <p class="decks__hint">tap a pad to place a sound &middot; every change updates the link</p>
+
+    <button type="button" class="arcade__exit" id="dk-exit">&#10005; EXIT TO LOUNGE</button>
   </div>
 </div>
 
@@ -461,17 +584,19 @@
   var BLOCKED = {};
   function block(x, y) { BLOCKED[x + "," + y] = true; }
   var SPEAKER = [8, 0], BENCH = [[1, 7], [2, 7]];
-  /* The interactive fixtures: an arcade cabinet against the empty back-left
-     wall (the back-right already carries the speaker and the poster), and a
-     second cabinet further along the back-right wall with room to spare
-     between the poster and the speaker. Clicking one opens its game. Both are
-     blocked so guests route around them and can't stand inside the machines. */
+  /* The interactive fixtures. Two arcade cabinets - one on the back-left wall,
+     one further along the back-right - and the DECKS, a DJ console higher up
+     the back-left wall that guests build a loop on rather than beat a game.
+     Clicking a fixture opens it; all are blocked so guests route around them
+     and can't stand inside the machines. */
   var ARCADE = [0, 4];
   var SNAKE = [6, 0];
+  var DECKS = [0, 1];
   block(SPEAKER[0], SPEAKER[1]);
   BENCH.forEach(function (b) { block(b[0], b[1]); });
   block(ARCADE[0], ARCADE[1]);
   block(SNAKE[0], SNAKE[1]);
+  block(DECKS[0], DECKS[1]);
 
   function walkable(x, y) {
     return x >= 0 && y >= 0 && x < GW && y < GH && !BLOCKED[x + "," + y];
@@ -625,6 +750,7 @@
      and invites a click; it swells further on hover. Both cabinets share one
      clock but read the wave at different phases so they don't pulse in lockstep. */
   var cabPulse = 0;
+  var deckSpin = 0;    /* the turntables' idle rotation; faster while a loop runs */
   function arcadeCab(hovered) {
     var tx = ARCADE[0], ty = ARCADE[1];
     /* Cool near-black body so the cyan screen is the only thing that glows. */
@@ -693,6 +819,71 @@
     if (hovered) cabinetLabel(SNAKE, "▶ SNAKE");
   }
 
+  /* ================= the decks =================
+     The room's centrepiece, and the one fixture you build with rather than
+     beat: a pair of turntables over a mixer, against the back-left wall. Its
+     front panel mirrors the loop currently held in the URL as a strip of lit
+     steps - brightest on the step playing right now - so a shared link visibly
+     "has a beat" before you ever open it. The platters spin, and spin faster
+     while the loop runs. Shorter than the game cabinets, so it reads as a
+     console you'd stand at, not an upright you'd feed coins. */
+  var DECK_H = 30;
+  function decksCab(hovered) {
+    var tx = DECKS[0], ty = DECKS[1], c = centre(tx, ty);
+    /* Faces SE like the arcade cabinet, so the mixer panel turns to the room. */
+    drawBox(tx, ty, DECK_H, css(shade(rgb(HEX.deep2), 1.15)),
+            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.95)));
+    var q = function (u0, u1, v0, v1, fill) {
+      cabQuad(DECKS, u0, u1, v0, v1, fill, "SE", DECK_H);
+    };
+
+    var ms = window.FrostDecks && window.FrostDecks.miniState
+      ? window.FrostDecks.miniState() : null;
+    var playing = ms && ms.playing;
+    var cols = ms ? ms.cols : null;
+    var curStep = ms ? ms.step : -1;
+
+    /* mixer face: a recessed dark panel, then a 16-step strip of the live loop */
+    q(0.08, 0.92, 0.14, 0.44, css(shade(rgb(HEX.O), 1.5)));
+    q(0.12, 0.88, 0.18, 0.4, "#02171f");
+    for (var s = 0; s < 16; s++) {
+      var u0 = 0.14 + s * (0.72 / 16);
+      /* Before the module loads, hint a plain four-on-the-floor so the panel
+         is never dead. */
+      var on = cols ? cols[s] : ((s % 4) === 0);
+      var lit = on ? (s === curStep ? 1 : 0.7) : 0.14;
+      q(u0, u0 + 0.03, 0.22, 0.36,
+        css(shade(rgb(on ? HEX.bright : HEX.f4), 0.4 + lit * 0.6)));
+    }
+    /* two channel faders below the strip, so it reads as a mixer not a screen */
+    q(0.2, 0.44, 0.5, 0.62, css(shade(rgb(HEX.deep2), 1.3)));
+    q(0.56, 0.8, 0.5, 0.62, css(shade(rgb(HEX.deep2), 1.3)));
+    q(0.29, 0.35, 0.48, 0.64, css(shade(rgb(HEX.f4), 1.15)));
+    q(0.65, 0.71, 0.48, 0.64, css(shade(rgb(HEX.f4), 1.15)));
+
+    /* two platters on the top face; a marker dot rides the spin. The top face
+       is a flat diamond, so a vertical squash (not the wall shear) is what
+       lays each record down onto it. */
+    var spin = deckSpin * (playing ? 3.4 : 1);
+    [[-6, -3], [6, 3]].forEach(function (p, i) {
+      ctx.save();
+      ctx.translate(c.x + p[0], c.y - DECK_H + p[1]);
+      ctx.scale(1, 0.5);
+      ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.fillStyle = css(shade(rgb(HEX.O), 1.25)); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = playing ? HEX.bright : css(shade(rgb(HEX.f4), 1.15));
+      ctx.fill();
+      var a = spin + i * Math.PI;              /* the two decks spin out of phase */
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * 4, Math.sin(a) * 4, 0.9, 0, Math.PI * 2);
+      ctx.fillStyle = HEX.light; ctx.fill();
+      ctx.restore();
+    });
+
+    if (hovered) cabinetLabelAt(DECKS, DECK_H, "▶ THE DECKS");
+  }
+
   /* Screen-space box a cabinet occupies, for hit-testing. The tall art rises
      over off-grid tiles, so we click the machine we can see rather than its
      footprint diamond. */
@@ -703,6 +894,13 @@
   }
   function inArcade(p) { return inCabinet(p, ARCADE); }
   function inSnake(p) { return inCabinet(p, SNAKE); }
+  /* The decks are shorter than the game cabinets, so they get their own box
+     rather than borrowing inCabinet's CAB_H reach. */
+  function inDecks(p) {
+    var c = centre(DECKS[0], DECKS[1]);
+    return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
+           p.y >= c.y - TH / 2 - DECK_H && p.y <= c.y + TH / 2;
+  }
 
   /* ================= the boombox =================
      Sits beside the speaker stack so the two read as one sound system. Click
@@ -747,6 +945,9 @@
     /* Tests paused, not musicPlaying(), so a click still clears the phantom
        not-paused-but-silent state a failed load leaves behind. */
     if (!audioEl.paused) { audioEl.pause(); return; }
+    /* One sound system at a time: hush the decks loop before the tape rolls. */
+    if (window.FrostDecks && window.FrostDecks.isPlaying &&
+        window.FrostDecks.isPlaying()) window.FrostDecks.stop();
     audioEl.volume = 0.65;
     var p = audioEl.play();
     if (p && p.catch) p.catch(function () { /* tapeMissing() reports it */ });
@@ -997,6 +1198,7 @@
   var hover = null;
   var arcadeHover = false;
   var snakeHover = false;
+  var decksHover = false;
   var boomHover = false;
 
   function render() {
@@ -1086,6 +1288,8 @@
                  f: function () { arcadeCab(arcadeHover); } });
     items.push({ d: SNAKE[0] + SNAKE[1],
                  f: function () { snakeCab(snakeHover); } });
+    items.push({ d: DECKS[0] + DECKS[1],
+                 f: function () { decksCab(decksHover); } });
     guests.forEach(function (g) {
       items.push({ d: g.depth(), f: function () { g.draw(); } });
     });
@@ -1107,14 +1311,16 @@
     var p = toCanvas(ev);
     arcadeHover = inArcade(p);
     snakeHover = inSnake(p);
-    boomHover = !arcadeHover && !snakeHover && inBoombox(p);
+    decksHover = !arcadeHover && !snakeHover && inDecks(p);
+    boomHover = !arcadeHover && !snakeHover && !decksHover && inBoombox(p);
     /* Suppress the tile highlight while over a fixture, so the room doesn't
        advertise a walk to a spot the click won't actually walk to. */
-    hover = (arcadeHover || snakeHover || boomHover)
+    hover = (arcadeHover || snakeHover || decksHover || boomHover)
       ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
-    hover = null; arcadeHover = false; snakeHover = false; boomHover = false;
+    hover = null; arcadeHover = false; snakeHover = false;
+    decksHover = false; boomHover = false;
   });
   cv.addEventListener("click", function (ev) {
     var p = toCanvas(ev);
@@ -1126,6 +1332,10 @@
     }
     if (inSnake(p)) {
       if (window.FrostSnake) window.FrostSnake.open();
+      return;
+    }
+    if (inDecks(p)) {
+      if (window.FrostDecks) window.FrostDecks.open();
       return;
     }
     if (inBoombox(p)) { toggleMusic(); return; }
@@ -1140,6 +1350,7 @@
     var dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     cabPulse += dt * 2.4;   /* drives the arcade screen's idle glow */
+    deckSpin += dt * 1.6;   /* drives the turntables' idle rotation */
     /* The music clock only advances while the track runs, so the EQ bars and
        cone thump freeze the moment it is paused instead of miming to silence. */
     if (musicPlaying()) {
@@ -1184,7 +1395,8 @@
     musicPlaying: musicPlaying, tapeMissing: tapeMissing,
     toggleMusic: toggleMusic, notes: notes,
     dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H,
-            BOOMBOX: BOOMBOX, SPEAKER: SPEAKER, SNAKE: SNAKE, ARCADE: ARCADE }
+            BOOMBOX: BOOMBOX, SPEAKER: SPEAKER, SNAKE: SNAKE, ARCADE: ARCADE,
+            DECKS: DECKS }
   };
 })();
 </script>
@@ -1991,6 +2203,577 @@
                length: snake.length, dir: { x: dir.x, y: dir.y },
                snake: snake.slice(), food: { x: food.x, y: food.y },
                scores: scores.slice() };
+    }
+  };
+})();
+</script>
+
+<script>
+/* =======================================================================
+   THE DECKS :: the lounge's step sequencer
+   CokeMusic's actual hook, finally built. Guests toggle pads to lay down an
+   icy loop, and the whole pattern is packed into the page's URL hash - so the
+   link IS the loop. Paste someone's link and the decks open with their beat
+   already loaded, ready to play. Every sound is synthesised on the fly with the
+   Web Audio API (no asset files, the same "costs nothing until asked" spirit as
+   the boombox), and unlike the game cabinets, playback keeps running when you
+   close the panel - so a loop you built can soundtrack the room while you walk
+   the checkerboard. Shares the .arcade modal chrome with Brick Smash and Snake.
+   ======================================================================= */
+(function () {
+  "use strict";
+
+  var overlay = document.getElementById("decks");
+  var gridEl = document.getElementById("dk-grid");
+  if (!overlay || !gridEl) return;
+
+  var elPlay = document.getElementById("dk-play");
+  var elRandom = document.getElementById("dk-random");
+  var elClear = document.getElementById("dk-clear");
+  var elTempo = document.getElementById("dk-tempo");
+  var elBpm = document.getElementById("dk-bpm");
+  var elLink = document.getElementById("dk-link");
+  var elCopy = document.getElementById("dk-copy");
+  var elExit = document.getElementById("dk-exit");
+
+  /* ---- the kit: melodic voices up top, drums below, DAW-style. Each row is a
+     synth voice plus the colour its pads light. The pitched rows sit in F minor
+     pentatonic, so any combination of pads you can place stays consonant. ---- */
+  var STEPS = 16;
+  var ROWS = [
+    { key: "chime", label: "CHIME", rc: "#eafcff" },
+    { key: "bell",  label: "BELL",  rc: "#b8ecff" },
+    { key: "hat",   label: "HAT",   rc: "#38e6ff" },
+    { key: "snap",  label: "SNAP",  rc: "#6bb8dd" },
+    { key: "bass",  label: "BASS",  rc: "#ffd68a" },
+    { key: "kick",  label: "KICK",  rc: "#5bc7ec" }
+  ];
+  var NROWS = ROWS.length;
+
+  function makeEmpty() {
+    var g = [];
+    for (var r = 0; r < NROWS; r++) {
+      g[r] = [];
+      for (var s = 0; s < STEPS; s++) g[r][s] = false;
+    }
+    return g;
+  }
+
+  /* A tasteful starter, so a first-time visitor's first press of PLAY already
+     grooves. Keyed by name so it survives any later reordering of ROWS. It is
+     deliberately NOT written to the URL until the guest changes something -
+     a fresh visit keeps a clean address bar. */
+  var DEFAULT = {
+    kick:  [0, 4, 8, 12],
+    snap:  [4, 12],
+    hat:   [2, 6, 10, 14],
+    chime: [0, 10],
+    bell:  [6, 14],
+    bass:  [0, 8]
+  };
+  function loadDefault() {
+    var g = makeEmpty();
+    ROWS.forEach(function (row, r) {
+      (DEFAULT[row.key] || []).forEach(function (s) { g[r][s] = true; });
+    });
+    return g;
+  }
+
+  var grid = makeEmpty();
+  var bpm = 110, MIN_BPM = 60, MAX_BPM = 180;
+  function clampBpm(v) { return Math.max(MIN_BPM, Math.min(MAX_BPM, v | 0)); }
+
+  /* ================= URL <-> pattern =================
+     13 bytes: one tempo byte, then 96 pattern bits (6 rows x 16 steps) packed
+     big-endian, base64url'd. Short enough to read as a "loop code", robust
+     enough that anything malformed just falls back to an empty grid. */
+  var BYTES = 1 + Math.ceil(NROWS * STEPS / 8);
+  function b64urlEnc(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function b64urlDec(str) {
+    try {
+      var s = str.replace(/-/g, "+").replace(/_/g, "/");
+      while (s.length % 4) s += "=";
+      var bin = atob(s), out = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    } catch (e) { return null; }
+  }
+  function encode() {
+    var bytes = new Uint8Array(BYTES);
+    bytes[0] = clampBpm(bpm) - MIN_BPM;
+    var bit = 0;
+    for (var r = 0; r < NROWS; r++) {
+      for (var s = 0; s < STEPS; s++) {
+        if (grid[r][s]) bytes[1 + (bit >> 3)] |= 1 << (7 - (bit & 7));
+        bit++;
+      }
+    }
+    return b64urlEnc(bytes);
+  }
+  function decode(str) {
+    var bytes = b64urlDec(str || "");
+    if (!bytes || bytes.length < BYTES) return false;
+    var g = makeEmpty(), bit = 0;
+    for (var r = 0; r < NROWS; r++) {
+      for (var s = 0; s < STEPS; s++) {
+        g[r][s] = !!(bytes[1 + (bit >> 3)] & (1 << (7 - (bit & 7))));
+        bit++;
+      }
+    }
+    grid = g;
+    bpm = clampBpm(bytes[0] + MIN_BPM);
+    return true;
+  }
+
+  function readHash() {
+    var m = (location.hash || "").match(/[#&]decks=([A-Za-z0-9_-]+)/);
+    return m ? m[1] : null;
+  }
+  function shareURL() {
+    return location.href.replace(/#.*$/, "") + "#decks=" + encode();
+  }
+  /* replaceState, so building a loop never floods the back button and never
+     reloads. (It also doesn't fire hashchange, so our own writes can't loop
+     back on the listener below.) */
+  function syncURL() {
+    var code = encode();
+    try {
+      history.replaceState(null, "",
+        location.pathname + location.search + "#decks=" + code);
+    } catch (e) {}
+    if (elLink) elLink.value = shareURL();
+  }
+
+  /* ================= audio engine =================
+     Built lazily on the first sound a gesture asks for: browsers block an
+     AudioContext that nothing clicked into life, exactly like the boombox. */
+  var actx = null, master = null, reverb = null, noiseBuf = null;
+
+  function makeNoise(sec) {
+    var n = (actx.sampleRate * sec) | 0;
+    var buf = actx.createBuffer(1, n, actx.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+  /* A short decaying-noise impulse gives the bells and snaps an icy room to
+     ring out into, without shipping a reverb sample. */
+  function makeImpulse(sec, decay) {
+    var n = (actx.sampleRate * sec) | 0;
+    var buf = actx.createBuffer(2, n, actx.sampleRate);
+    for (var ch = 0; ch < 2; ch++) {
+      var d = buf.getChannelData(ch);
+      for (var i = 0; i < n; i++)
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay);
+    }
+    return buf;
+  }
+  function ensureAudio() {
+    if (actx) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = new AC();
+    master = actx.createGain(); master.gain.value = 0.85;
+    master.connect(actx.destination);
+    reverb = actx.createConvolver(); reverb.buffer = makeImpulse(1.6, 2.4);
+    var revGain = actx.createGain(); revGain.gain.value = 0.5;
+    reverb.connect(revGain); revGain.connect(master);
+    noiseBuf = makeNoise(1);
+  }
+  /* Exponential attack/decay envelope - the shape every voice below shares. */
+  function env(g, t, peak, attack, release) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + release);
+  }
+  function toReverb(node, amt) {
+    var s = actx.createGain(); s.gain.value = amt;
+    node.connect(s); s.connect(reverb);
+  }
+  function vKick(t) {
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(165, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.13);
+    env(g, t, 0.9, 0.005, 0.22);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.24);
+  }
+  function vSnap(t) {
+    var s = actx.createBufferSource(); s.buffer = noiseBuf;
+    var bp = actx.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = 1900; bp.Q.value = 0.7;
+    var g = actx.createGain();
+    env(g, t, 0.55, 0.003, 0.16);
+    s.connect(bp); bp.connect(g); g.connect(master);
+    toReverb(g, 0.22);
+    s.start(t); s.stop(t + 0.2);
+  }
+  function vHat(t) {
+    var s = actx.createBufferSource(); s.buffer = noiseBuf;
+    var hp = actx.createBiquadFilter();
+    hp.type = "highpass"; hp.frequency.value = 8200;
+    var g = actx.createGain();
+    env(g, t, 0.32, 0.002, 0.05);
+    s.connect(hp); hp.connect(g); g.connect(master);
+    s.start(t); s.stop(t + 0.06);
+  }
+  /* Glassy bell: a few inharmonic partials, fast attack, long ring, sent into
+     the reverb. freq picks the note, peak scales the whole voice. */
+  function vBell(t, freq, peak) {
+    [[1, peak], [2.01, peak * 0.35], [3.02, peak * 0.16]].forEach(function (p) {
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = freq * p[0];
+      env(g, t, p[1], 0.004, 0.62);
+      o.connect(g); g.connect(master);
+      toReverb(g, 0.6);
+      o.start(t); o.stop(t + 0.68);
+    });
+  }
+  function vBass(t, freq) {
+    var o = actx.createOscillator(), g = actx.createGain(),
+        lp = actx.createBiquadFilter();
+    o.type = "triangle"; o.frequency.value = freq;
+    lp.type = "lowpass"; lp.frequency.value = 520;
+    env(g, t, 0.7, 0.01, 0.3);
+    o.connect(lp); lp.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.32);
+  }
+  var VOICE = {
+    kick: vKick, snap: vSnap, hat: vHat,
+    chime: function (t) { vBell(t, 1046.50, 0.42); },   /* C6 */
+    bell:  function (t) { vBell(t, 830.61, 0.42); },    /* Ab5 */
+    bass:  function (t) { vBass(t, 87.31); }            /* F2  */
+  };
+  /* A one-shot when a pad is switched on, so placing a sound is audible even
+     before you hit play. The toggle is a user gesture, so warming audio here
+     is allowed. */
+  function preview(key) {
+    ensureAudio();
+    if (!actx) return;
+    if (actx.state === "suspended") actx.resume();
+    VOICE[key](actx.currentTime + 0.01);
+  }
+
+  /* ================= transport / scheduler =================
+     Lookahead scheduler (the standard Web Audio trick): a timer queues notes a
+     little ahead of the clock using absolute AudioContext times, so timing is
+     rock-solid and independent of the room's own animation frames. */
+  var playing = false, nextStep = 0, nextTime = 0;
+  var LOOKAHEAD = 0.1, TICK = 25;
+  var timer = null, raf = null;
+  var playQueue = [];      /* {step,time} pairs the playhead catches up to */
+  var activeCol = -1;
+
+  function stepDur() { return 60 / clampBpm(bpm) / 4; }   /* one 16th note */
+
+  function scheduleAhead() {
+    /* If a backgrounded tab throttled our timer, don't machine-gun every
+       missed step into the past - drop them and resync to the clock. */
+    if (nextTime < actx.currentTime) nextTime = actx.currentTime + 0.03;
+    while (nextTime < actx.currentTime + LOOKAHEAD) {
+      for (var r = 0; r < NROWS; r++) {
+        if (grid[r][nextStep]) VOICE[ROWS[r].key](nextTime);
+      }
+      playQueue.push({ step: nextStep, time: nextTime });
+      nextTime += stepDur();
+      nextStep = (nextStep + 1) % STEPS;
+    }
+    /* In a hidden tab the visual playhead (rAF) pauses while this timer keeps
+       running, so nothing drains the queue - cap it so a long spell offscreen
+       can't grow it without bound. */
+    if (playQueue.length > 64) playQueue.splice(0, playQueue.length - 64);
+    timer = setTimeout(scheduleAhead, TICK);
+  }
+
+  function drawPlayhead() {
+    if (!playing) return;
+    var now = actx.currentTime, step = activeCol;
+    while (playQueue.length && playQueue[0].time <= now) step = playQueue.shift().step;
+    if (step !== activeCol) setActiveCol(step);
+    raf = requestAnimationFrame(drawPlayhead);
+  }
+
+  function play() {
+    ensureAudio();
+    if (!actx) return;
+    if (actx.state === "suspended") actx.resume();
+    if (playing) return;
+    playing = true;
+    nextStep = 0; nextTime = actx.currentTime + 0.06; playQueue = [];
+    /* One sound system at a time: stop the boombox tape if it's rolling. */
+    if (window.LOUNGE && window.LOUNGE.musicPlaying &&
+        window.LOUNGE.musicPlaying()) window.LOUNGE.toggleMusic();
+    scheduleAhead();
+    raf = requestAnimationFrame(drawPlayhead);
+    updatePlayBtn();
+  }
+  function stop() {
+    if (!playing) return;
+    playing = false;
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    setActiveCol(-1);
+    updatePlayBtn();
+  }
+  function togglePlay() { playing ? stop() : play(); }
+  function updatePlayBtn() {
+    if (elPlay) elPlay.innerHTML = playing ? "■ STOP" : "▶ PLAY";
+  }
+
+  /* ================= grid DOM =================
+     Real <button>s in a roving-tabindex group: one cell is tabbable at a time,
+     arrows move focus, Space/Enter toggles (the native button activation, so
+     it's never double-handled). Each pad announces its row and step. */
+  var cells = [];          /* cells[row][step] -> button */
+  var ruler = [];          /* ruler[step] -> tick element */
+  var focusR = NROWS - 1, focusS = 0;   /* start the roving focus on the kick */
+
+  function buildGrid() {
+    gridEl.innerHTML = "";
+
+    var rrow = document.createElement("div");
+    rrow.className = "decks__row decks__ruler";
+    var spacer = document.createElement("div");
+    spacer.className = "decks__label";
+    rrow.appendChild(spacer);
+    for (var s = 0; s < STEPS; s++) {
+      var tk = document.createElement("div");
+      tk.className = "decks__tick" + (s % 4 === 0 ? " on-beat beatstart" : "");
+      tk.textContent = s + 1;
+      rrow.appendChild(tk);
+      ruler[s] = tk;
+    }
+    gridEl.appendChild(rrow);
+
+    for (var r = 0; r < NROWS; r++) {
+      cells[r] = [];
+      var row = document.createElement("div");
+      row.className = "decks__row";
+      var lab = document.createElement("div");
+      lab.className = "decks__label";
+      lab.textContent = ROWS[r].label;
+      row.appendChild(lab);
+      for (var s2 = 0; s2 < STEPS; s2++) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "decks__cell" + (s2 % 4 === 0 ? " beatstart" : "");
+        b.style.setProperty("--rc", ROWS[r].rc);
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", ROWS[r].label + " step " + (s2 + 1));
+        b.tabIndex = -1;
+        b.dataset.r = r; b.dataset.s = s2;
+        row.appendChild(b);
+        cells[r][s2] = b;
+      }
+      gridEl.appendChild(row);
+    }
+    cells[focusR][focusS].tabIndex = 0;
+    refreshGrid();
+  }
+
+  function refreshGrid() {
+    for (var r = 0; r < NROWS; r++)
+      for (var s = 0; s < STEPS; s++)
+        cells[r][s].setAttribute("aria-pressed", grid[r][s] ? "true" : "false");
+  }
+
+  function setActiveCol(step) {
+    if (activeCol >= 0) {
+      for (var r = 0; r < NROWS; r++) cells[r][activeCol].classList.remove("playcol");
+      if (ruler[activeCol]) ruler[activeCol].classList.remove("playcol");
+    }
+    activeCol = step;
+    if (activeCol >= 0) {
+      for (var r2 = 0; r2 < NROWS; r2++) cells[r2][activeCol].classList.add("playcol");
+      if (ruler[activeCol]) ruler[activeCol].classList.add("playcol");
+    }
+  }
+
+  function toggleCell(r, s) {
+    grid[r][s] = !grid[r][s];
+    cells[r][s].setAttribute("aria-pressed", grid[r][s] ? "true" : "false");
+    if (grid[r][s]) preview(ROWS[r].key);
+    syncURL();
+  }
+
+  function setFocus(nr, ns) {
+    nr = Math.max(0, Math.min(NROWS - 1, nr));
+    ns = Math.max(0, Math.min(STEPS - 1, ns));
+    cells[focusR][focusS].tabIndex = -1;
+    focusR = nr; focusS = ns;
+    var c = cells[focusR][focusS];
+    c.tabIndex = 0; c.focus();
+  }
+
+  gridEl.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest(".decks__cell") : null;
+    if (!b) return;
+    var r = +b.dataset.r, s = +b.dataset.s;
+    /* Clicking also becomes the roving-focus anchor. */
+    cells[focusR][focusS].tabIndex = -1;
+    focusR = r; focusS = s; b.tabIndex = 0;
+    toggleCell(r, s);
+  });
+  gridEl.addEventListener("keydown", function (e) {
+    if (!e.target.closest || !e.target.closest(".decks__cell")) return;
+    var k = e.key;
+    if (k === "ArrowLeft") { setFocus(focusR, focusS - 1); e.preventDefault(); }
+    else if (k === "ArrowRight") { setFocus(focusR, focusS + 1); e.preventDefault(); }
+    else if (k === "ArrowUp") { setFocus(focusR - 1, focusS); e.preventDefault(); }
+    else if (k === "ArrowDown") { setFocus(focusR + 1, focusS); e.preventDefault(); }
+    else if (k === "Home") { setFocus(focusR, 0); e.preventDefault(); }
+    else if (k === "End") { setFocus(focusR, STEPS - 1); e.preventDefault(); }
+    /* Space/Enter fall through to the button's native click above. */
+  });
+
+  /* ================= controls ================= */
+  function randomize() {
+    /* Weighted so it lands on something musical, not noise: kick on the beat,
+       snap on the backbeat, hats filling offbeats, bells and bass a sprinkle. */
+    grid = makeEmpty();
+    function idx(key) {
+      for (var r = 0; r < NROWS; r++) if (ROWS[r].key === key) return r;
+      return -1;
+    }
+    function set(key, prob, mask) {
+      var r = idx(key);
+      for (var s = 0; s < STEPS; s++)
+        if ((!mask || mask(s)) && Math.random() < prob) grid[r][s] = true;
+    }
+    set("kick", 0.92, function (s) { return s % 4 === 0; });
+    set("kick", 0.1);
+    set("snap", 0.85, function (s) { return s % 8 === 4; });
+    set("hat", 0.55, function (s) { return s % 2 === 0; });
+    set("hat", 0.22);
+    set("chime", 0.18);
+    set("bell", 0.2);
+    set("bass", 0.42, function (s) { return s % 4 === 0; });
+    refreshGrid();
+    syncURL();
+  }
+  function clearAll() {
+    grid = makeEmpty();
+    refreshGrid();
+    syncURL();
+  }
+
+  elPlay.addEventListener("click", togglePlay);
+  elRandom.addEventListener("click", randomize);
+  elClear.addEventListener("click", clearAll);
+  elTempo.addEventListener("input", function () {
+    bpm = clampBpm(+elTempo.value);
+    elBpm.textContent = bpm;
+    syncURL();
+  });
+  function refreshTempoUI() {
+    elTempo.value = bpm;
+    elBpm.textContent = bpm;
+  }
+
+  elCopy.addEventListener("click", function () {
+    syncURL();
+    var link = shareURL();
+    function flash() {
+      var old = elCopy.getAttribute("data-label") || elCopy.innerHTML;
+      elCopy.setAttribute("data-label", old);
+      elCopy.innerHTML = "❄ COPIED";
+      setTimeout(function () { elCopy.innerHTML = old; }, 1400);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(flash, function () {
+        elLink.select(); flash();
+      });
+    } else {
+      elLink.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      flash();
+    }
+  });
+
+  /* ================= open / close =================
+     Closing does NOT stop the sound: a loop you built keeps playing as the
+     room's soundtrack while you wander. Reopen the decks (or hit the boombox)
+     to stop it. */
+  var lastFocus = null;
+  function open() {
+    lastFocus = document.activeElement;
+    syncURL();
+    refreshTempoUI();
+    overlay.classList.add("is-open");
+    overlay.removeAttribute("aria-hidden");
+    document.addEventListener("keydown", onKeyDown);
+    updatePlayBtn();
+    elExit.focus();
+  }
+  function close() {
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+    document.removeEventListener("keydown", onKeyDown);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function onKeyDown(e) { if (e.key === "Escape") close(); }
+  elExit.addEventListener("click", close);
+  /* Click the dark backdrop (not the cabinet) to leave. */
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) close();
+  });
+
+  /* ================= init ================= */
+  buildGrid();
+
+  var initCode = readHash(), openedFromLink = false;
+  if (initCode && decode(initCode)) {
+    refreshGrid(); refreshTempoUI();
+    openedFromLink = true;
+  } else {
+    grid = loadDefault();
+    refreshGrid(); refreshTempoUI();
+  }
+  if (elLink) elLink.value = shareURL();
+
+  /* A shared link greets you with its loop already up. Wait a beat so the room
+     paints behind the panel first. */
+  if (openedFromLink) setTimeout(open, 60);
+
+  /* Someone pasting a fresh link into the address bar fires hashchange with no
+     reload - pick up the new loop and show it. (Our own replaceState writes
+     don't fire this, so there's no feedback loop.) */
+  window.addEventListener("hashchange", function () {
+    var code = readHash();
+    if (code && decode(code)) {
+      refreshGrid(); refreshTempoUI();
+      if (!overlay.classList.contains("is-open")) open();
+    }
+  });
+
+  /* Exposed for the room's deck fixture (miniState) and for headless checks,
+     the same way the game cabinets expose their internals. */
+  window.FrostDecks = {
+    open: open, close: close, stop: stop,
+    isPlaying: function () { return playing; },
+    miniState: function () {
+      var cols = [];
+      for (var s = 0; s < STEPS; s++) {
+        var any = false;
+        for (var r = 0; r < NROWS; r++) if (grid[r][s]) { any = true; break; }
+        cols[s] = any;
+      }
+      return { cols: cols, playing: playing, step: playing ? activeCol : -1 };
+    },
+    encode: encode,
+    load: function (code) {
+      var ok = decode(code);
+      if (ok) { refreshGrid(); refreshTempoUI(); syncURL(); }
+      return ok;
+    },
+    peek: function () {
+      return { playing: playing, bpm: bpm, activeCol: activeCol,
+               grid: grid.map(function (row) { return row.slice(); }),
+               code: encode() };
     }
   };
 })();
