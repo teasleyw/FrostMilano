@@ -5,11 +5,29 @@
 <style>
   body{
     margin:0; background:#05131f; color:#eafcff;
-    font-family:ui-monospace,Consolas,monospace;
+    /* Colour-emoji fonts sit ahead of the generic family for the same reason
+       they do in css/style.css: on Windows, Segoe UI Symbol (monochrome) wins
+       the fallback race before Segoe UI Emoji unless it is named outright,
+       and the snowflakes here would render as flat grey glyphs. */
+    font-family:ui-monospace,Consolas,
+      "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",monospace;
     display:flex; flex-direction:column; align-items:center; gap:14px;
     padding:24px 12px;
   }
   h1{ font-size:1rem; letter-spacing:2px; color:#b8ecff; margin:0; }
+  /* Styled to echo .navbar__btn on the main site so the trip back feels like
+     the same place, without pulling in the whole stylesheet. */
+  .back{
+    font-size:.78rem; letter-spacing:1px; text-decoration:none;
+    color:#eafcff; padding:6px 14px; border-radius:6px;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    border:2px outset #4bb4d8;
+    text-shadow:0 1px 0 #02101c;
+    transition:filter .12s ease, transform .08s ease;
+  }
+  .back:hover{ filter:brightness(1.25); color:#fff; transform:translateY(-1px); }
+  .back:active{ border-style:inset; transform:translateY(1px); }
+  .back:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
   p{ font-size:.8rem; color:#6bb8dd; margin:0; text-align:center; }
   canvas{
     /* Native pixel buffer, upscaled by CSS - never resample pixel art. */
@@ -21,6 +39,7 @@
   #hud{ font-size:.72rem; color:#2b6f96; }
 </style>
 
+<a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
 <p>click a tile to walk there &mdash; prototype</p>
 <canvas id="stage" width="340" height="300"></canvas>
