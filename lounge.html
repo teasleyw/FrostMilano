@@ -795,23 +795,22 @@ for the track</p>
     }
   }
 
-  /* A glowing neon sign centred at (cx, cy): dark backing plate, then the text
-     bloomed with a couple of shadow passes so it reads as lit tubing. */
+  /* Neon lettering centred at (cx, cy): no plate or frame - just lit tubing on
+     the wall. The coloured blur spills AROUND the glyphs as room glow, then a
+     bright near-white core is laid on top last so the letters stay readable. */
   function neonSign(cx, cy, text, glow) {
     ctx.save();
     ctx.font = 'bold 11px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    var w = Math.ceil(ctx.measureText(text).width) + 12;
-    ctx.fillStyle = "#0a0f14";
-    ctx.fillRect(Math.round(cx - w / 2), Math.round(cy - 9), w, 18);
-    ctx.strokeStyle = css(shade(rgb(glow), 0.5));
-    ctx.lineWidth = 1;
-    ctx.strokeRect(Math.round(cx - w / 2) + 0.5, Math.round(cy - 9) + 0.5, w - 1, 17);
+    var y = cy + 0.5;
     ctx.shadowColor = glow;
     ctx.fillStyle = glow;
-    ctx.shadowBlur = 7;  ctx.fillText(text, cx, cy + 0.5);
-    ctx.shadowBlur = 12; ctx.fillText(text, cx, cy + 0.5);
+    ctx.shadowBlur = 9; ctx.fillText(text, cx, y);   /* soft halo */
+    ctx.shadowBlur = 4; ctx.fillText(text, cx, y);   /* tube colour */
+    ctx.shadowBlur = 2;                              /* crisp lit core */
+    ctx.fillStyle = css(shade(rgb(glow), 1.75));
+    ctx.fillText(text, cx, y);
     ctx.restore();
   }
 
