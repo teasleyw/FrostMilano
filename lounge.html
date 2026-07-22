@@ -805,15 +805,22 @@ for the track</p>
     ctx.save();
     ctx.translate(cx, cy + 0.5);
     ctx.transform(1, TH / TW, 0, 1, 0, 0);   /* lie flat on the SE wall */
-    ctx.font = 'bold 8px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+    ctx.font = 'bold 9px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "1.2px";  /* few-px glyphs weld together unless opened right up */
     var g = rgb(glow);
+    /* At this size a tight glow pools in the gaps and fuses the letters into a
+       blob, so the light has to go WIDE and FAINT: a low-alpha, big-blur wash
+       stays below the visible threshold between glyphs (no bridging) yet still
+       spills a soft coloured glow onto the wall. The crisp bright core drawn
+       on top is what you actually read. */
     ctx.shadowColor = glow;
-    ctx.fillStyle = rgba(g, 0.5);
-    ctx.shadowBlur = 4; ctx.fillText(text, 0, 0);   /* tight halo on the wall */
-    ctx.shadowBlur = 0;                             /* crisp core, no bleed */
-    ctx.fillStyle = css(shade(g, 1.3));
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = rgba(g, 0.12);
+    ctx.fillText(text, 0, 0);                       /* wide, faint wall glow */
+    ctx.shadowBlur = 0;                             /* crisp, legible core */
+    ctx.fillStyle = css(shade(g, 1.45));
     ctx.fillText(text, 0, 0);
     ctx.restore();
   }
