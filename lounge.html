@@ -155,9 +155,19 @@
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
-<p>click a tile to walk &mdash; click a cabinet to play <b>BRICK SMASH</b> or <b>SNAKE</b></p>
+<p>click a tile to walk &mdash; click a cabinet to play <b>BRICK SMASH</b> or
+<b>SNAKE</b> &mdash; click the boombox for the track</p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
+
+<!-- The lounge track. preload="none" so an unvisited page costs nothing, and
+     no autoplay attribute: playback starts only when the boombox is clicked.
+     Drop the file in as audio/lounge-track.mp3 (see audio/README.txt) - until
+     then the boombox reports NO TAPE instead of failing silently. -->
+<audio id="lounge-track" loop preload="none">
+  <source src="audio/lounge-track.mp3" type="audio/mpeg" />
+  <source src="audio/lounge-track.ogg" type="audio/ogg" />
+</audio>
 
 <!-- ================= BRICK SMASH ================= -->
 <div id="arcade" class="arcade" role="dialog" aria-modal="true"
@@ -560,19 +570,34 @@
      the camera from anywhere in the room. CAB_H is the body's rise in px. */
   var CAB_H = 42;
 
-  /* A point on the SE (right) face of a cabinet at `tile`, in face-local
-     coordinates: u runs 0..1 back->front along the top edge, v runs 0..1
-     top->bottom down the body. The face is a parallelogram, so this affine
-     map is exact - it lets flat screen artwork sit on the angled face without
-     solving corners by hand, the same idea as wallPoint() for the poster. */
-  function cabFace(tile, u, v) {
+  /* A point on one upright face of a box at `tile`, in face-local coordinates:
+     u runs 0..1 left->right across the face as drawn, v runs 0..1 top->bottom
+     down the body. Each face is a parallelogram, so this affine map is exact -
+     it lets flat artwork sit on the angled face without solving corners by
+     hand, the same idea as wallPoint() for the poster.
+
+     Which face a fixture uses depends on which wall it stands against, because
+     only one of the two visible faces looks INTO the room:
+
+       against the back-left wall (tx 0)  -> room lies toward +x -> "SE"
+       against the back-right wall (ty 0) -> room lies toward +y -> "SW"
+
+     Both directions run left->right on screen, so artwork never comes out
+     mirrored when a fixture switches sides. `h` defaults to the cabinet
+     height so the boombox can borrow the same machinery at its own height. */
+  function cabFace(tile, u, v, side, h) {
+    h = (h === undefined) ? CAB_H : h;
     var c = centre(tile[0], tile[1]);
+    if (side === "SW") {
+      return { x: c.x - TW / 2 + u * (TW / 2),
+               y: (c.y - h) + u * (TH / 2) + v * h };
+    }
     return { x: c.x + u * (TW / 2),
-             y: (c.y + TH / 2 - CAB_H) - u * (TH / 2) + v * CAB_H };
+             y: (c.y + TH / 2 - h) - u * (TH / 2) + v * h };
   }
-  function cabQuad(tile, u0, u1, v0, v1, fill) {
-    var a = cabFace(tile, u0, v0), b = cabFace(tile, u1, v0);
-    var d = cabFace(tile, u1, v1), e = cabFace(tile, u0, v1);
+  function cabQuad(tile, u0, u1, v0, v1, fill, side, h) {
+    var a = cabFace(tile, u0, v0, side, h), b = cabFace(tile, u1, v0, side, h);
+    var d = cabFace(tile, u1, v1, side, h), e = cabFace(tile, u0, v1, side, h);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.lineTo(d.x, d.y); ctx.lineTo(e.x, e.y);
@@ -580,9 +605,10 @@
   }
 
   /* On hover, a floating label so a fixture names itself before the click. */
-  function cabinetLabel(tile, label) {
+  function cabinetLabel(tile, label) { cabinetLabelAt(tile, CAB_H, label); }
+  function cabinetLabelAt(tile, h, label) {
     var c = centre(tile[0], tile[1]);
-    var lx = c.x, ly = c.y - TH / 2 - CAB_H - 12;
+    var lx = c.x, ly = c.y - TH / 2 - h - 12;
     ctx.font = '8px ui-monospace,Consolas,monospace';
     ctx.textBaseline = "top";
     var w = Math.ceil(ctx.measureText(label).width) + 8;
@@ -634,8 +660,14 @@
      Brick Smash's row colours. */
   function snakeCab(hovered) {
     var tx = SNAKE[0], ty = SNAKE[1];
+    /* Stands against the back-right wall, so its screen goes on the SW face -
+       the one that looks into the room. The body's shading swaps to match:
+       the lit tone belongs on whichever side is turned toward us. */
     drawBox(tx, ty, CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
-            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.92)));
+            css(shade(rgb(HEX.deep2), 0.92)), css(shade(rgb(HEX.O), 1.35)));
+    var q = function (u0, u1, v0, v1, fill) {
+      cabQuad(SNAKE, u0, u1, v0, v1, fill, "SW");
+    };
 
     /* Phase-shifted from the Brick Smash cabinet so the two screens breathe
        out of sync, and tinted gold instead of cyan so the pair reads as two
@@ -643,22 +675,20 @@
     var glow = 0.6 + 0.4 * Math.sin(cabPulse + 1.6) * 0.5 + (hovered ? 0.35 : 0);
     glow = Math.max(0, Math.min(1, glow));
 
-    cabQuad(SNAKE, 0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.gold), 0.4 + glow * 0.5)));
-    cabQuad(SNAKE, 0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
-    cabQuad(SNAKE, 0.14, 0.86, 0.24, 0.58, "#02171f");
+    q(0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.gold), 0.4 + glow * 0.5)));
+    q(0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
+    q(0.14, 0.86, 0.24, 0.58, "#02171f");
 
     var segs = [[0.20, 0.28], [0.30, 0.28], [0.40, 0.28], [0.40, 0.38], [0.40, 0.48]];
     var segColors = [HEX.bright, HEX.light];
     segs.forEach(function (s, i) {
-      cabQuad(SNAKE, s[0], s[0] + 0.085, s[1], s[1] + 0.045,
-              css(shade(rgb(segColors[i % 2]), 0.55 + glow * 0.6)));
+      q(s[0], s[0] + 0.085, s[1], s[1] + 0.045,
+        css(shade(rgb(segColors[i % 2]), 0.55 + glow * 0.6)));
     });
     /* head, brighter than the body */
-    cabQuad(SNAKE, 0.5, 0.585, 0.48, 0.525,
-            css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
+    q(0.5, 0.585, 0.48, 0.525, css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
     /* the snowflake it's chasing */
-    cabQuad(SNAKE, 0.66, 0.7, 0.48, 0.525,
-            css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
+    q(0.66, 0.7, 0.48, 0.525, css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
 
     if (hovered) cabinetLabel(SNAKE, "▶ SNAKE");
   }
@@ -673,6 +703,124 @@
   }
   function inArcade(p) { return inCabinet(p, ARCADE); }
   function inSnake(p) { return inCabinet(p, SNAKE); }
+
+  /* ================= the boombox =================
+     Sits beside the speaker stack so the two read as one sound system. Click
+     it to start or stop the track.
+
+     There is deliberately no autoplay: browsers refuse audio that a user did
+     not ask for, and a homepage that starts playing music at you is rude even
+     when it is allowed. The click IS the gesture that unlocks it.
+
+     If audio/lounge-track.mp3 is missing the machine says NO TAPE rather than
+     failing silently - the same idea as the "NO SIGNAL" TVs on the main site,
+     so the room never looks broken while the file is still being added. */
+  var BOOMBOX = [8, 2];
+  var BOOM_H = 15;
+  block(BOOMBOX[0], BOOMBOX[1]);
+
+  var audioEl = document.getElementById("lounge-track");
+  var musicT = 0;          /* advances only while the track runs */
+  var notes = [];          /* the ♪ that drift up out of the speaker grille */
+  var noteT = 0;           /* countdown to the next note being released */
+
+  var NETWORK_NO_SOURCE = 3, HAVE_CURRENT_DATA = 2, ERR_SRC_NOT_SUPPORTED = 4;
+
+  /* Missing file, unplayable codec, or nothing selected. Read live rather
+     than cached: before the first click networkState is NETWORK_EMPTY, so the
+     boombox offers PLAY and only reports NO TAPE once an attempt has failed. */
+  function tapeMissing() {
+    return !audioEl || audioEl.networkState === NETWORK_NO_SOURCE ||
+           !!(audioEl.error && audioEl.error.code === ERR_SRC_NOT_SUPPORTED);
+  }
+
+  /* Deliberately stricter than !paused. With no file present the element sits
+     at paused === false while networkState is NO_SOURCE - so a naive check
+     reports "playing" and the EQ bars mime to silence. readyState is the only
+     honest answer to "is sound actually coming out". */
+  function musicPlaying() {
+    return !!audioEl && !audioEl.paused && !audioEl.ended &&
+           audioEl.readyState >= HAVE_CURRENT_DATA && !tapeMissing();
+  }
+  function toggleMusic() {
+    if (!audioEl) return;
+    /* Tests paused, not musicPlaying(), so a click still clears the phantom
+       not-paused-but-silent state a failed load leaves behind. */
+    if (!audioEl.paused) { audioEl.pause(); return; }
+    audioEl.volume = 0.65;
+    var p = audioEl.play();
+    if (p && p.catch) p.catch(function () { /* tapeMissing() reports it */ });
+  }
+
+  function boombox(hovered) {
+    var tile = BOOMBOX, c = centre(tile[0], tile[1]);
+    var playing = musicPlaying();
+    /* Lighter tone on the SW face - it faces the room, same as the speaker. */
+    drawBox(tile[0], tile[1], BOOM_H, css(shade(rgb(HEX.O), 1.55)),
+            css(shade(rgb(HEX.O), 1.4)), css(shade(rgb(HEX.O), 1.15)));
+    var q = function (u0, u1, v0, v1, fill) {
+      cabQuad(tile, u0, u1, v0, v1, fill, "SW", BOOM_H);
+    };
+
+    /* Carry handle: a flattened arch over the CENTRE of the top face. Centred
+       on the SW face's top edge instead, it sat off to one side and read as
+       floating beside the box rather than attached to it. */
+    ctx.save();
+    ctx.translate(c.x, c.y - BOOM_H);
+    ctx.scale(1, 0.45);
+    ctx.beginPath(); ctx.arc(0, 0, 9, Math.PI, 0);
+    ctx.strokeStyle = css(shade(rgb(HEX.f4), 1.1));
+    ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+
+    /* deck window between the two cones */
+    q(0.40, 0.60, 0.18, 0.42, css(shade(rgb(HEX.O), 1.9)));
+    q(0.43, 0.57, 0.22, 0.38, playing ? css(shade(rgb(HEX.bright), 0.55)) : "#0b1a24");
+
+    /* EQ bars: flat when idle, dancing when the track runs */
+    for (var b = 0; b < 5; b++) {
+      var lvl = playing ? 0.25 + 0.75 * Math.abs(Math.sin(musicT * 6 + b * 1.1)) : 0.12;
+      var bu = 0.41 + b * 0.037;
+      q(bu, bu + 0.026, 0.72 - lvl * 0.16, 0.72,
+        css(shade(rgb(b % 2 ? HEX.bright : HEX.gold), 0.5 + lvl * 0.6)));
+    }
+
+    /* the two cones, drawn sheared onto the SW face like the speaker's */
+    [0.22, 0.78].forEach(function (u) {
+      var f = cabFace(tile, u, 0.45, "SW", BOOM_H);
+      var r = 4 * (playing ? 1 + 0.14 * Math.sin(musicT * 7.2) : 1);
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.transform(1, 0.5, 0, 1, 0, 0);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = css(shade(rgb(HEX.O), 1.3)); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = playing ? HEX.bright : css(shade(rgb(HEX.f4), 0.9));
+      ctx.fill();
+      ctx.restore();
+    });
+
+    /* notes drift up out of the grille while it plays */
+    ctx.font = '8px ui-monospace,Consolas,monospace';
+    ctx.textBaseline = "top";
+    notes.forEach(function (n) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, n.life / 1.6));
+      ctx.fillStyle = HEX.bright;
+      ctx.fillText(n.g, c.x - 10 + n.x, c.y - BOOM_H - 6 - n.y);
+    });
+    ctx.globalAlpha = 1;
+
+    if (hovered) {
+      cabinetLabelAt(tile, BOOM_H,
+        tapeMissing() ? "NO TAPE" : (playing ? "■ STOP" : "▶ PLAY TRACK"));
+    }
+  }
+
+  function inBoombox(p) {
+    var c = centre(BOOMBOX[0], BOOMBOX[1]);
+    return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
+           p.y >= c.y - TH / 2 - BOOM_H && p.y <= c.y + TH / 2;
+  }
 
   /* ================= A* ================= */
   function findPath(sx, sy, gx, gy) {
@@ -849,6 +997,7 @@
   var hover = null;
   var arcadeHover = false;
   var snakeHover = false;
+  var boomHover = false;
 
   function render() {
     ctx.fillStyle = HEX.O;
@@ -902,22 +1051,32 @@
     /* everything that stands up, painted back to front */
     var items = [];
     items.push({ d: SPEAKER[0] + SPEAKER[1], f: function () {
+      /* Also against the back-right wall, so it turns the same way as SNAKE:
+         cones on the SW face, and the lighter body tone moved to that side.
+         Facing SE it was aiming its cones at the corner. */
       drawBox(SPEAKER[0], SPEAKER[1], 16, css(shade(rgb(HEX.deep2), 1.3)),
-              HEX.deep2, css(shade(rgb(HEX.deep2), 1.12)));
+              css(shade(rgb(HEX.deep2), 1.12)), HEX.deep2);
       drawBox(SPEAKER[0], SPEAKER[1], 32, css(shade(rgb(HEX.deep2), 1.15)),
-              css(shade(rgb(HEX.deep2), 0.85)), HEX.deep2);
+              HEX.deep2, css(shade(rgb(HEX.deep2), 0.85)));
       var c4 = centre(SPEAKER[0], SPEAKER[1]);
+      /* Cones breathe with the track, so the stack reads as the thing making
+         the noise rather than scenery that happens to be nearby. */
+      var thump = musicPlaying() ? 1 + 0.16 * Math.sin(musicT * 7.2) : 1;
       [[10, 5], [26, 3]].forEach(function (s) {
         ctx.save();
-        ctx.translate(c4.x + 8, c4.y - s[0]);
-        ctx.transform(1, -0.5, 0, 1, 0, 0);
-        ctx.beginPath(); ctx.arc(0, 0, s[1], 0, Math.PI * 2);
+        /* SW face: centre sits a quarter-tile LEFT of the tile centre, and the
+           surface falls away to the right, so the shear is +0.5 (it was -0.5
+           for the SE face, which rises to the right). */
+        ctx.translate(c4.x - 8, c4.y - s[0]);
+        ctx.transform(1, 0.5, 0, 1, 0, 0);
+        ctx.beginPath(); ctx.arc(0, 0, s[1] * thump, 0, Math.PI * 2);
         ctx.fillStyle = css(shade(rgb(HEX.O), 1.4)); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, 0, s[1] * 0.4, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(0, 0, s[1] * 0.4 * thump, 0, Math.PI * 2);
         ctx.fillStyle = HEX.gold; ctx.fill();
         ctx.restore();
       });
     } });
+    items.push({ d: BOOMBOX[0] + BOOMBOX[1], f: function () { boombox(boomHover); } });
     BENCH.forEach(function (b) {
       items.push({ d: b[0] + b[1], f: function () {
         drawBox(b[0], b[1], 7, HEX.f3, css(shade(rgb(HEX.f4), 0.8)), HEX.f4);
@@ -948,12 +1107,14 @@
     var p = toCanvas(ev);
     arcadeHover = inArcade(p);
     snakeHover = inSnake(p);
-    /* Suppress the tile highlight while over a cabinet, so the room doesn't
+    boomHover = !arcadeHover && !snakeHover && inBoombox(p);
+    /* Suppress the tile highlight while over a fixture, so the room doesn't
        advertise a walk to a spot the click won't actually walk to. */
-    hover = (arcadeHover || snakeHover) ? null : screenToTile(p.x, p.y);
+    hover = (arcadeHover || snakeHover || boomHover)
+      ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
-    hover = null; arcadeHover = false; snakeHover = false;
+    hover = null; arcadeHover = false; snakeHover = false; boomHover = false;
   });
   cv.addEventListener("click", function (ev) {
     var p = toCanvas(ev);
@@ -967,6 +1128,7 @@
       if (window.FrostSnake) window.FrostSnake.open();
       return;
     }
+    if (inBoombox(p)) { toggleMusic(); return; }
     var t = screenToTile(p.x, p.y);
     if (walkable(t.x, t.y)) player.goto(t.x, t.y);
   });
@@ -978,6 +1140,23 @@
     var dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     cabPulse += dt * 2.4;   /* drives the arcade screen's idle glow */
+    /* The music clock only advances while the track runs, so the EQ bars and
+       cone thump freeze the moment it is paused instead of miming to silence. */
+    if (musicPlaying()) {
+      musicT += dt;
+      noteT -= dt;
+      if (noteT <= 0) {
+        noteT = 0.42 + Math.random() * 0.4;
+        notes.push({ x: 4 + Math.random() * 12, y: 0, life: 1.6,
+                     g: Math.random() < 0.5 ? "♪" : "♫" });
+      }
+    }
+    for (var n = notes.length - 1; n >= 0; n--) {
+      notes[n].y += dt * 13;
+      notes[n].x += Math.sin(notes[n].life * 5) * dt * 5;
+      notes[n].life -= dt;
+      if (notes[n].life <= 0) notes.splice(n, 1);
+    }
     guests.forEach(function (g) { g.update(dt); });
     render();
     hud.textContent = "tile " + player.tx + "," + player.ty +
@@ -1002,7 +1181,10 @@
       }
       render();
     },
-    dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H }
+    musicPlaying: musicPlaying, tapeMissing: tapeMissing,
+    toggleMusic: toggleMusic, notes: notes,
+    dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H,
+            BOOMBOX: BOOMBOX, SPEAKER: SPEAKER, SNAKE: SNAKE, ARCADE: ARCADE }
   };
 })();
 </script>
