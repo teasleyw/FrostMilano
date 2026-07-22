@@ -82,6 +82,13 @@
     border:3px ridge #6bb8dd; border-radius:6px;
     background:#05131f; cursor:none;
   }
+  /* Snake is grid/blocky, so unlike bs-canvas it keeps the file-wide
+     pixelated rendering and pointer cursor - just needs the modal's sizing. */
+  #sn-canvas{
+    width:100%; height:auto; display:block;
+    border:3px ridge #6bb8dd; border-radius:6px;
+    background:#05131f;
+  }
   /* Faint CRT scanlines, echoing the video-vault TVs on the main site. */
   .arcade__screen::after{
     content:""; position:absolute; inset:0; pointer-events:none;
@@ -148,7 +155,7 @@
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
-<p>click a tile to walk &mdash; click the arcade cabinet to play <b>BRICK SMASH</b></p>
+<p>click a tile to walk &mdash; click a cabinet to play <b>BRICK SMASH</b> or <b>SNAKE</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
 
@@ -176,6 +183,33 @@
       </aside>
     </div>
     <button type="button" class="arcade__exit" id="bs-exit">&#10005; EXIT TO LOUNGE</button>
+  </div>
+</div>
+
+<!-- ================= SNAKE ================= -->
+<div id="snake" class="arcade" role="dialog" aria-modal="true"
+     aria-label="Snake" aria-hidden="true">
+  <div class="arcade__cab">
+    <div class="arcade__marquee">&#10052; SNAKE &#10052;</div>
+    <div class="arcade__body">
+      <div class="arcade__stage">
+        <div class="arcade__hud">
+          <span>SCORE <b id="sn-score">0</b></span>
+          <span>LEVEL <b id="sn-level">1</b></span>
+          <span>LENGTH <b id="sn-length">3</b></span>
+        </div>
+        <div class="arcade__screen">
+          <canvas id="sn-canvas" width="340" height="340"></canvas>
+          <div class="arcade__msg" id="sn-msg"></div>
+        </div>
+        <p class="arcade__hint">&#9650; &#9660; &#9664; &#9654; / WASD to steer &middot; SPACE or click to start &middot; ESC to exit</p>
+      </div>
+      <aside class="arcade__scores">
+        <h3>&#127942; HIGH SCORES</h3>
+        <ol id="sn-board"></ol>
+      </aside>
+    </div>
+    <button type="button" class="arcade__exit" id="sn-exit">&#10005; EXIT TO LOUNGE</button>
   </div>
 </div>
 
@@ -417,14 +451,17 @@
   var BLOCKED = {};
   function block(x, y) { BLOCKED[x + "," + y] = true; }
   var SPEAKER = [8, 0], BENCH = [[1, 7], [2, 7]];
-  /* The one interactive fixture: an arcade cabinet against the empty back-left
-     wall (the back-right already carries the speaker and the poster). Clicking
-     it opens BRICK SMASH. Blocked so guests route around it and can't stand
-     inside the machine. */
+  /* The interactive fixtures: an arcade cabinet against the empty back-left
+     wall (the back-right already carries the speaker and the poster), and a
+     second cabinet further along the back-right wall with room to spare
+     between the poster and the speaker. Clicking one opens its game. Both are
+     blocked so guests route around them and can't stand inside the machines. */
   var ARCADE = [0, 4];
+  var SNAKE = [6, 0];
   block(SPEAKER[0], SPEAKER[1]);
   BENCH.forEach(function (b) { block(b[0], b[1]); });
   block(ARCADE[0], ARCADE[1]);
+  block(SNAKE[0], SNAKE[1]);
 
   function walkable(x, y) {
     return x >= 0 && y >= 0 && x < GW && y < GH && !BLOCKED[x + "," + y];
@@ -517,33 +554,50 @@
     wallQuad(tx, 0.43, 0.49, 22, 37, HEX.chkLight);
   }
 
-  /* ================= arcade cabinet =================
-     The launcher for BRICK SMASH, drawn as a standing box (same trick as the
-     speaker) with a lit screen on its SE face - the one that turns toward the
-     camera from anywhere in the room. CAB_H is the body's rise in px. */
+  /* ================= arcade cabinets =================
+     BRICK SMASH and SNAKE are both drawn as standing boxes (same trick as the
+     speaker) with a lit screen on their SE face - the one that turns toward
+     the camera from anywhere in the room. CAB_H is the body's rise in px. */
   var CAB_H = 42;
 
-  /* A point on the SE (right) face of the cabinet in face-local coordinates:
-     u runs 0..1 back->front along the top edge, v runs 0..1 top->bottom down
-     the body. The face is a parallelogram, so this affine map is exact - it
-     lets flat screen artwork sit on the angled face without solving corners by
-     hand, the same idea as wallPoint() for the poster. */
-  function cabFace(u, v) {
-    var c = centre(ARCADE[0], ARCADE[1]);
+  /* A point on the SE (right) face of a cabinet at `tile`, in face-local
+     coordinates: u runs 0..1 back->front along the top edge, v runs 0..1
+     top->bottom down the body. The face is a parallelogram, so this affine
+     map is exact - it lets flat screen artwork sit on the angled face without
+     solving corners by hand, the same idea as wallPoint() for the poster. */
+  function cabFace(tile, u, v) {
+    var c = centre(tile[0], tile[1]);
     return { x: c.x + u * (TW / 2),
              y: (c.y + TH / 2 - CAB_H) - u * (TH / 2) + v * CAB_H };
   }
-  function cabQuad(u0, u1, v0, v1, fill) {
-    var a = cabFace(u0, v0), b = cabFace(u1, v0);
-    var d = cabFace(u1, v1), e = cabFace(u0, v1);
+  function cabQuad(tile, u0, u1, v0, v1, fill) {
+    var a = cabFace(tile, u0, v0), b = cabFace(tile, u1, v0);
+    var d = cabFace(tile, u1, v1), e = cabFace(tile, u0, v1);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
     ctx.lineTo(d.x, d.y); ctx.lineTo(e.x, e.y);
     ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
   }
 
-  /* Screen `glow` (0..1) rides an idle pulse so the machine reads as powered-on
-     and invites a click; it swells further on hover. */
+  /* On hover, a floating label so a fixture names itself before the click. */
+  function cabinetLabel(tile, label) {
+    var c = centre(tile[0], tile[1]);
+    var lx = c.x, ly = c.y - TH / 2 - CAB_H - 12;
+    ctx.font = '8px ui-monospace,Consolas,monospace';
+    ctx.textBaseline = "top";
+    var w = Math.ceil(ctx.measureText(label).width) + 8;
+    var bx = Math.max(2, Math.min(cv.width - w - 2, Math.round(lx - w / 2)));
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillRect(bx - 1, ly - 1, w + 2, 13);
+    ctx.fillStyle = HEX.bright;
+    ctx.fillRect(bx, ly, w, 11);
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillText(label, bx + 4, ly + 2);
+  }
+
+  /* Screen `glow` (0..1) rides an idle pulse so a machine reads as powered-on
+     and invites a click; it swells further on hover. Both cabinets share one
+     clock but read the wave at different phases so they don't pulse in lockstep. */
   var cabPulse = 0;
   function arcadeCab(hovered) {
     var tx = ARCADE[0], ty = ARCADE[1];
@@ -555,48 +609,70 @@
     glow = Math.max(0, Math.min(1, glow));
 
     /* marquee light across the top of the face */
-    cabQuad(0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.bright), 0.4 + glow * 0.5)));
+    cabQuad(ARCADE, 0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.bright), 0.4 + glow * 0.5)));
     /* screen bezel, then the dark screen itself */
-    cabQuad(0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
-    cabQuad(0.14, 0.86, 0.24, 0.58, "#02171f");
+    cabQuad(ARCADE, 0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
+    cabQuad(ARCADE, 0.14, 0.86, 0.24, 0.58, "#02171f");
     /* two rows of mini bricks + a paddle + a ball: a game caught mid-play */
     var rowC = [HEX.chkLight, HEX.bright, HEX.f3];
     for (var r = 0; r < 3; r++) {
       for (var col = 0; col < 4; col++) {
         var bu0 = 0.18 + col * 0.165, bv0 = 0.27 + r * 0.05;
-        cabQuad(bu0, bu0 + 0.13, bv0, bv0 + 0.035,
+        cabQuad(ARCADE, bu0, bu0 + 0.13, bv0, bv0 + 0.035,
                 css(shade(rgb(rowC[r]), 0.55 + glow * 0.6)));
       }
     }
-    cabQuad(0.4, 0.6, 0.53, 0.565, css(shade(rgb(HEX.bright), 0.6 + glow * 0.5)));
-    cabQuad(0.62, 0.66, 0.45, 0.49, css(shade(rgb(HEX.light), 0.7 + glow * 0.4)));
+    cabQuad(ARCADE, 0.4, 0.6, 0.53, 0.565, css(shade(rgb(HEX.bright), 0.6 + glow * 0.5)));
+    cabQuad(ARCADE, 0.62, 0.66, 0.45, 0.49, css(shade(rgb(HEX.light), 0.7 + glow * 0.4)));
 
-    /* On hover, a floating label so the fixture names itself before the click. */
-    if (hovered) {
-      var c = centre(tx, ty);
-      var lx = c.x, ly = c.y - TH / 2 - CAB_H - 12;
-      var label = "▶ BRICK SMASH";
-      ctx.font = '8px ui-monospace,Consolas,monospace';
-      ctx.textBaseline = "top";
-      var w = Math.ceil(ctx.measureText(label).width) + 8;
-      var bx = Math.max(2, Math.min(cv.width - w - 2, Math.round(lx - w / 2)));
-      ctx.fillStyle = HEX.bubbleInk;
-      ctx.fillRect(bx - 1, ly - 1, w + 2, 13);
-      ctx.fillStyle = HEX.bright;
-      ctx.fillRect(bx, ly, w, 11);
-      ctx.fillStyle = HEX.bubbleInk;
-      ctx.fillText(label, bx + 4, ly + 2);
-    }
+    if (hovered) cabinetLabel(ARCADE, "▶ BRICK SMASH");
   }
 
-  /* Screen-space box the cabinet occupies, for hit-testing. The tall art rises
+  /* SNAKE's screen preview: a checkerboard-striped body caught mid-slither
+     toward a snowflake, the same "frozen game in progress" idea as the bricks
+     above but drawn with the room's own light/dark check instead of borrowing
+     Brick Smash's row colours. */
+  function snakeCab(hovered) {
+    var tx = SNAKE[0], ty = SNAKE[1];
+    drawBox(tx, ty, CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
+            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.92)));
+
+    /* Phase-shifted from the Brick Smash cabinet so the two screens breathe
+       out of sync, and tinted gold instead of cyan so the pair reads as two
+       distinct machines at a glance. */
+    var glow = 0.6 + 0.4 * Math.sin(cabPulse + 1.6) * 0.5 + (hovered ? 0.35 : 0);
+    glow = Math.max(0, Math.min(1, glow));
+
+    cabQuad(SNAKE, 0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.gold), 0.4 + glow * 0.5)));
+    cabQuad(SNAKE, 0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
+    cabQuad(SNAKE, 0.14, 0.86, 0.24, 0.58, "#02171f");
+
+    var segs = [[0.20, 0.28], [0.30, 0.28], [0.40, 0.28], [0.40, 0.38], [0.40, 0.48]];
+    var segColors = [HEX.bright, HEX.light];
+    segs.forEach(function (s, i) {
+      cabQuad(SNAKE, s[0], s[0] + 0.085, s[1], s[1] + 0.045,
+              css(shade(rgb(segColors[i % 2]), 0.55 + glow * 0.6)));
+    });
+    /* head, brighter than the body */
+    cabQuad(SNAKE, 0.5, 0.585, 0.48, 0.525,
+            css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
+    /* the snowflake it's chasing */
+    cabQuad(SNAKE, 0.66, 0.7, 0.48, 0.525,
+            css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
+
+    if (hovered) cabinetLabel(SNAKE, "▶ SNAKE");
+  }
+
+  /* Screen-space box a cabinet occupies, for hit-testing. The tall art rises
      over off-grid tiles, so we click the machine we can see rather than its
      footprint diamond. */
-  function inArcade(p) {
-    var c = centre(ARCADE[0], ARCADE[1]);
+  function inCabinet(p, tile) {
+    var c = centre(tile[0], tile[1]);
     return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
            p.y >= c.y - TH / 2 - CAB_H && p.y <= c.y + TH / 2;
   }
+  function inArcade(p) { return inCabinet(p, ARCADE); }
+  function inSnake(p) { return inCabinet(p, SNAKE); }
 
   /* ================= A* ================= */
   function findPath(sx, sy, gx, gy) {
@@ -772,6 +848,7 @@
   /* ================= render ================= */
   var hover = null;
   var arcadeHover = false;
+  var snakeHover = false;
 
   function render() {
     ctx.fillStyle = HEX.O;
@@ -833,7 +910,7 @@
       [[10, 5], [26, 3]].forEach(function (s) {
         ctx.save();
         ctx.translate(c4.x + 8, c4.y - s[0]);
-        ctx.transform(1, 0.5, 0, 1, 0, 0);
+        ctx.transform(1, -0.5, 0, 1, 0, 0);
         ctx.beginPath(); ctx.arc(0, 0, s[1], 0, Math.PI * 2);
         ctx.fillStyle = css(shade(rgb(HEX.O), 1.4)); ctx.fill();
         ctx.beginPath(); ctx.arc(0, 0, s[1] * 0.4, 0, Math.PI * 2);
@@ -848,6 +925,8 @@
     });
     items.push({ d: ARCADE[0] + ARCADE[1],
                  f: function () { arcadeCab(arcadeHover); } });
+    items.push({ d: SNAKE[0] + SNAKE[1],
+                 f: function () { snakeCab(snakeHover); } });
     guests.forEach(function (g) {
       items.push({ d: g.depth(), f: function () { g.draw(); } });
     });
@@ -868,19 +947,24 @@
   cv.addEventListener("mousemove", function (ev) {
     var p = toCanvas(ev);
     arcadeHover = inArcade(p);
-    /* Suppress the tile highlight while over the cabinet, so the room doesn't
+    snakeHover = inSnake(p);
+    /* Suppress the tile highlight while over a cabinet, so the room doesn't
        advertise a walk to a spot the click won't actually walk to. */
-    hover = arcadeHover ? null : screenToTile(p.x, p.y);
+    hover = (arcadeHover || snakeHover) ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
-    hover = null; arcadeHover = false;
+    hover = null; arcadeHover = false; snakeHover = false;
   });
   cv.addEventListener("click", function (ev) {
     var p = toCanvas(ev);
-    /* The cabinet wins the click before the floor does: its art overlaps
+    /* A cabinet wins the click before the floor does: its art overlaps
        tiles you would otherwise walk to. */
     if (inArcade(p)) {
       if (window.FrostArcade) window.FrostArcade.open();
+      return;
+    }
+    if (inSnake(p)) {
+      if (window.FrostSnake) window.FrostSnake.open();
       return;
     }
     var t = screenToTile(p.x, p.y);
@@ -1363,6 +1447,367 @@
       return { state: state, score: score, level: level, lives: lives,
                liveCount: liveCount, paddleX: paddleX,
                ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy },
+               scores: scores.slice() };
+    }
+  };
+})();
+</script>
+
+<script>
+/* =======================================================================
+   SNAKE :: the lounge's second arcade cabinet
+   Same shell as Brick Smash (state machine, localStorage leaderboard, pause
+   on a hidden tab) so the two machines feel like one arcade, not two bolted-
+   together widgets. The board itself borrows the room's own black-and-white
+   check for its floor and the checkerboard-striped body, and the food is a
+   plain callback to the site's snowflake motif rather than an invented icon.
+   ======================================================================= */
+(function () {
+  "use strict";
+
+  var overlay = document.getElementById("snake");
+  var cv = document.getElementById("sn-canvas");
+  if (!overlay || !cv) return;
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+
+  var elScore = document.getElementById("sn-score");
+  var elLevel = document.getElementById("sn-level");
+  var elLength = document.getElementById("sn-length");
+  var elMsg = document.getElementById("sn-msg");
+  var elBoard = document.getElementById("sn-board");
+  var elExit = document.getElementById("sn-exit");
+
+  /* ---- palette: the lounge's ice tones, plus its checkerboard ---- */
+  var INK = "#02101c";
+  var CELL_A = "#05131f", CELL_B = "#08192a";   /* a check faint enough not to fight the snake */
+  var BODY = ["#38e6ff", "#b8ecff"];             /* alternates per segment - a checkerboard snake */
+  var GOLD = "#ffd68a";
+
+  /* ---- geometry: 17x17 nods to the room's own 9x9 without copying it ---- */
+  var CELL = 20, COLS = W / CELL, ROWS = H / CELL;
+
+  /* ---- tuning ---- */
+  var BASE_INTERVAL = 140;   /* ms per step, level 1 */
+  var MIN_INTERVAL = 70;
+  var STEP_MS = 8;           /* interval trimmed by this much per level */
+  var GROW_PER_LEVEL = 5;    /* food eaten before the level (and speed) ticks up */
+  var START_LEN = 3;
+
+  /* ---- leaderboard (localStorage; entries escaped on render) ---- */
+  var KEY = "frost_snake_v1";
+  var MAX_SCORES = 8;
+  var SEED = [
+    { i: "FRO", s: 300 }, { i: "ICE", s: 220 }, { i: "MIL", s: 160 },
+    { i: "SNO", s: 100 }, { i: "AAA", s: 50 }
+  ];
+
+  function loadScores() {
+    var list = SEED.slice();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var v = JSON.parse(raw);
+        if (Array.isArray(v)) list = v;
+      }
+    } catch (e) {}
+    return list.filter(function (e) { return e && typeof e.s === "number"; })
+               .sort(function (a, b) { return b.s - a.s; })
+               .slice(0, MAX_SCORES);
+  }
+  function saveScores(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function renderBoard(highlight) {
+    elBoard.innerHTML = scores.map(function (e, idx) {
+      return '<li' + (idx === highlight ? ' class="is-new"' : "") + ">" +
+        '<span class="rank">' + (idx + 1) + "</span>" +
+        '<span class="who">' + esc(e.i) + "</span>" +
+        '<span class="pts">' + e.s + "</span></li>";
+    }).join("");
+  }
+  function qualifies(sc) {
+    if (sc <= 0) return false;
+    return scores.length < MAX_SCORES || sc > scores[scores.length - 1].s;
+  }
+  function submit(initials, sc) {
+    var name = (initials || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
+    scores.push({ i: name, s: sc });
+    scores.sort(function (a, b) { return b.s - a.s; });
+    scores = scores.slice(0, MAX_SCORES);
+    saveScores(scores);
+    var at = scores.indexOf(scores.filter(function (e) {
+      return e.i === name && e.s === sc;
+    })[0]);
+    renderBoard(at);
+    return at;
+  }
+
+  var scores = loadScores();
+
+  /* ================= game state ================= */
+  var STATE = { IDLE: 0, PLAY: 1, PAUSED: 2, OVER: 3, ENTER: 4 };
+  var state = STATE.IDLE;
+  var score = 0, level = 1, interval = BASE_INTERVAL, acc = 0;
+  var snake = [], dir = { x: 1, y: 0 }, nextDir = { x: 1, y: 0 };
+  var food = { x: 0, y: 0 };
+  var foodPulse = 0;
+  var raf = null, lastT = 0, running = false;
+
+  function placeFood() {
+    var fx, fy, hit;
+    do {
+      fx = (Math.random() * COLS) | 0;
+      fy = (Math.random() * ROWS) | 0;
+      hit = snake.some(function (s) { return s.x === fx && s.y === fy; });
+    } while (hit);
+    food.x = fx; food.y = fy;
+  }
+
+  function newGame() {
+    score = 0; level = 1; interval = BASE_INTERVAL; acc = 0;
+    var hx = (COLS / 2) | 0, hy = (ROWS / 2) | 0;
+    snake = [];
+    for (var i = 0; i < START_LEN; i++) snake.push({ x: hx - i, y: hy });
+    dir = { x: 1, y: 0 }; nextDir = dir;
+    placeFood();
+    syncHud();
+    state = STATE.IDLE;
+    showMsg('<b>SNAKE</b>' +
+      '<small class="blink">CLICK OR PRESS SPACE TO START</small>');
+  }
+
+  function gameOver() {
+    if (qualifies(score)) {
+      state = STATE.ENTER;
+      showMsg('<b>NEW HIGH SCORE!</b>' +
+        '<small>' + score + ' points &middot; enter your initials</small>' +
+        '<form class="arcade__enter" id="sn-enter">' +
+        '<input id="sn-initials" maxlength="3" autocomplete="off" ' +
+        'aria-label="Your initials" placeholder="AAA">' +
+        '<button type="submit" class="arcade__exit">OK</button></form>');
+      var form = document.getElementById("sn-enter");
+      var inp = document.getElementById("sn-initials");
+      if (inp) inp.focus();
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          submit(inp ? inp.value : "", score);
+          state = STATE.OVER;
+          showMsg('<b>GAME OVER</b><small>' + score +
+            ' points</small><small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+        });
+      }
+    } else {
+      state = STATE.OVER;
+      showMsg('<b>GAME OVER</b><small>' + score +
+        ' points</small><small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+    }
+  }
+
+  function syncHud() {
+    elScore.textContent = score;
+    elLevel.textContent = level;
+    elLength.textContent = snake.length;
+  }
+  function showMsg(html) {
+    if (html == null) { elMsg.hidden = true; elMsg.innerHTML = ""; return; }
+    elMsg.hidden = false; elMsg.innerHTML = html;
+  }
+
+  /* ================= step ================= */
+  function step() {
+    dir = nextDir;
+    var head = snake[0];
+    var nx = head.x + dir.x, ny = head.y + dir.y;
+    if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) { gameOver(); return; }
+
+    var eating = (nx === food.x && ny === food.y);
+    /* Skip the tail cell when it isn't eating: that cell is vacated the same
+       tick, so moving into it is legal - the classic snake-chasing-its-tail
+       edge case. */
+    var limit = eating ? snake.length : snake.length - 1;
+    for (var i = 0; i < limit; i++) {
+      if (snake[i].x === nx && snake[i].y === ny) { gameOver(); return; }
+    }
+
+    snake.unshift({ x: nx, y: ny });
+    if (eating) {
+      score += 10 * level; syncHud();
+      if (snake.length % GROW_PER_LEVEL === 0) {
+        level++;
+        interval = Math.max(MIN_INTERVAL, BASE_INTERVAL - (level - 1) * STEP_MS);
+        elLevel.textContent = level;
+      }
+      placeFood();
+    } else {
+      snake.pop();
+    }
+    elLength.textContent = snake.length;
+  }
+
+  /* ================= draw ================= */
+  function draw() {
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        ctx.fillStyle = (x + y) % 2 === 0 ? CELL_A : CELL_B;
+        ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+      }
+    }
+
+    /* food: a gentle pulse so it reads as alive, not just a marker */
+    var fx = food.x * CELL + CELL / 2, fy = food.y * CELL + CELL / 2;
+    var pulse = 0.85 + 0.15 * Math.sin(foodPulse);
+    ctx.save();
+    ctx.shadowColor = GOLD; ctx.shadowBlur = 8;
+    ctx.fillStyle = GOLD;
+    ctx.font = "bold " + Math.round((CELL - 4) * pulse) + "px ui-monospace,Consolas,monospace";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("❄", fx, fy + 1);
+    ctx.restore();
+
+    /* body, tail first so the head paints on top of any overlap */
+    for (var i = snake.length - 1; i >= 0; i--) {
+      var seg = snake[i], isHead = i === 0;
+      var col = BODY[i % 2];
+      var px = seg.x * CELL, py = seg.y * CELL;
+      if (isHead) {
+        ctx.save();
+        ctx.shadowColor = BODY[0]; ctx.shadowBlur = 8;
+        ctx.fillStyle = col;
+        ctx.fillRect(px + 1, py + 1, CELL - 2, CELL - 2);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = col;
+        ctx.fillRect(px + 1, py + 1, CELL - 2, CELL - 2);
+      }
+      /* top bevel, the same stacked-block cue Brick Smash's bricks use */
+      ctx.fillStyle = "rgba(255,255,255,.25)";
+      ctx.fillRect(px + 1, py + 1, CELL - 2, 2);
+
+      if (isHead) {
+        /* two eye dots on the leading edge, offset by the direction of travel */
+        var cx = px + CELL / 2, cy = py + CELL / 2;
+        var fwx = dir.x * 3, fwy = dir.y * 3;
+        var perpX = dir.y * 3, perpY = dir.x * 3;
+        ctx.fillStyle = INK;
+        ctx.fillRect(cx + fwx + perpX - 1, cy + fwy + perpY - 1, 2, 2);
+        ctx.fillRect(cx + fwx - perpX - 1, cy + fwy - perpY - 1, 2, 2);
+      }
+    }
+  }
+
+  /* ================= loop ================= */
+  function update(dt) {
+    foodPulse += dt * 4;
+    if (state !== STATE.PLAY) return;
+    acc += dt * 1000;
+    while (acc >= interval) {
+      acc -= interval;
+      step();
+      if (state !== STATE.PLAY) { acc = 0; break; }
+    }
+  }
+  function frame(now) {
+    if (!running) return;
+    var dt = Math.min((now - lastT) / 1000, 0.05);
+    lastT = now;
+    update(dt);
+    draw();
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* ================= input ================= */
+  function pressStart() {
+    if (state === STATE.IDLE || state === STATE.PAUSED) { state = STATE.PLAY; showMsg(null); }
+    else if (state === STATE.OVER) newGame();
+    /* PLAY and ENTER swallow it: no restart mid-run, no skipping entry. */
+  }
+
+  function turn(dx, dy) {
+    /* Refuse a reversal - the only illegal move in Snake. */
+    if (dx === -dir.x && dy === -dir.y) return;
+    nextDir = { x: dx, y: dy };
+  }
+
+  cv.addEventListener("mousedown", function (e) {
+    e.preventDefault(); pressStart();
+  });
+  cv.addEventListener("touchstart", function (e) {
+    e.preventDefault(); pressStart();
+  }, { passive: false });
+
+  /* Key handling lives at document level but only bites while the cabinet is
+     open, so the room's own controls are untouched when it's closed. */
+  function onKeyDown(e) {
+    if (!running) return;
+    var k = e.key;
+    if (k === "ArrowUp" || k === "w" || k === "W") { turn(0, -1); e.preventDefault(); }
+    else if (k === "ArrowDown" || k === "s" || k === "S") { turn(0, 1); e.preventDefault(); }
+    else if (k === "ArrowLeft" || k === "a" || k === "A") { turn(-1, 0); e.preventDefault(); }
+    else if (k === "ArrowRight" || k === "d" || k === "D") { turn(1, 0); e.preventDefault(); }
+    else if (k === " " || k === "Spacebar") {
+      /* Don't hijack Space while typing initials into the entry field. */
+      if (state !== STATE.ENTER) { pressStart(); e.preventDefault(); }
+    } else if (k === "Escape") { close(); }
+  }
+
+  /* ================= open / close ================= */
+  var lastFocus = null;
+  function open() {
+    if (running) return;
+    lastFocus = document.activeElement;
+    scores = loadScores();
+    renderBoard(-1);
+    overlay.classList.add("is-open");
+    overlay.removeAttribute("aria-hidden");
+    document.addEventListener("keydown", onKeyDown);
+    running = true;
+    lastT = performance.now();
+    newGame();
+    raf = requestAnimationFrame(frame);
+    elExit.focus();
+  }
+  function close() {
+    if (!running) return;
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    document.removeEventListener("keydown", onKeyDown);
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  elExit.addEventListener("click", close);
+  /* Pause mid-run if the tab is hidden, so the snake doesn't run itself into
+     a wall while you're away - same idea as Brick Smash's paused ball. */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === STATE.PLAY) {
+      state = STATE.PAUSED;
+      showMsg('<b>PAUSED</b><small class="blink">CLICK OR PRESS SPACE</small>');
+    }
+  });
+
+  /* step/draw/peek are exposed for the same reason the room exposes them:
+     requestAnimationFrame is suspended in a hidden tab, so a headless check
+     needs a synchronous way to advance and inspect the game. */
+  window.FrostSnake = {
+    open: open, close: close,
+    step: function (dt, n) {
+      for (var i = 0; i < (n || 1); i++) update(dt || 0.016);
+      draw();
+    },
+    start: pressStart,
+    turn: turn,
+    peek: function () {
+      return { state: state, score: score, level: level,
+               length: snake.length, dir: { x: dir.x, y: dir.y },
+               snake: snake.slice(), food: { x: food.x, y: food.y },
                scores: scores.slice() };
     }
   };
