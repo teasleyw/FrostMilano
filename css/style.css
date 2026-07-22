@@ -73,7 +73,10 @@ a{ color:var(--ice-bright); }
   position:absolute; top:-20px; color:#fff; user-select:none;
   text-shadow:0 0 6px rgba(160,225,255,.9);
   /* Two animations run at once: the fall, and the glint. JS supplies a
-     duration + delay pair for each (see spawn() in js/main.js). */
+     duration + delay pair for each, plus --sweep and --glint-delay, which the
+     ::after flare below reads (see spawn() in js/main.js). Custom properties
+     are the only way to hand timing to a pseudo-element - it cannot be
+     targeted by inline style. */
   animation-name:fall, glint;
   animation-timing-function:linear, ease-in-out;
   animation-iteration-count:1, infinite;
@@ -89,6 +92,11 @@ a{ color:var(--ice-bright); }
    window travels left → right. The flat stretch is the flake in shade; the
    rise and fall are deliberately symmetric (12% each side of the peak) so the
    light arrives and leaves at the same rate, the way a sweep does.
+
+   Deliberately restrained. Lifting the whole glyph's brightness made the
+   entire snowflake glow, which reads as the shape lighting up rather than
+   light catching an edge of it. The star flare below is the actual sparkle;
+   this only warms the glyph enough to sell that the flare belongs to it.
    No opacity or transform in here; `fall` owns both. */
 @keyframes glint{
   0%, 76%, 100%{
@@ -97,12 +105,38 @@ a{ color:var(--ice-bright); }
   }
   88%{
     text-shadow:
-      0 0 3px #fff,
-      0 0 10px rgba(255,246,222,.95),
-      0 0 20px rgba(255,214,138,.75),
-      0 0 34px rgba(255,190,90,.4);
-    filter:brightness(1.85);
+      0 0 2px #fff,
+      0 0 7px rgba(255,246,222,.8),
+      0 0 13px rgba(255,214,138,.45);
+    filter:brightness(1.18);
   }
+}
+
+/* The sparkle itself: a four-point star flare struck at the centre of the
+   flake, the way a facet throws light. Two crossed bars whose gradients fade
+   to nothing at the tips give the tapered arms, over a small round core.
+   Sized in em so the flare scales with each flake's font-size. */
+.flake::after{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  width:2.4em; height:2.4em;
+  pointer-events:none;
+  background:
+    radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,246,222,.35) 45%, transparent 70%),
+    linear-gradient(90deg, transparent 2%, rgba(255,250,235,.95) 50%, transparent 98%),
+    linear-gradient(0deg,  transparent 2%, rgba(255,250,235,.95) 50%, transparent 98%);
+  background-size:52% 52%, 100% 1.5px, 1.5px 100%;
+  background-position:center, center, center;
+  background-repeat:no-repeat;
+  transform:translate(-50%,-50%) scale(.2);
+  opacity:0;
+  animation:sparkle var(--sweep,7s) ease-in-out var(--glint-delay,0s) infinite;
+}
+/* Peaks at 88%, the same instant as `glint`, so the flare and the glyph's
+   warmth are one event rather than two. */
+@keyframes sparkle{
+  0%, 78%, 100%{ opacity:0; transform:translate(-50%,-50%) scale(.2); }
+  88%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
 }
 
 /* ---------- CHECKERBOARD ---------- */

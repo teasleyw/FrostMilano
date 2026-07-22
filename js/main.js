@@ -52,6 +52,11 @@
       f.style.opacity = 0.4 + Math.random() * 0.6;
       f.style.animationDuration = dur + "s, " + SWEEP + "s";
       f.style.animationDelay = "0s, " + phase + "s";
+      /* The star flare is drawn by .flake::after, which inline style cannot
+         reach. Custom properties inherit into the pseudo-element, so the
+         flare picks up the same clock and phase as the glyph's glint. */
+      f.style.setProperty("--sweep", SWEEP + "s");
+      f.style.setProperty("--glint-delay", phase + "s");
       layer.appendChild(f);
       setTimeout(function () {
         if (f.parentNode) f.parentNode.removeChild(f);
