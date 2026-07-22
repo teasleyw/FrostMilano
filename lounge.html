@@ -53,7 +53,13 @@
   var HEX = {
     O: "#05131f", deep2: "#0a2740", mid: "#0e4a6e", bright: "#38e6ff",
     light: "#b8ecff", f3: "#6bb8dd", f4: "#2b6f96", gold: "#ffd68a",
-    skin: "#d9a06b", mouth: "#8a5a3a"
+    skin: "#d9a06b", mouth: "#8a5a3a",
+    /* The checkerboard. The dark square is charcoal rather than true black on
+       purpose: avatars are outlined in #05131f, and on a pure black tile that
+       outline disappears and the figure loses its silhouette. Charcoal still
+       reads as black beside a near-white square but keeps the outline alive. */
+    chkLight: "#e9f4fa", chkDark: "#151f2a",
+    bubble: "#f2fbff", bubbleInk: "#0a1a26"
   };
 
   function rgb(hex) {
@@ -267,6 +273,7 @@
   /* ================= room ================= */
   var TW = 32, TH = 16, GW = 9, GH = 9;
   var OX = 170, OY = 96;
+  var WALL_H = 44;
 
   var cv = document.getElementById("stage");
   var ctx = cv.getContext("2d");
@@ -320,6 +327,56 @@
     ctx.closePath(); ctx.fill();
   }
 
+  /* A horizontal band across a run of wall segments. `d` is the drop from the
+     wall's top edge, `h` the band height; both follow the wall's slope, which
+     is what keeps the checkered trim sitting flat on the surface instead of
+     sliding off it. Side "L" is the back-left wall, "R" the back-right. */
+  function wallBand(from, to, side, d, h, fill) {
+    ctx.fillStyle = fill;
+    for (var i = from; i < to; i++) {
+      var c = centre(side === "L" ? 0 : i, side === "L" ? i : 0);
+      var ax = side === "L" ? c.x - TW / 2 : c.x;
+      var ay = (side === "L" ? c.y : c.y - TH / 2) - WALL_H + d;
+      var bx = side === "L" ? c.x : c.x + TW / 2;
+      var by = (side === "L" ? c.y - TH / 2 : c.y) - WALL_H + d;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+      ctx.lineTo(bx, by + h); ctx.lineTo(ax, ay + h);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  /* A point on the back-right wall in face-local coordinates: `u` runs 0..1
+     across one tile, `v` drops from the wall top. Lets flat artwork sit on the
+     wall in perspective without hand-solving each corner. */
+  function wallPoint(tx, u, v) {
+    var c = centre(tx, 0);
+    return { x: c.x + u * (TW / 2),
+             y: (c.y - TH / 2 - WALL_H) + u * (TH / 2) + v };
+  }
+  function wallQuad(tx, u0, u1, v0, v1, fill) {
+    var a = wallPoint(tx, u0, v0), b = wallPoint(tx, u1, v0);
+    var d = wallPoint(tx, u1, v1), e = wallPoint(tx, u0, v1);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.lineTo(d.x, d.y); ctx.lineTo(e.x, e.y);
+    ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  }
+
+  /* A framed record sleeve on the wall - the one warm object in the room, so
+     the eye has somewhere to land that isn't black, white or cyan. */
+  function poster(tx) {
+    /* Hangs below the frieze, which occupies v 3..15. */
+    wallQuad(tx, 0.08, 0.92, 18, 41, HEX.gold);
+    wallQuad(tx, 0.12, 0.88, 20, 39, css(shade(rgb(HEX.gold), 0.55)));
+    wallQuad(tx, 0.16, 0.84, 22, 37, HEX.O);
+    wallQuad(tx, 0.16, 0.84, 22, 30, css(shade(rgb(HEX.mid), 1.1)));
+    wallQuad(tx, 0.16, 0.84, 30, 37, HEX.deep2);
+    /* the sleeve's diagonal flash, echoing the sun glint on the snow */
+    wallQuad(tx, 0.27, 0.39, 22, 37, HEX.bright);
+    wallQuad(tx, 0.43, 0.49, 22, 37, HEX.chkLight);
+  }
+
   /* ================= A* ================= */
   function findPath(sx, sy, gx, gy) {
     if (!walkable(gx, gy)) return null;
@@ -353,6 +410,15 @@
   /* ================= entities ================= */
   var SPEED = 2.6;   /* tiles per second */
 
+  /* Kept short on purpose: a bubble wider than a couple of tiles covers the
+     room it is supposed to be standing in. */
+  var CHATTER = [
+    "stay frosty", "this beat is COLD", "who's on the decks?",
+    "brb, refill", "nice kicks", "is this the ice list?",
+    "sub-zero", "put the demo on", "❄❄❄", "lol",
+    "checkerboard hits", "10/10 floor"
+  ];
+
   function Guest(tx, ty, sprites, wander) {
     this.tx = tx; this.ty = ty;
     this.px = tx; this.py = ty;          /* smooth position, in tile units */
@@ -361,7 +427,55 @@
     this.dist = 0;                        /* drives the walk frame */
     this.wander = !!wander;
     this.idle = Math.random() * 3;
+    this.msg = null; this.msgT = 0;
+    this.nextMsg = 2 + Math.random() * 8;
   }
+
+  /* Only the wanderers talk. The player speaking unprompted would read as the
+     room putting words in your mouth. */
+  Guest.prototype.chat = function (dt) {
+    if (!this.wander) return;
+    if (this.msg) {
+      this.msgT -= dt;
+      if (this.msgT <= 0) this.msg = null;
+      return;
+    }
+    this.nextMsg -= dt;
+    if (this.nextMsg <= 0) {
+      this.msg = CHATTER[(Math.random() * CHATTER.length) | 0];
+      this.msgT = 3.4;
+      this.nextMsg = 7 + Math.random() * 11;
+    }
+  };
+
+  Guest.prototype.drawBubble = function () {
+    if (!this.msg) return;
+    var c = { x: (this.px - this.py) * (TW / 2) + OX,
+              y: (this.px + this.py) * (TH / 2) + OY };
+    ctx.font = '8px ui-monospace,Consolas,monospace';
+    ctx.textBaseline = "top";
+    var w = Math.ceil(ctx.measureText(this.msg).width) + 8;
+    var h = 13;
+    var x = Math.round(c.x - w / 2);
+    /* Clamp inside the canvas so a guest at the back wall or the far edge
+       still gets a readable bubble instead of a clipped one. */
+    x = Math.max(2, Math.min(cv.width - w - 2, x));
+    var y = Math.max(2, Math.round(c.y - SPR_H - h - 2));
+
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+    ctx.fillStyle = HEX.bubble;
+    ctx.fillRect(x, y, w, h);
+    /* tail, kept on the speaker even when the bubble itself was clamped */
+    var tx2 = Math.max(x + 2, Math.min(x + w - 5, Math.round(c.x - 2)));
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillRect(tx2 - 1, y + h, 5, 4);
+    ctx.fillStyle = HEX.bubble;
+    ctx.fillRect(tx2, y + h, 3, 3);
+
+    ctx.fillStyle = HEX.bubbleInk;
+    ctx.fillText(this.msg, x + 4, y + 3);
+  };
 
   Guest.prototype.goto = function (gx, gy) {
     var p = findPath(this.tx, this.ty, gx, gy);
@@ -369,6 +483,7 @@
   };
 
   Guest.prototype.update = function (dt) {
+    this.chat(dt);
     if (!this.path.length) {
       this.px = this.tx; this.py = this.ty;
       if (this.wander) {
@@ -440,38 +555,45 @@
     ctx.fillStyle = HEX.O;
     ctx.fillRect(0, 0, cv.width, cv.height);
 
-    var WALL_H = 44;
-    /* back-left wall */
-    ctx.fillStyle = HEX.deep2;
-    for (var ty = 0; ty < GH; ty++) {
-      var c = centre(0, ty);
-      ctx.beginPath();
-      ctx.moveTo(c.x - TW / 2, c.y - WALL_H);
-      ctx.lineTo(c.x, c.y - TH / 2 - WALL_H);
-      ctx.lineTo(c.x, c.y - TH / 2);
-      ctx.lineTo(c.x - TW / 2, c.y);
-      ctx.closePath(); ctx.fill();
+    /* Walls are quiet on purpose. With a hard black-and-white floor carrying
+       the room, patterning these too would leave the eye nowhere to rest. */
+    wallBand(0, GH, "L", 0, WALL_H, HEX.deep2);
+    wallBand(0, GW, "R", 0, WALL_H, css(shade(rgb(HEX.mid), 0.8)));
+
+    /* Checkered frieze: two stacked rows, offset per column, so it reads as a
+       real checkerboard band rather than a dashed stripe.
+
+       It runs along the TOP of the wall, not the bottom. Sat at skirting
+       height it butted straight into the checkerboard floor and the two
+       patterns dissolved into each other - as a frieze it has dark wall on
+       both sides and stays legible. */
+    var TRIM = 6, TOP = 3;
+    for (var w = 0; w < GH; w++) {
+      wallBand(w, w + 1, "L", TOP, TRIM,
+               w % 2 ? HEX.chkLight : HEX.chkDark);
+      wallBand(w, w + 1, "L", TOP + TRIM, TRIM,
+               w % 2 ? HEX.chkDark : HEX.chkLight);
     }
-    /* back-right wall, lit a touch brighter */
-    ctx.fillStyle = css(shade(rgb(HEX.mid), 0.8));
-    for (var tx = 0; tx < GW; tx++) {
-      var c2 = centre(tx, 0);
-      ctx.beginPath();
-      ctx.moveTo(c2.x, c2.y - TH / 2 - WALL_H);
-      ctx.lineTo(c2.x + TW / 2, c2.y - WALL_H);
-      ctx.lineTo(c2.x + TW / 2, c2.y);
-      ctx.lineTo(c2.x, c2.y - TH / 2);
-      ctx.closePath(); ctx.fill();
+    for (var w2 = 0; w2 < GW; w2++) {
+      wallBand(w2, w2 + 1, "R", TOP, TRIM,
+               w2 % 2 ? HEX.chkLight : HEX.chkDark);
+      wallBand(w2, w2 + 1, "R", TOP + TRIM, TRIM,
+               w2 % 2 ? HEX.chkDark : HEX.chkLight);
     }
 
-    /* floor */
+    poster(3);
+
+    /* Floor: the checkerboard is the room's whole identity, so it runs edge
+       to edge with no competing tint. */
     for (var y = 0; y < GH; y++) {
       for (var x = 0; x < GW; x++) {
         var c3 = centre(x, y);
         diamond(c3);
-        ctx.fillStyle = ((x + y) % 2 === 0) ? HEX.f4 : HEX.mid;
+        ctx.fillStyle = ((x + y) % 2 === 0) ? HEX.chkLight : HEX.chkDark;
         ctx.fill();
-        ctx.strokeStyle = css(shade(rgb(HEX.light), 0.35));
+        /* Hairline seam in the light square's own tone - a bright grid over
+           black squares would read as a wireframe, not a floor. */
+        ctx.strokeStyle = "rgba(120,160,185,.35)";
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -513,6 +635,10 @@
     });
     items.sort(function (a, b) { return a.d - b.d; });
     items.forEach(function (it) { it.f(); });
+
+    /* Bubbles last and unsorted: speech should never be occluded by furniture
+       standing in front of the speaker. */
+    guests.forEach(function (g) { g.drawBubble(); });
   }
 
   /* ================= input ================= */

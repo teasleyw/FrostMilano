@@ -25,6 +25,13 @@
      (color). Naming the emoji fonts explicitly forces the color versions.
      Without this, anything past the ~2010 emoji set renders as a grey glyph
      that reads like a broken image. */
+  /* Shared with the lounge floor in lounge.html - same two tones, so the
+     room and the site read as one place. The dark square is charcoal rather
+     than true black; against this page's navy it stays a colour instead of
+     punching a hole. */
+  --chk-light:  #e9f4fa;
+  --chk-dark:   #151f2a;
+
   --emoji:   "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
   --display: "Anton", "Impact", "Haettenschweiler", var(--emoji), sans-serif;
   --pixel:   "VT323", "Courier New", var(--emoji), monospace;
@@ -96,6 +103,22 @@ a{ color:var(--ice-bright); }
       0 0 34px rgba(255,190,90,.4);
     filter:brightness(1.85);
   }
+}
+
+/* ---------- CHECKERBOARD ---------- */
+/* One conic-gradient draws the whole pattern: the four colour stops land in
+   the four quadrants of each background tile, so a 16px tile yields 8px
+   squares. Deliberately used twice and only twice - once under the hero and
+   once above the footer - so it bookends the page. Repeated at every section
+   it would stop being an accent and start being wallpaper. */
+.checker-band{
+  height:16px;
+  background:conic-gradient(
+    var(--chk-dark) 0 25%, var(--chk-light) 0 50%,
+    var(--chk-dark) 0 75%, var(--chk-light) 0) 0 0 / 16px 16px;
+  border-top:2px solid var(--frost-4);
+  border-bottom:2px solid var(--frost-4);
+  margin:16px 0 20px;
 }
 
 /* ---------- TOP TICKER ---------- */
@@ -589,7 +612,9 @@ a{ color:var(--ice-bright); }
 .gb-entry__msg{ margin:2px 0 0; word-break:break-word; }
 
 /* ---------- FOOTER ---------- */
-.footer{ text-align:center; padding:18px 10px 6px; border-top:3px double var(--frost-3); margin-top:6px; }
+/* No border-top: the checker band directly above is the divider now, and
+   stacking its rule against a double border read as a seam. */
+.footer{ text-align:center; padding:18px 10px 6px; margin-top:6px; }
 .counter{
   font-family:var(--pixel); font-size:1.2rem; color:var(--ice-light);
   letter-spacing:1px; margin-bottom:10px;
