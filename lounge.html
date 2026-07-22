@@ -392,6 +392,7 @@ for the track</p>
     return [ch(c[0]), ch(c[1]), ch(c[2]), c[3]];
   }
   function css(c) { return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")"; }
+  function rgba(c, a) { return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
 
   var CLEAR = [0, 0, 0, 0];
 
@@ -596,7 +597,8 @@ for the track</p>
   var ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
-  /* Tiles occupied by furniture - the pathfinder routes around these. */
+  /* Tiles occupied by furniture - the pathfinder routes around these. Rebuilt
+     per room by buildBlocked(), since the two scenes hold different furniture. */
   var BLOCKED = {};
   function block(x, y) { BLOCKED[x + "," + y] = true; }
   var SPEAKER = [8, 0], BENCH = [[1, 7], [2, 7]];
@@ -608,11 +610,49 @@ for the track</p>
   var ARCADE = [0, 4];
   var SNAKE = [6, 0];
   var DECKS = [0, 1];
-  block(SPEAKER[0], SPEAKER[1]);
-  BENCH.forEach(function (b) { block(b[0], b[1]); });
-  block(ARCADE[0], ARCADE[1]);
-  block(SNAKE[0], SNAKE[1]);
-  block(DECKS[0], DECKS[1]);
+
+  /* ================= scenes =================
+     The lounge, and the bar you reach through the doorway in its back wall.
+     Both rooms are 9x9 so every bit of iso machinery below is shared; only the
+     contents differ. A door lives on the back-right wall (the one with the
+     wallQuad art helpers). `at` is the threshold tile that sends you to the
+     other room; `into` is where you LAND when you arrive here - one tile in
+     front of the door, so stepping in doesn't bounce you straight back out. */
+  var scene = "lounge";
+  var LOUNGE_DOOR = 4;   /* wall column of the BAR door, between poster(3) and SNAKE(6) */
+  var BAR_DOOR = 1;      /* wall column of the LOUNGE door back out of the bar */
+  var ROOMS = {
+    lounge: { at: [LOUNGE_DOOR, 0], into: [LOUNGE_DOOR, 1] },
+    bar:    { at: [BAR_DOOR, 0],    into: [BAR_DOOR, 1] }
+  };
+
+  /* Bar-room furniture (drawn in renderBar). The counter sits one tile off the
+     back wall so the bartender can stand behind it; the strip directly behind
+     is blocked too, so you can't wander around and stand in the well. */
+  var BAR_COUNTER = { x0: 3, x1: 6, y: 1 };
+  var BAR_H = 20;
+  var BARKEEP = [4, 0];
+  var STOOLS = [[3, 2], [5, 2]];
+  var STAGE = { x: 0, y0: 6, y1: 7 };
+
+  function buildBlocked() {
+    BLOCKED = {};
+    if (scene === "bar") {
+      for (var x = BAR_COUNTER.x0; x <= BAR_COUNTER.x1; x++) {
+        block(x, BAR_COUNTER.y);   /* counter */
+        block(x, 0);               /* the well behind it */
+      }
+      STOOLS.forEach(function (s) { block(s[0], s[1]); });
+      for (var y = STAGE.y0; y <= STAGE.y1; y++) block(STAGE.x, y);
+    } else {
+      block(SPEAKER[0], SPEAKER[1]);
+      BENCH.forEach(function (b) { block(b[0], b[1]); });
+      block(ARCADE[0], ARCADE[1]);
+      block(SNAKE[0], SNAKE[1]);
+      block(DECKS[0], DECKS[1]);
+      block(BOOMBOX[0], BOOMBOX[1]);
+    }
+  }
 
   function walkable(x, y) {
     return x >= 0 && y >= 0 && x < GW && y < GH && !BLOCKED[x + "," + y];
@@ -652,6 +692,31 @@ for the track</p>
     ctx.beginPath();
     ctx.moveTo(x, y - TH / 2 - h); ctx.lineTo(x + TW / 2, y - h);
     ctx.lineTo(x, y + TH / 2 - h); ctx.lineTo(x - TW / 2, y - h);
+    ctx.closePath(); ctx.fill();
+  }
+
+  /* Like drawBox, but over a rectangle in CONTINUOUS tile coordinates rather
+     than a single tile - so the bar counter and the stage riser can span a run
+     of tiles as one solid slab. centre() is affine, so fractional/edge coords
+     project correctly. Corners: A back, B right-back, C front, D left-front;
+     the camera sees the front (D->C, SW) and right (C->B, SE) faces plus the
+     raised top, exactly the split drawBox uses. */
+  function drawWideBox(x0, y0, x1, y1, h, top, left, right) {
+    var A = centre(x0, y0), B = centre(x1, y0), C = centre(x1, y1), D = centre(x0, y1);
+    ctx.fillStyle = left;
+    ctx.beginPath();
+    ctx.moveTo(D.x, D.y - h); ctx.lineTo(C.x, C.y - h);
+    ctx.lineTo(C.x, C.y); ctx.lineTo(D.x, D.y);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = right;
+    ctx.beginPath();
+    ctx.moveTo(C.x, C.y - h); ctx.lineTo(B.x, B.y - h);
+    ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = top;
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y - h); ctx.lineTo(B.x, B.y - h);
+    ctx.lineTo(C.x, C.y - h); ctx.lineTo(D.x, D.y - h);
     ctx.closePath(); ctx.fill();
   }
 
@@ -704,6 +769,89 @@ for the track</p>
     wallQuad(tx, 0.27, 0.39, 22, 37, HEX.bright);
     wallQuad(tx, 0.43, 0.49, 22, 37, HEX.chkLight);
   }
+
+  /* ---- walls & floor, shared by both room renderers ----
+     Papered top-to-floor in a two-tone check, each face dimmed by its own
+     lighting factor. Colours are passed in so the lounge stays stark black-and-
+     white while the bar is a dim, warm version of the same pattern. */
+  var WROWS = 4, WCELL = WALL_H / WROWS;
+  function chkWall(len, side, face, lightHex, darkHex) {
+    for (var col = 0; col < len; col++) {
+      for (var row = 0; row < WROWS; row++) {
+        var base = rgb((col + row) % 2 === 0 ? lightHex : darkHex);
+        wallBand(col, col + 1, side, row * WCELL, WCELL, css(shade(base, face)));
+      }
+    }
+  }
+  function floorCheck(lightHex, darkHex, seam) {
+    for (var y = 0; y < GH; y++) {
+      for (var x = 0; x < GW; x++) {
+        var c = centre(x, y);
+        diamond(c);
+        ctx.fillStyle = ((x + y) % 2 === 0) ? lightHex : darkHex;
+        ctx.fill();
+        ctx.strokeStyle = seam; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+  }
+
+  /* A glowing neon sign centred at (cx, cy): dark backing plate, then the text
+     bloomed with a couple of shadow passes so it reads as lit tubing. */
+  function neonSign(cx, cy, text, glow) {
+    ctx.save();
+    ctx.font = 'bold 11px Impact, "Arial Narrow", Haettenschweiler, sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    var w = Math.ceil(ctx.measureText(text).width) + 12;
+    ctx.fillStyle = "#0a0f14";
+    ctx.fillRect(Math.round(cx - w / 2), Math.round(cy - 9), w, 18);
+    ctx.strokeStyle = css(shade(rgb(glow), 0.5));
+    ctx.lineWidth = 1;
+    ctx.strokeRect(Math.round(cx - w / 2) + 0.5, Math.round(cy - 9) + 0.5, w - 1, 17);
+    ctx.shadowColor = glow;
+    ctx.fillStyle = glow;
+    ctx.shadowBlur = 7;  ctx.fillText(text, cx, cy + 0.5);
+    ctx.shadowBlur = 12; ctx.fillText(text, cx, cy + 0.5);
+    ctx.restore();
+  }
+
+  /* A doorway punched through the back-right wall at column `tx`: a dark recess
+     with a spill of light from the room beyond, a framed jamb, and a neon sign
+     over the lintel. On hover it names the room it leads to. The threshold tile
+     in front stays walkable - stepping onto it is what carries you through
+     (see the tick loop). */
+  function doorway(tx, glow, label, hovered) {
+    var g = rgb(glow);
+    wallQuad(tx, 0.16, 0.84, 3, WALL_H, "#03080d");                 /* recess */
+    wallQuad(tx, 0.24, 0.76, WALL_H * 0.5, WALL_H, rgba(g, 0.10));  /* light spill */
+    wallQuad(tx, 0.34, 0.66, WALL_H * 0.62, WALL_H, rgba(g, 0.16));
+    var jamb = css(shade(rgb(HEX.deep2), 1.15));
+    wallQuad(tx, 0.16, 0.21, 3, WALL_H, jamb);                      /* left jamb */
+    wallQuad(tx, 0.79, 0.84, 3, WALL_H, jamb);                      /* right jamb */
+    wallQuad(tx, 0.16, 0.84, 3, 7, jamb);                           /* lintel */
+    var s = wallPoint(tx, 0.5, 0);
+    neonSign(s.x, s.y - 3, label, glow);
+    if (hovered) cabinetLabelAt([tx, 0], WALL_H + 10, "▶ " + label);
+  }
+
+  /* Point-in-polygon (ray cast) to hit-test the doorway opening, which is a
+     parallelogram on the wall rather than a floor tile. */
+  function pointInPoly(px, py, pts) {
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      var xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+      if (((yi > py) !== (yj > py)) &&
+          (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+  function doorCol() { return scene === "bar" ? BAR_DOOR : LOUNGE_DOOR; }
+  function doorRegion(tx) {
+    return [wallPoint(tx, 0.14, 1), wallPoint(tx, 0.86, 1),
+            wallPoint(tx, 0.86, WALL_H), wallPoint(tx, 0.14, WALL_H)]
+           .map(function (q) { return [q.x, q.y]; });
+  }
+  function inDoor(p) { return pointInPoly(p.x, p.y, doorRegion(doorCol())); }
 
   /* ================= arcade cabinets =================
      BRICK SMASH and SNAKE are both drawn as standing boxes (same trick as the
@@ -931,7 +1079,7 @@ for the track</p>
      so the room never looks broken while the file is still being added. */
   var BOOMBOX = [8, 2];
   var BOOM_H = 15;
-  block(BOOMBOX[0], BOOMBOX[1]);
+  /* blocked in buildBlocked() with the rest of the lounge furniture */
 
   var audioEl = document.getElementById("lounge-track");
   var musicT = 0;          /* advances only while the track runs */
@@ -1202,13 +1350,119 @@ for the track</p>
                   Math.round(c.y - SPR_H + 5));
   };
 
+  /* You are the one guest that survives a room change; the wanderers and the
+     bartender are recycled each time a room is (re)entered. Sprite sets are
+     built once and reused. */
   var frostSet = makeSpriteSet(HEX.f3, HEX.bright, HEX.f4);
-  var guests = [
-    new Guest(4, 4, frostSet, false),
-    new Guest(2, 1, makeSpriteSet(HEX.gold, "#c84a6e", HEX.deep2), true),
-    new Guest(7, 5, makeSpriteSet(HEX.light, "#4a8fb5", HEX.deep2), true)
+  var player = new Guest(4, 4, frostSet, false);
+  var loungeWander = [
+    makeSpriteSet(HEX.gold, "#c84a6e", HEX.deep2),
+    makeSpriteSet(HEX.light, "#4a8fb5", HEX.deep2)
   ];
-  var player = guests[0];
+  var barkeepSet = makeSpriteSet("#e6b98a", "#6f2a14", "#241009");  /* warm apron */
+  var patronSet  = makeSpriteSet(HEX.gold, "#3a5a86", "#20140a");
+  var guests = [];
+  function buildGuests() {
+    if (scene === "bar") {
+      var keep = new Guest(BARKEEP[0], BARKEEP[1], barkeepSet, false);
+      keep.dir = "SW";   /* faces the room across the bar */
+      guests = [player, keep, new Guest(6, 4, patronSet, true)];
+    } else {
+      guests = [player,
+                new Guest(2, 1, loungeWander[0], true),
+                new Guest(7, 5, loungeWander[1], true)];
+    }
+  }
+  buildBlocked();
+  buildGuests();
+
+  /* ================= bar-room furniture =================
+     Drawn only in renderBar. The counter is split into one-tile columns so it
+     depth-sorts against guests the same way every other fixture does; drawn
+     with a shared fill the columns fuse into one unbroken slab. */
+  function backBar() {
+    var lo = BAR_COUNTER.x0, hi = BAR_COUNTER.x1;
+    for (var tx = lo; tx <= hi; tx++) {
+      wallQuad(tx, 0.05, 0.95, 8, 32, "#170f09");                     /* mirror panel */
+      wallQuad(tx, 0.12, 0.88, 12, 28, rgba(rgb("#7a4a1e"), 0.5));    /* warm backlight */
+      wallQuad(tx, 0.05, 0.95, 28, 31, css(shade(rgb("#3a2415"), 1.2))); /* shelf */
+      var cols = ["#c8791e", "#2f6b3a", "#8fb8cc"];  /* amber, green, frosted */
+      for (var b = 0; b < 3; b++) {
+        var u = 0.22 + b * 0.28;
+        wallQuad(tx, u - 0.055, u + 0.055, 16, 28, cols[b]);              /* body */
+        wallQuad(tx, u - 0.018, u + 0.018, 12, 16, css(shade(rgb(cols[b]), 0.7))); /* neck */
+        wallQuad(tx, u - 0.055, u - 0.03, 16, 28, css(shade(rgb(cols[b]), 1.5))); /* glint */
+      }
+    }
+    var mid = wallPoint((lo + hi) / 2 + 0.5, 0, 0);
+    neonSign(mid.x, mid.y + 6, "DIRTY WHISKEY", "#ffb347");
+  }
+
+  function counterColumn(x) {
+    var y = BAR_COUNTER.y;
+    drawWideBox(x - 0.5, y - 0.5, x + 0.5, y + 0.5, BAR_H,
+                css(shade(rgb("#5a3a22"), 1.15)),   /* lit wood top */
+                css(shade(rgb("#4a2f1b"), 1.0)),    /* SW front face */
+                css(shade(rgb("#3a2416"), 0.85)));  /* SE side face */
+    var D = centre(x - 0.5, y + 0.5), C = centre(x + 0.5, y + 0.5);
+    ctx.strokeStyle = "#e8c07a"; ctx.lineWidth = 1.4;                 /* brass rail */
+    ctx.beginPath();
+    ctx.moveTo(D.x, D.y - BAR_H + 1.5); ctx.lineTo(C.x, C.y - BAR_H + 1.5); ctx.stroke();
+    ctx.strokeStyle = rgba(rgb("#1c110a"), 0.8); ctx.lineWidth = 2;   /* kick strip */
+    ctx.beginPath();
+    ctx.moveTo(D.x, D.y - 2); ctx.lineTo(C.x, C.y - 2); ctx.stroke();
+  }
+
+  /* A rocks glass on the counter - whiskey with a pale cube of ice, the frost
+     accent that keeps this Frost Milano's bar and not just any bar. */
+  function whiskeyGlass(x) {
+    var c = centre(x, BAR_COUNTER.y), gx = c.x, gy = c.y - BAR_H;
+    ctx.fillStyle = rgba(rgb("#bfe8f2"), 0.30); ctx.fillRect(gx - 3, gy - 8, 6, 8);
+    ctx.fillStyle = "#c8791e"; ctx.fillRect(gx - 3, gy - 4, 6, 4);
+    ctx.fillStyle = "#eafcff"; ctx.fillRect(gx - 1, gy - 6, 3, 3);
+    ctx.fillStyle = rgba(rgb(HEX.bright), 0.6); ctx.fillRect(gx - 1, gy - 6, 1, 3);
+    ctx.strokeStyle = rgba(rgb("#eafcff"), 0.7); ctx.lineWidth = 1;
+    ctx.strokeRect(gx - 3.5, gy - 8.5, 7, 9);
+  }
+
+  function stool(x, y) {
+    var c = centre(x, y), h = 12;
+    ctx.fillStyle = "#241812"; ctx.fillRect(c.x - 1.5, c.y - h, 3, h);
+    ctx.fillStyle = "#7a2f18";
+    ctx.beginPath(); ctx.ellipse(c.x, c.y - h, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#9a3f22";
+    ctx.beginPath(); ctx.ellipse(c.x, c.y - h - 1.5, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* The blues corner: a low riser against the back-left wall with an amp and a
+     guitar leaning on it - the live/Dirty Whiskey half made visible. */
+  function stage() {
+    var x = STAGE.x;
+    drawWideBox(x - 0.5, STAGE.y0 - 0.5, x + 0.5, STAGE.y1 + 0.5, 5,
+                css(shade(rgb("#3a2a1a"), 1.2)),
+                css(shade(rgb("#2c2013"), 1.0)),
+                css(shade(rgb("#221810"), 0.85)));
+    var ay = STAGE.y0;
+    drawWideBox(x - 0.35, ay - 0.35, x + 0.05, ay + 0.35, 16, "#141414", "#1c1c1c", "#0e0e0e");
+    var ac = centre(x - 0.15, ay);
+    ctx.fillStyle = rgba(rgb("#3a3a3a"), 0.9); ctx.fillRect(ac.x - 5, ac.y - 15, 10, 9); /* grille */
+    ctx.fillStyle = "#ff8a1a"; ctx.fillRect(ac.x + 4, ac.y - 16, 2, 2);                  /* pilot light */
+    guitar(centre(x, STAGE.y1));
+  }
+  function guitar(c) {
+    ctx.save();
+    ctx.translate(c.x - 2, c.y - 6);
+    ctx.rotate(-0.5);   /* leaning against the wall */
+    ctx.fillStyle = "#b5651d";
+    ctx.beginPath(); ctx.ellipse(0, 0, 5, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#8a4a12";
+    ctx.beginPath(); ctx.ellipse(0, 1, 3.5, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2a1608";
+    ctx.beginPath(); ctx.arc(0, -1, 1.6, 0, Math.PI * 2); ctx.fill();      /* sound hole */
+    ctx.fillStyle = "#3a2412"; ctx.fillRect(-1.2, -22, 2.4, 16);          /* neck */
+    ctx.fillStyle = "#e8d9c0"; ctx.fillRect(-2, -25, 4, 4);               /* headstock */
+    ctx.restore();
+  }
 
   /* ================= render ================= */
   var hover = null;
@@ -1216,55 +1470,38 @@ for the track</p>
   var snakeHover = false;
   var decksHover = false;
   var boomHover = false;
+  var doorHover = false;
 
   function render() {
-    ctx.fillStyle = HEX.O;
-    ctx.fillRect(0, 0, cv.width, cv.height);
+    if (scene === "bar") { renderBar(); return; }
+    renderLounge();
+  }
 
-    /* Both back walls are papered top-to-floor in the same black-and-white
-       check as the floor, so the pattern wraps the whole room instead of
-       clinging to a thin stripe near the ceiling.
-
-       Each face is dimmed by its own lighting factor: the check still reads,
-       but as a surface in shadow. That is also what stops the wall squares
-       dissolving into the identical floor squares where the two planes meet -
-       the shaded wall check sits a clear step darker than the lit floor. */
-    var WROWS = 4, WCELL = WALL_H / WROWS;
-    function chkWall(len, side, face) {
-      for (var col = 0; col < len; col++) {
-        for (var row = 0; row < WROWS; row++) {
-          var base = rgb((col + row) % 2 === 0 ? HEX.chkLight : HEX.chkDark);
-          wallBand(col, col + 1, side, row * WCELL, WCELL, css(shade(base, face)));
-        }
-      }
-    }
-    chkWall(GH, "L", 0.5);   /* back-left wall, deeper in shadow */
-    chkWall(GW, "R", 0.72);  /* back-right wall, catching more light */
-
-    poster(3);
-
-    /* Floor: the checkerboard is the room's whole identity, so it runs edge
-       to edge with no competing tint. */
-    for (var y = 0; y < GH; y++) {
-      for (var x = 0; x < GW; x++) {
-        var c3 = centre(x, y);
-        diamond(c3);
-        ctx.fillStyle = ((x + y) % 2 === 0) ? HEX.chkLight : HEX.chkDark;
-        ctx.fill();
-        /* Hairline seam in the light square's own tone - a bright grid over
-           black squares would read as a wireframe, not a floor. */
-        ctx.strokeStyle = "rgba(120,160,185,.35)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-    /* hover highlight */
+  /* the cyan tile highlight under the cursor, shared by both rooms */
+  function drawHover() {
     if (hover && walkable(hover.x, hover.y)) {
       diamond(centre(hover.x, hover.y));
       ctx.fillStyle = "rgba(56,230,255,.28)";
       ctx.fill();
       ctx.strokeStyle = HEX.bright; ctx.stroke();
     }
+  }
+
+  function renderLounge() {
+    ctx.fillStyle = HEX.O;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+
+    /* Both back walls papered top-to-floor in the same black-and-white check as
+       the floor, each face dimmed by its own lighting factor so the wall check
+       sits a clear step darker than the lit floor where the planes meet. */
+    chkWall(GH, "L", 0.5, HEX.chkLight, HEX.chkDark);   /* back-left, deeper shadow */
+    chkWall(GW, "R", 0.72, HEX.chkLight, HEX.chkDark);  /* back-right, more light */
+
+    poster(3);
+    doorway(LOUNGE_DOOR, "#ff8a1a", "BAR", doorHover);
+
+    floorCheck(HEX.chkLight, HEX.chkDark, "rgba(120,160,185,.35)");
+    drawHover();
 
     /* everything that stands up, painted back to front */
     var items = [];
@@ -1317,6 +1554,56 @@ for the track</p>
     guests.forEach(function (g) { g.drawBubble(); });
   }
 
+  function renderBar() {
+    ctx.fillStyle = "#160d07";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    /* a dim, warm version of the lounge's check - same room grammar, new mood */
+    chkWall(GH, "L", 0.62, "#4a3722", "#2c1f13");
+    chkWall(GW, "R", 0.82, "#4a3722", "#2c1f13");
+
+    backBar();
+    doorway(BAR_DOOR, HEX.bright, "LOUNGE", doorHover);
+
+    floorCheck("#3a2a1a", "#281c11", "rgba(150,110,70,.28)");
+    drawHover();
+
+    /* counter split into columns so it depth-sorts against the guests */
+    var items = [];
+    for (var cx = BAR_COUNTER.x0; cx <= BAR_COUNTER.x1; cx++) {
+      (function (x) {
+        items.push({ d: x + BAR_COUNTER.y, f: function () { counterColumn(x); } });
+      })(cx);
+    }
+    items.push({ d: 5 + BAR_COUNTER.y + 0.4, f: function () { whiskeyGlass(5); } });
+    STOOLS.forEach(function (s) {
+      items.push({ d: s[0] + s[1], f: function () { stool(s[0], s[1]); } });
+    });
+    items.push({ d: STAGE.x + STAGE.y1, f: function () { stage(); } });
+    guests.forEach(function (g) {
+      items.push({ d: g.depth(), f: function () { g.draw(); } });
+    });
+    items.sort(function (a, b) { return a.d - b.d; });
+    items.forEach(function (it) { it.f(); });
+
+    guests.forEach(function (g) { g.drawBubble(); });
+  }
+
+  /* Walk onto a doorway threshold and you pass into the other room. The player
+     is dropped one tile in front of the destination door (so it can't instantly
+     re-trigger), and that room's furniture + wanderers are rebuilt. */
+  function enterScene(target) {
+    scene = target;
+    buildBlocked();
+    var into = ROOMS[target].into;
+    player.tx = player.px = into[0];
+    player.ty = player.py = into[1];
+    player.path = [];
+    player.dir = "SW";
+    buildGuests();
+    hover = null;
+    arcadeHover = snakeHover = decksHover = boomHover = doorHover = false;
+  }
+
   /* ================= input ================= */
   function toCanvas(ev) {
     var r = cv.getBoundingClientRect();
@@ -1325,36 +1612,37 @@ for the track</p>
   }
   cv.addEventListener("mousemove", function (ev) {
     var p = toCanvas(ev);
-    arcadeHover = inArcade(p);
-    snakeHover = inSnake(p);
-    decksHover = !arcadeHover && !snakeHover && inDecks(p);
-    boomHover = !arcadeHover && !snakeHover && !decksHover && inBoombox(p);
-    /* Suppress the tile highlight while over a fixture, so the room doesn't
-       advertise a walk to a spot the click won't actually walk to. */
-    hover = (arcadeHover || snakeHover || decksHover || boomHover)
+    if (scene === "lounge") {
+      arcadeHover = inArcade(p);
+      snakeHover = inSnake(p);
+      decksHover = !arcadeHover && !snakeHover && inDecks(p);
+      boomHover = !arcadeHover && !snakeHover && !decksHover && inBoombox(p);
+    } else {
+      arcadeHover = snakeHover = decksHover = boomHover = false;
+    }
+    doorHover = !arcadeHover && !snakeHover && !decksHover && !boomHover && inDoor(p);
+    /* Suppress the tile highlight while over a fixture or the door, so the room
+       doesn't advertise a walk to a spot the click won't actually walk to. */
+    hover = (arcadeHover || snakeHover || decksHover || boomHover || doorHover)
       ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
     hover = null; arcadeHover = false; snakeHover = false;
-    decksHover = false; boomHover = false;
+    decksHover = false; boomHover = false; doorHover = false;
   });
   cv.addEventListener("click", function (ev) {
     var p = toCanvas(ev);
-    /* A cabinet wins the click before the floor does: its art overlaps
-       tiles you would otherwise walk to. */
-    if (inArcade(p)) {
-      if (window.FrostArcade) window.FrostArcade.open();
-      return;
+    /* A cabinet wins the click before the floor does: its art overlaps tiles
+       you would otherwise walk to. Cabinets only exist in the lounge. */
+    if (scene === "lounge") {
+      if (inArcade(p)) { if (window.FrostArcade) window.FrostArcade.open(); return; }
+      if (inSnake(p))  { if (window.FrostSnake)  window.FrostSnake.open();  return; }
+      if (inDecks(p))  { if (window.FrostDecks)  window.FrostDecks.open();  return; }
+      if (inBoombox(p)) { toggleMusic(); return; }
     }
-    if (inSnake(p)) {
-      if (window.FrostSnake) window.FrostSnake.open();
-      return;
-    }
-    if (inDecks(p)) {
-      if (window.FrostDecks) window.FrostDecks.open();
-      return;
-    }
-    if (inBoombox(p)) { toggleMusic(); return; }
+    /* Click the doorway and you walk to its threshold; arriving there carries
+       you through to the other room (see the tick loop). */
+    if (inDoor(p)) { var d = ROOMS[scene].at; player.goto(d[0], d[1]); return; }
     var t = screenToTile(p.x, p.y);
     if (walkable(t.x, t.y)) player.goto(t.x, t.y);
   });
@@ -1385,8 +1673,16 @@ for the track</p>
       if (notes[n].life <= 0) notes.splice(n, 1);
     }
     guests.forEach(function (g) { g.update(dt); });
+    /* Step onto the active room's doorway threshold and pass through. Only the
+       player triggers it; a wandering guest just steps over the sill. */
+    if (!player.path.length) {
+      var exit = ROOMS[scene].at;
+      if (player.tx === exit[0] && player.ty === exit[1]) {
+        enterScene(scene === "lounge" ? "bar" : "lounge");
+      }
+    }
     render();
-    hud.textContent = "tile " + player.tx + "," + player.ty +
+    hud.textContent = "[" + scene + "] tile " + player.tx + "," + player.ty +
                       "  facing " + player.dir +
                       "  frame " + player.frame() +
                       "  queue " + player.path.length;
@@ -1402,6 +1698,8 @@ for the track</p>
     guests: guests, player: player, findPath: findPath,
     screenToTile: screenToTile, centre: centre, walkable: walkable,
     render: render,
+    scene: function () { return scene; },
+    enterScene: enterScene,
     step: function (dt, n) {
       for (var i = 0; i < (n || 1); i++) {
         guests.forEach(function (g) { g.update(dt); });
