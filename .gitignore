@@ -16,3 +16,10 @@ desktop.ini
 # committed for them to appear on the live site. Keep each clip small
 # (~8 MB, see video/README.txt); git keeps every version of a binary
 # forever, so re-exporting a clip repeatedly will grow the repo permanently.
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
