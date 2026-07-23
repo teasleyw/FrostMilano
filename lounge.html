@@ -262,18 +262,17 @@
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
 <p>click a tile to walk &mdash; step up to the <b>DECKS</b> to build a loop &mdash;
 click a cabinet for <b>BRICK SMASH</b> or <b>SNAKE</b> &mdash; click the boombox
-for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
+to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
 
-<!-- The lounge track. preload="none" so an unvisited page costs nothing, and
-     no autoplay attribute: playback starts only when the boombox is clicked.
-     Drop the file in as audio/lounge-track.mp3 (see audio/README.txt) - until
-     then the boombox reports NO TAPE instead of failing silently. -->
-<audio id="lounge-track" loop preload="none">
-  <source src="audio/lounge-track.mp3" type="audio/mpeg" />
-  <source src="audio/lounge-track.ogg" type="audio/ogg" />
-</audio>
+<!-- The jukebox output. preload="none" so an unvisited page costs nothing, and
+     no autoplay attribute: playback starts only when the boombox is clicked. The
+     boombox sets .src from its TRACKS list at play time and steps through them
+     (see audio/README.txt). No loop attribute - each track ends so the next can
+     roll in. Until the files exist the boombox reports NO TAPE rather than
+     failing silently. -->
+<audio id="lounge-track" preload="none"></audio>
 
 <!-- ================= BRICK SMASH ================= -->
 <div id="arcade" class="arcade" role="dialog" aria-modal="true"
@@ -635,16 +634,19 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
   };
 
   /* The record room's wall of singles - the real catalogue, one framed sleeve
-     per column of the back-right wall. Click a sleeve and its Spotify track
-     opens in a new tab. Colours are the sleeve's own art, not tied to the room
-     palette, so each cover reads as a distinct record. Keep the ids in sync
-     with the release cards on index.html. */
+     per column of the back-right wall. A released sleeve opens its Spotify track
+     in a new tab; an upcoming one (no link yet) cues its preview on the lounge
+     jukebox instead, matched to a TRACKS title by `cue`. Colours are the
+     sleeve's own art, not tied to the room palette, so each cover reads as a
+     distinct record. Keep the released ids in sync with the cards on
+     index.html; ROCKSTAR is lounge-only until it drops. */
   var REC_BENCH = [[4, 5], [5, 5]];
   var RECORDS = [
     { title: "LATELY",    col: 3, url: "https://open.spotify.com/track/6mukDcsHBhetIhoVBlOLMi", a: "#7ad9ff", b: "#2b6f96" },
     { title: "MONSTER",   col: 4, url: "https://open.spotify.com/track/5V717i6TcXnAAMFzJzrXnk", a: "#ffb066", b: "#a24b00" },
     { title: "DEMON",     col: 5, url: "https://open.spotify.com/track/7Dv865zUTFgDOKMgYo78iH", a: "#ff7ab0", b: "#a11f5a" },
-    { title: "MYFURCOAT", col: 6, url: "https://open.spotify.com/track/16bEq8UIqQZfgOBSWpNrma", a: "#d8c2ff", b: "#6a4bb0" }
+    { title: "MYFURCOAT", col: 6, url: "https://open.spotify.com/track/16bEq8UIqQZfgOBSWpNrma", a: "#d8c2ff", b: "#6a4bb0" },
+    { title: "ROCKSTAR",  col: 7, upcoming: true, cue: "ROCKSTAR", a: "#ffd24a", b: "#8a4a00" }
   ];
 
   /* Bar-room furniture (drawn in renderBar). The counter sits one tile off the
@@ -1123,25 +1125,42 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
            p.y >= c.y - TH / 2 - DECK_H && p.y <= c.y + TH / 2;
   }
 
-  /* ================= the boombox =================
-     Sits beside the speaker stack so the two read as one sound system. Click
-     it to start or stop the track.
+  /* ================= the boombox / jukebox =================
+     Sits beside the speaker stack so the two read as one sound system. Click it
+     to start or stop the box; it steps through the TRACKS list (above) and wraps,
+     naming the current track in a chip over the cabinet while it plays.
 
      There is deliberately no autoplay: browsers refuse audio that a user did
      not ask for, and a homepage that starts playing music at you is rude even
      when it is allowed. The click IS the gesture that unlocks it.
 
-     If audio/lounge-track.mp3 is missing the machine says NO TAPE rather than
-     failing silently - the same idea as the "NO SIGNAL" TVs on the main site,
-     so the room never looks broken while the file is still being added. */
+     If a track's file is missing the box skips past it, and if the whole list is
+     missing the machine says NO TAPE rather than failing silently - the same
+     idea as the "NO SIGNAL" TVs on the main site, so the room never looks broken
+     while the files are still being added. */
   var BOOMBOX = [8, 2];
   var BOOM_H = 15;
   /* blocked in buildBlocked() with the rest of the lounge furniture */
 
   var audioEl = document.getElementById("lounge-track");
-  var musicT = 0;          /* advances only while the track runs */
+  var musicT = 0;          /* advances only while a track runs */
   var notes = [];          /* the ♪ that drift up out of the speaker grille */
   var noteT = 0;           /* countdown to the next note being released */
+
+  /* The jukebox playlist. The boombox is loaded lazily from this list - nothing
+     is fetched until the first click (preload="none"), then each track's src is
+     set as it plays. When one ends the next rolls in and the list wraps, so the
+     box keeps the room in music. Keep LATELY/MONSTER named to match the release
+     cards; ROCKSTAR is an unreleased preview the record room cues by name. */
+  var TRACKS = [
+    { title: "LATELY",   src: "audio/lately.mp3" },
+    { title: "MMP",      src: "audio/mmp.mp3" },
+    { title: "MONSTER",  src: "audio/monster.mp3" },
+    { title: "ROCKSTAR", src: "audio/rockstar.mp3" }
+  ];
+  var trackIx = 0;         /* which track is loaded / would resume */
+  var wantPlaying = false; /* the box is meant to be running (vs. a load that failed) */
+  var skipGuard = 0;       /* stops a lap of missing files from skipping forever */
 
   var NETWORK_NO_SOURCE = 3, HAVE_CURRENT_DATA = 2, ERR_SRC_NOT_SUPPORTED = 4;
 
@@ -1161,17 +1180,64 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
     return !!audioEl && !audioEl.paused && !audioEl.ended &&
            audioEl.readyState >= HAVE_CURRENT_DATA && !tapeMissing();
   }
+
+  /* Point the element at the current track, but only when it actually changes -
+     a pause/resume must not refetch the file it already holds. currentSrc is an
+     absolute URL, so match on its tail. */
+  function cueTrack() {
+    var want = TRACKS[trackIx].src;
+    if (!audioEl.currentSrc ||
+        audioEl.currentSrc.slice(-want.length) !== want) {
+      audioEl.src = want;
+    }
+  }
+  function loadAndPlay() {
+    /* One sound system at a time: hush the decks loop before the tape rolls. */
+    if (window.FrostDecks && window.FrostDecks.isPlaying &&
+        window.FrostDecks.isPlaying()) window.FrostDecks.stop();
+    cueTrack();
+    audioEl.volume = 0.65;
+    var p = audioEl.play();
+    if (p && p.catch) p.catch(function () { /* tapeMissing()/error handle it */ });
+  }
+  /* Jump the box to a specific track and roll it - used by a click on the
+     boombox (resume the current one) and by the record room (cue ROCKSTAR). */
+  function playTrack(i) {
+    if (!audioEl) return;
+    trackIx = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length;
+    wantPlaying = true;
+    skipGuard = 0;
+    loadAndPlay();
+  }
+  function advance() {   /* next in the list, wrapping, without touching skipGuard */
+    if (!audioEl) return;
+    trackIx = (trackIx + 1) % TRACKS.length;
+    loadAndPlay();
+  }
   function toggleMusic() {
     if (!audioEl) return;
     /* Tests paused, not musicPlaying(), so a click still clears the phantom
        not-paused-but-silent state a failed load leaves behind. */
-    if (!audioEl.paused) { audioEl.pause(); return; }
-    /* One sound system at a time: hush the decks loop before the tape rolls. */
-    if (window.FrostDecks && window.FrostDecks.isPlaying &&
-        window.FrostDecks.isPlaying()) window.FrostDecks.stop();
-    audioEl.volume = 0.65;
-    var p = audioEl.play();
-    if (p && p.catch) p.catch(function () { /* tapeMissing() reports it */ });
+    if (!audioEl.paused) { wantPlaying = false; audioEl.pause(); return; }
+    playTrack(trackIx);
+  }
+
+  if (audioEl) {
+    /* A finished track hands off to the next; a clean end clears the guard.
+       Guarded by wantPlaying so a stray 'ended' after the box was stopped
+       can't resurrect it - a real end only fires mid-play anyway. */
+    audioEl.addEventListener("ended", function () {
+      if (!wantPlaying) return;
+      skipGuard = 0; advance();
+    });
+    /* A missing/unplayable file shouldn't stall the box: skip to the next, but
+       give up after one full lap so an all-missing folder just goes quiet (and
+       the boombox reports NO TAPE) rather than hammering the network. */
+    audioEl.addEventListener("error", function () {
+      if (!wantPlaying) return;
+      if (++skipGuard >= TRACKS.length) { wantPlaying = false; return; }
+      advance();
+    });
   }
 
   function boombox(hovered) {
@@ -1232,9 +1298,13 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
     });
     ctx.globalAlpha = 1;
 
-    if (hovered) {
+    /* Name the track whenever it's running - the box's little readout - and
+       fall back to the play/stop prompt only on hover. */
+    if (playing) {
       cabinetLabelAt(tile, BOOM_H,
-        tapeMissing() ? "NO TAPE" : (playing ? "■ STOP" : "▶ PLAY TRACK"));
+        (hovered ? "■ " : "♪ ") + TRACKS[trackIx].title);
+    } else if (hovered) {
+      cabinetLabelAt(tile, BOOM_H, tapeMissing() ? "NO TAPE" : "▶ PLAY TRACK");
     }
   }
 
@@ -1666,6 +1736,12 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
     wallQuad(tx, 0.17, 0.83, 28, 39, rec.b);                             /* cover, low band */
     wallQuad(tx, 0.28, 0.40, 17, 39, css(shade(rgb(rec.a), 1.35)));      /* diagonal flash */
     wallQuad(tx, 0.46, 0.52, 17, 39, HEX.light);
+    /* An unreleased single wears a bright sticker across the foot of the sleeve
+       so it reads as not-out-yet even before the hover label spells it out. */
+    if (rec.upcoming) {
+      wallQuad(tx, 0.17, 0.83, 35, 39, "#1a0f00");
+      wallQuad(tx, 0.20, 0.80, 35.6, 38.4, css(shade(rgb(rec.a), 1.4)));
+    }
   }
 
   /* Floating title over a hovered sleeve, same chip as cabinetLabelAt but
@@ -1715,8 +1791,13 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
     items.sort(function (a, b) { return a.d - b.d; });
     items.forEach(function (it) { it.f(); });
 
-    /* the hovered sleeve names its track, on top of everything */
-    if (hoveredRecord) recordLabelAt(hoveredRecord.col, "▶ " + hoveredRecord.title);
+    /* the hovered sleeve names its track, on top of everything - a released one
+       prompts the Spotify open, an upcoming one flags itself and cues locally */
+    if (hoveredRecord) {
+      recordLabelAt(hoveredRecord.col, hoveredRecord.upcoming
+        ? "♪ " + hoveredRecord.title + " · SOON"
+        : "▶ " + hoveredRecord.title);
+    }
 
     guests.forEach(function (g) { g.drawBubble(); });
   }
@@ -1782,9 +1863,18 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
       if (inDecks(p))  { if (window.FrostDecks)  window.FrostDecks.open();  return; }
       if (inBoombox(p)) { toggleMusic(); return; }
     }
-    /* Click a record sleeve to open its track on Spotify in a new tab. */
+    /* Click a record sleeve: a released one opens its Spotify track in a new
+       tab, an upcoming one (no link yet) cues its preview on the jukebox. */
     var rec = recordAt(p);
-    if (rec) { window.open(rec.url, "_blank", "noopener"); return; }
+    if (rec) {
+      if (rec.url) { window.open(rec.url, "_blank", "noopener"); }
+      else if (rec.cue) {
+        for (var ti = 0; ti < TRACKS.length; ti++) {
+          if (TRACKS[ti].title === rec.cue) { playTrack(ti); break; }
+        }
+      }
+      return;
+    }
     /* Click a doorway and you walk to its threshold; arriving there carries you
        through to the room it leads to (see the tick loop). */
     var dr = doorAt(p);
@@ -1854,7 +1944,8 @@ for the track &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b
       render();
     },
     musicPlaying: musicPlaying, tapeMissing: tapeMissing,
-    toggleMusic: toggleMusic, notes: notes,
+    toggleMusic: toggleMusic, playTrack: playTrack, tracks: TRACKS,
+    trackIndex: function () { return trackIx; }, notes: notes,
     doorAt: doorAt, recordAt: recordAt, records: RECORDS, rooms: ROOMS,
     dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H,
             BOOMBOX: BOOMBOX, SPEAKER: SPEAKER, SNAKE: SNAKE, ARCADE: ARCADE,

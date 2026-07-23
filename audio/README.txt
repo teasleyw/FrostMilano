@@ -1,22 +1,25 @@
 =======================================================================
- FROST MILANO :: THE LOUNGE BOOMBOX — how to add your track
+ FROST MILANO :: THE LOUNGE JUKEBOX — how to add / change tracks
 =======================================================================
 
 WHAT GOES IN HERE
 -----------------
-Drop your track in this folder. The lounge is already wired to look for
-these filenames, in this order:
+The lounge boombox is a jukebox: it steps through a list of tracks and
+wraps back to the top. The list lives in lounge.html (search TRACKS) and
+points at these files:
 
-    audio/lounge-track.mp3      <- this one is enough on its own
-    audio/lounge-track.ogg      <- optional fallback
+    audio/lately.mp3     LATELY    (also a release card + Record Room sleeve)
+    audio/mmp.mp3        MMP
+    audio/monster.mp3    MONSTER   (also a release card + Record Room sleeve)
+    audio/rockstar.mp3   ROCKSTAR  (unreleased — Record Room preview only)
 
-Until a file exists, clicking the boombox reports "NO TAPE" instead of
-failing silently — same idea as the "NO SIGNAL" TVs on the main site, so
-the room never looks broken while you're still filling it in.
+Drop an .mp3 in with the matching name and it plays. MP3 alone plays
+everywhere that matters (Chrome, Safari, Firefox, Edge, iOS, Android).
 
-MP3 alone plays everywhere that matters (Chrome, Safari, Firefox, Edge,
-iOS, Android). The .ogg is only worth adding if you care about very old
-Firefox builds.
+If a track's file is missing the box just skips past it; if the whole
+list is missing the boombox reports "NO TAPE" instead of failing
+silently — same idea as the "NO SIGNAL" TVs on the main site, so the
+room never looks broken while you're still filling it in.
 
 
 NOTHING PLAYS UNTIL SOMEONE CLICKS
@@ -34,41 +37,54 @@ Two reasons, and the first is not optional:
     the browser allows it. Someone with headphones on at work should not
     get ambushed by your record.
 
-The track loops once started, and clicking again stops it.
+Click once to play; the current track's name shows in a chip over the
+cabinet. When it ends the next one rolls in automatically and the list
+wraps. Click again to stop.
 
 
-WHICH TRACK TO USE
-------------------
-Pick one, and prefer something that loops without an obvious seam — the
-lounge is a place people idle in, so a hard stop-and-restart gets old
-fast. An instrumental or a beat tends to sit better under a room you're
-walking around than a full vocal mix.
+ROCKSTAR / UPCOMING TRACKS
+--------------------------
+ROCKSTAR is unreleased, so it has no Spotify link. Its sleeve on the
+Record Room wall carries a "SOON" sticker, and clicking it cues the
+local rockstar.mp3 straight on the jukebox instead of opening a dead
+release page. To add another upcoming track: add it to TRACKS, then add
+a RECORDS entry with `upcoming: true` and `cue: "<its TRACKS title>"`
+(no url). Released singles keep their Spotify url and open that instead.
 
-If you'd rather not host the audio at all, the alternative is a Spotify
-embed like the MUSIC section on the main page uses. Worth knowing what
-that costs you though: Spotify embeds only play 30-second previews for
-anyone who isn't logged in, they can't be triggered from the canvas, and
-you'd be dropping an iframe into the room. Local file is the better
-experience here; Spotify is the better discovery link.
+
+ADDING OR REORDERING TRACKS
+---------------------------
+Everything is driven by the TRACKS array in lounge.html:
+
+    var TRACKS = [
+      { title: "LATELY",   src: "audio/lately.mp3" },
+      ...
+    ];
+
+Add, remove, or reorder entries there. `title` is what shows in the
+readout chip; `src` is the file. The Record Room matches an upcoming
+sleeve to a track by `title`, so keep those spellings in sync.
 
 
 MAKING IT WEB-FRIENDLY
 ----------------------
-A full-quality track is a big download for a page someone might bounce
-off in ten seconds. If you have ffmpeg:
+A full-quality WAV is a big download for a page someone might bounce off
+in ten seconds. Convert with ffmpeg:
 
-    ffmpeg -i input.wav -c:a libmp3lame -b:a 128k lounge-track.mp3
+    ffmpeg -i input.wav -c:a libmp3lame -b:a 128k audio/monster.mp3
 
   -b:a 128k     plenty for a background loop. 160k if you're fussy.
                 Don't go above 192k for this — it's playing under a
                 canvas game, not being auditioned.
 
-Target: under ~4 MB. A 3-minute track at 128k lands around 2.9 MB.
+A 3-minute track at 128k lands around 3 MB. With several tracks the
+files add up, but preload="none" means none are fetched until the box is
+first clicked, so an unvisited page still costs nothing.
 
 To trim to a section first:
 
     ffmpeg -i input.wav -ss 00:00:12 -t 00:01:30 -c:a libmp3lame ^
-           -b:a 128k lounge-track.mp3
+           -b:a 128k audio/monster.mp3
 
   -ss   where to start   -t   how long to keep
 
@@ -77,15 +93,10 @@ No ffmpeg? Audacity (free, audacityteam.org) — File -> Export -> MP3.
 
 VOLUME
 ------
-The lounge sets playback to 65% on its own, so you don't need to master
-the file quietly. Normal levels are fine.
+The jukebox sets playback to 65% on its own, so you don't need to master
+the files quietly. Normal levels are fine.
 
 To change it, search lounge.html for `audioEl.volume`.
 
-
-CHANGING THE FILENAME
----------------------
-Search lounge.html for "lounge-track" — it appears in the <audio> block
-near the top of the file. Both <source> lines point at it.
 
 Stay frosty. ❄
