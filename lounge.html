@@ -282,6 +282,23 @@
     display:flex; flex-direction:column; gap:12px;
   }
   .ward__slot h4{ margin:0 0 5px; font-size:.72rem; letter-spacing:2px; color:#b8ecff; }
+  /* Style pills - the SHAPE of a part (hat/hair/outfit) as against its colour.
+     Text chips that sit above each colour row; the pressed one glows cyan. */
+  .ward__styles{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  .ward__style{
+    padding:5px 10px; cursor:pointer; border-radius:5px;
+    font:inherit; font-size:.62rem; letter-spacing:1.5px; color:#b8ecff;
+    background:rgba(2,16,28,.7); border:2px solid #17415c;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .06s ease, border-color .06s ease, color .06s ease;
+  }
+  .ward__style:hover{ transform:translateY(-1px); border-color:#6bb8dd; color:#eafcff; }
+  .ward__style[aria-pressed="true"]{
+    color:#eafcff; border-color:#38e6ff;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    box-shadow:0 0 0 1px #38e6ff, 0 0 8px rgba(56,230,255,.5);
+  }
+  .ward__style:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
   .ward__swatches{ display:flex; flex-wrap:wrap; gap:6px; }
   .ward__sw{
     width:24px; height:24px; padding:0; cursor:pointer; border-radius:5px;
@@ -297,9 +314,12 @@
   .ward__actions{
     display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:2px;
   }
-  @media (prefers-reduced-motion:reduce){ .ward__sw{ transition:none; } }
+  @media (prefers-reduced-motion:reduce){
+    .ward__sw, .ward__style{ transition:none; }
+  }
   @media (max-width:560px){
     .ward__sw{ width:30px; height:30px; }
+    .ward__style{ padding:7px 12px; font-size:.66rem; }
     #wc-canvas{ width:100px; }
   }
 </style>
@@ -422,15 +442,30 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       <div class="ward__controls">
         <div class="ward__slot">
           <h4>HAT</h4>
-          <div class="ward__swatches" id="wc-hat" role="group" aria-label="Hat colour"></div>
+          <div class="ward__styles" id="wc-hat-style" role="group" aria-label="Hat style"></div>
+          <div class="ward__swatches" id="wc-hatColor" role="group" aria-label="Hat colour"></div>
         </div>
         <div class="ward__slot">
-          <h4>COAT</h4>
-          <div class="ward__swatches" id="wc-coat" role="group" aria-label="Coat colour"></div>
+          <h4>HAIR</h4>
+          <div class="ward__styles" id="wc-hair-style" role="group" aria-label="Hair style"></div>
+          <div class="ward__swatches" id="wc-hairColor" role="group" aria-label="Hair colour"></div>
+        </div>
+        <div class="ward__slot">
+          <h4>SHADES</h4>
+          <div class="ward__styles" id="wc-glasses-style" role="group" aria-label="Sunglasses"></div>
+        </div>
+        <div class="ward__slot">
+          <h4>OUTFIT</h4>
+          <div class="ward__styles" id="wc-outfit-style" role="group" aria-label="Outfit style"></div>
+          <div class="ward__swatches" id="wc-coatColor" role="group" aria-label="Outfit colour"></div>
         </div>
         <div class="ward__slot">
           <h4>PANTS</h4>
-          <div class="ward__swatches" id="wc-pants" role="group" aria-label="Pants colour"></div>
+          <div class="ward__swatches" id="wc-pantsColor" role="group" aria-label="Pants colour"></div>
+        </div>
+        <div class="ward__slot">
+          <h4>SKIN</h4>
+          <div class="ward__swatches" id="wc-skinColor" role="group" aria-label="Skin tone"></div>
         </div>
         <div class="ward__actions">
           <button type="button" class="decks__btn" id="wc-random">&#10052; RANDOM</button>
@@ -597,6 +632,209 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     ".....OOOO..OOOO....."
   ];
 
+  /* ================= wardrobe part overlays & variants =================
+     Real customisation composes layers over the base figure instead of only
+     recolouring it. A hat or glasses is a grid the same shape as the head; a
+     "." means "leave the pixel underneath alone", so an overlay only paints
+     where the part actually is, and is drawn OVER the head after it is laid
+     down. Hair and outfit instead swap the base head/torso grid outright.
+     Direction still comes from asymmetry + mirroring, so a cap's bill points
+     the way the guest faces. New letters: T/t hat + fold, u brim, L/l glasses
+     frame + lens. */
+
+  /* --- hats: sit on the crown, front & back differ only in the bill --- */
+  var BEANIE_F = [
+    "....................",
+    "......TTTTTTTT......",
+    "....TTTTTTTTTTTT....",
+    "...TTTTTTTTTTTTTT...",
+    "...tttttttttttttt...",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ];
+  var BEANIE_B = BEANIE_F;                 /* knit cap reads the same from behind */
+  /* The cap's peak juts a pixel past the silhouette on the front sprite and is
+     absent on the back - mirroring then points it SE vs SW. */
+  var CAP_F = [
+    "....................",
+    "......TTTTTTTT......",
+    "....TTTTTTTTTTTT....",
+    "...TTTTTTTTTTTTTT...",
+    "...uuuuuuuuuuuuuuuu.",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ];
+  var CAP_B = [
+    "....................",
+    "......TTTTTTTT......",
+    "....TTTTTTTTTTTT....",
+    "...TTTTTTTTTTTTTT...",
+    "...tttttttttttttt...",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ];
+  var HATS = {
+    none:   null,
+    beanie: { f: BEANIE_F, b: BEANIE_B },
+    cap:    { f: CAP_F,    b: CAP_B }
+  };
+
+  /* --- glasses: front only; on the back sprites the face isn't drawn at all.
+     Two dark lenses over the eye rows (7-8) with a bridge between them. --- */
+  var GLASSES_F = [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".......LLLLLLLLLL...",
+    ".......LllLLLLllL...",
+    ".......LllLLLLllL...",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+  ];
+
+  /* --- hair variants: the base head IS the hair, so a style swaps the whole
+     grid. "short" is the authored default; "long" drops the sidebangs a row
+     lower; "buzz" trims them to a thin cap so more face shows. --- */
+  var HEAD_F_LONG = [
+    "......OOOOOOOO......",
+    "....OOHHHHHHHHOO....",
+    "...OHHHHHHHHHHHHO...",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHFFFFFFFFFFHO..",
+    "..OHHHFFFFFFFFFFFO..",
+    "..OHHFFFEEFFFFEEFO..",
+    "..OHHFFFEEFFFFEEFO..",
+    "..OHHFFFFFFFFFFFFO..",
+    "..OHHFFFFFMMMMFFHO..",
+    "..OHHFFFFFFFFFFHHO..",
+    "..OHHFFFFFFFFFFHO...",
+    "...OHOOOOOOOOOHO...."
+  ];
+  var HEAD_B_LONG = [
+    "......OOOOOOOO......",
+    "....OOHHHHHHHHOO....",
+    "...OHGGGGGGGGGGHO...",
+    "..OHHGGGGGGGGGGHHO..",
+    "..OHHHGGGGGGGGHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHNNNNNNNNHHHO..",
+    "..OHHNNNNNNNNNNHHO..",
+    "..OHHNNNNNNNNNNHHO..",
+    "..OHHNNNNNNNNNNHHO..",
+    "..OHHNNNNNNNNNNHHO..",
+    "...OHOOOOOOOOOHO...."
+  ];
+  var HEAD_F_BUZZ = [
+    "......OOOOOOOO......",
+    "....OOHHHHHHHHOO....",
+    "...OHHHHHHHHHHHHO...",
+    "..OHHFFFFFFFFFFHHO..",
+    "..OHFFFFFFFFFFFFHO..",
+    "..OHFFFFFFFFFFFFFO..",
+    "..OHFFFFFFFFFFFFFO..",
+    "..OFFFFEEFFFFEEFFO..",
+    "..OFFFFEEFFFFEEFFO..",
+    "..OFFFFFFFFFFFFFFO..",
+    "..OFFFFFFMMMMFFFFO..",
+    "..OFFFFFFFFFFFFFFO..",
+    "...OFFFFFFFFFFFO...",
+    "....OOOOOOOOOOOO...."
+  ];
+  var HEAD_B_BUZZ = [
+    "......OOOOOOOO......",
+    "....OOHHHHHHHHOO....",
+    "...OHHHHHHHHHHHHO...",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "..OHHHHHHHHHHHHHHO..",
+    "...OHHHHHHHHHHHO...",
+    "....OOOOOOOOOOOO...."
+  ];
+  var HEADS = {
+    short: { f: HEAD_F,      b: HEAD_B },
+    long:  { f: HEAD_F_LONG, b: HEAD_B_LONG },
+    buzz:  { f: HEAD_F_BUZZ, b: HEAD_B_BUZZ }
+  };
+
+  /* --- outfit variants: swap the torso. "coat" is the authored default (open
+     jacket, J body, A arms). "tee" bares the forearms to skin (lowercase a is
+     the skin-shaded sleeve edge). "hoodie" pulls a hood up behind the neck. --- */
+  var TORSO_F_TEE = [
+    "........OSSO........",
+    "....OOOJJJJJJOOO....",
+    "...OAAOJJJJJJOAAO...",
+    "..OAAAOJJJJJJOAAAO..",
+    "..OAAAOJJJJJJOAAAO..",
+    "..OaaaOJJJJJJOaaaO..",
+    "..OaaaOJJJJJJOaaaO..",
+    "..OaaaOJJJJJJOaaaO..",
+    "..OSSSOJJJJJJOSSSO..",
+    "...OOOOJJJJJJOOOO...",
+    ".....OJJJJJJJJO.....",
+    ".....OJJJJJJJJO.....",
+    ".....OJJJJJJJJO....."
+  ];
+  var TORSO_B_TEE = TORSO_F_TEE.slice();
+  TORSO_B_TEE[0] = "........OKKO........";
+  var TORSO_F_HOODIE = [
+    ".......OKKKKO.......",
+    "....OOKKKKKKKKOO....",
+    "...OAAKJJJJJJKAAO...",
+    "..OAAAKJJJJJJKAAAO..",
+    "..OAAAOJJJJJJOAAAO..",
+    "..OAAAOJJJJJJOAAAO..",
+    "..OAAAOJJJJJJOAAAO..",
+    "..OAAAOJJJJJJOAAAO..",
+    "..OKKKOJJJJJJOKKKO..",
+    "...OOOOJKKKKJOOOO...",
+    ".....OJKKKKKKJO.....",
+    ".....OJJJJJJJJO.....",
+    ".....OJJJJJJJJO....."
+  ];
+  var TORSO_B_HOODIE = TORSO_F_HOODIE.slice();
+  TORSO_B_HOODIE[0] = ".......OKKKKO.......";
+  var TORSOS = {
+    coat:   { f: TORSO_F,        b: TORSO_B },
+    tee:    { f: TORSO_F_TEE,    b: TORSO_B_TEE },
+    hoodie: { f: TORSO_F_HOODIE, b: TORSO_B_HOODIE }
+  };
+
   var LEG_SEQ = [LEGS_STAND, LEGS_A, LEGS_PASS_A, LEGS_B, LEGS_PASS_B];
   var BOB_SEQ = [0, 1, 0, 1, 0];
   var ARM_SEQ = [0, 1, 0, -1, 0];
@@ -605,26 +843,54 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var HEAD_H = HEAD_F.length, TORSO_H = TORSO_F.length;
   var SPR_H = HEAD_H + TORSO_H + LEGS_STAND.length + 1;
 
-  function palette(hat, coat, pants) {
-    var H = rgb(hat), J = rgb(coat), P = rgb(pants), S = rgb(HEX.skin);
+  /* The default guest look; every field a wardrobe slot can override. Kept as
+     one object so a saved guest round-trips through localStorage in one blob
+     and NPCs are dressed with the same call the player uses. */
+  var HATS_DEFAULT = "none", HAIR_DEFAULT = "short", OUTFIT_DEFAULT = "coat";
+  function makeLook(o) {
+    o = o || {};
+    return {
+      hairColor:  o.hairColor  || HEX.f3,
+      coatColor:  o.coatColor  || HEX.bright,
+      pantsColor: o.pantsColor || HEX.f4,
+      skinColor:  o.skinColor  || HEX.skin,
+      hatColor:   o.hatColor   || HEX.light,
+      hat:    HATS[o.hat]      ? o.hat    : HATS_DEFAULT,
+      hair:   HEADS[o.hair]    ? o.hair   : HAIR_DEFAULT,
+      outfit: TORSOS[o.outfit] ? o.outfit : OUTFIT_DEFAULT,
+      glasses: !!o.glasses
+    };
+  }
+
+  function palette(look) {
+    var H = rgb(look.hairColor), J = rgb(look.coatColor),
+        P = rgb(look.pantsColor), S = rgb(look.skinColor),
+        T = rgb(look.hatColor);
     return {
       O: rgb(HEX.O), H: H, G: shade(H, 1.3), N: shade(H, 0.7),
-      F: S, S: shade(S, 0.82), E: rgb(HEX.O), M: rgb(HEX.mouth),
+      F: S, S: shade(S, 0.82), a: shade(S, 0.9), E: rgb(HEX.O), M: rgb(HEX.mouth),
       J: J, K: shade(J, 0.62), A: shade(J, 0.74),
       P: P, p: shade(P, 0.68),
       B: rgb(HEX.light), b: shade(rgb(HEX.light), 0.66),
+      T: T, t: shade(T, 0.78), u: shade(T, 0.55),
+      L: rgb(HEX.O), l: rgb(HEX.deep2),
       ".": CLEAR
     };
   }
 
-  /* Rasterise one sprite into its own canvas, once, then reuse it. */
-  function buildSprite(pal, back, frame, mirror) {
+  /* Rasterise one sprite into its own canvas, once, then reuse it. The figure
+     is drawn back-to-front in layers: base head, then any hat and glasses over
+     it, then the torso and legs. Hair and outfit have already been chosen by
+     swapping which head/torso grid we read. */
+  function buildSprite(look, pal, back, frame, mirror) {
     var cv = document.createElement("canvas");
     cv.width = SPR_W; cv.height = SPR_H;
     var ctx = cv.getContext("2d");
     var im = ctx.createImageData(SPR_W, SPR_H);
-    var head = back ? HEAD_B : HEAD_F;
-    var torso = back ? TORSO_B : TORSO_F;
+    var head = HEADS[look.hair][back ? "b" : "f"];
+    var torso = TORSOS[look.outfit][back ? "b" : "f"];
+    var hat = HATS[look.hat] ? HATS[look.hat][back ? "b" : "f"] : null;
+    var glasses = (look.glasses && !back) ? GLASSES_F : null;
     var legs = LEG_SEQ[frame], bob = BOB_SEQ[frame], arm = ARM_SEQ[frame];
 
     function put(x, y, ch) {
@@ -635,13 +901,18 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       im.data[i] = c[0]; im.data[i + 1] = c[1];
       im.data[i + 2] = c[2]; im.data[i + 3] = c[3];
     }
-    head.forEach(function (row, j) {
-      for (var i = 0; i < row.length; i++) put(i, j + bob, row[i]);
-    });
+    function overlay(grid) {
+      grid.forEach(function (row, j) {
+        for (var i = 0; i < row.length; i++) put(i, j + bob, row[i]);
+      });
+    }
+    overlay(head);
+    if (hat) overlay(hat);
+    if (glasses) overlay(glasses);
     torso.forEach(function (row, j) {
       for (var i = 0; i < row.length; i++) {
         var ch = row[i];
-        var dy = (ch === "A" || ch === "S")
+        var dy = (ch === "A" || ch === "S" || ch === "a")
           ? (i < SPR_W / 2 ? arm : -arm) : 0;
         put(i, HEAD_H + j + bob + dy, ch);
       }
@@ -658,11 +929,11 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var DIRS = { SE: [false, false], SW: [false, true],
                NW: [true, false],  NE: [true, true] };
 
-  function makeSpriteSet(hat, coat, pants) {
-    var pal = palette(hat, coat, pants), set = {};
+  function makeSpriteSet(look) {
+    var pal = palette(look), set = {};
     Object.keys(DIRS).forEach(function (d) {
       set[d] = LEG_SEQ.map(function (_, f) {
-        return buildSprite(pal, DIRS[d][0], f, DIRS[d][1]);
+        return buildSprite(look, pal, DIRS[d][0], f, DIRS[d][1]);
       });
     });
     return set;
@@ -1610,14 +1881,21 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   /* You are the one guest that survives a room change; the wanderers and the
      bartender are recycled each time a room is (re)entered. Sprite sets are
      built once and reused. */
-  var frostSet = makeSpriteSet(HEX.f3, HEX.bright, HEX.f4);
+  var frostSet = makeSpriteSet(makeLook(
+    { hairColor: HEX.f3, coatColor: HEX.bright, pantsColor: HEX.f4 }));
   var player = new Guest(4, 4, frostSet, false);
   var loungeWander = [
-    makeSpriteSet(HEX.gold, "#c84a6e", HEX.deep2),
-    makeSpriteSet(HEX.light, "#4a8fb5", HEX.deep2)
+    makeSpriteSet(makeLook({ hairColor: HEX.gold, coatColor: "#c84a6e",
+      pantsColor: HEX.deep2, hat: "beanie", hatColor: "#c84a6e" })),
+    makeSpriteSet(makeLook({ hairColor: HEX.light, coatColor: "#4a8fb5",
+      pantsColor: HEX.deep2, outfit: "hoodie", glasses: true }))
   ];
-  var barkeepSet = makeSpriteSet("#e6b98a", "#6f2a14", "#241009");  /* warm apron */
-  var patronSet  = makeSpriteSet(HEX.gold, "#3a5a86", "#20140a");
+  var barkeepSet = makeSpriteSet(makeLook(          /* warm apron, cap, tee */
+    { hairColor: "#e6b98a", coatColor: "#6f2a14", pantsColor: "#241009",
+      skinColor: "#c98d5a", hat: "cap", hatColor: "#241009", outfit: "tee" }));
+  var patronSet  = makeSpriteSet(makeLook(
+    { hairColor: HEX.gold, coatColor: "#3a5a86", pantsColor: "#20140a",
+      glasses: true }));
   var guests = [];
   function buildGuests() {
     if (scene === "bar") {
@@ -2021,24 +2299,46 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   });
 
   /* ================= make your own guest =================
-     The wardrobe's panel. Three rows of swatches - hat, coat, pants - rebuild
-     the player's sprite set on the spot via makeSpriteSet(), the same call that
-     dresses every guest in the room. The choice is saved to localStorage, so
-     the guest you build is the one you walk back in as next visit, and a small
-     canvas struts that guest while you pick. All of this lives in the main
-     closure because it leans on makeSpriteSet, the player object and HEX. */
-  var GUEST_KEY = "frost_guest_v1";
-  var DEFAULT_COLORS = [HEX.f3, HEX.bright, HEX.f4];   /* the stock Frost look */
-  /* One curated palette shared by all three slots: every swatch is a room ice
-     tone or a warm accent, so any hat/coat/pants combination still sits inside
-     the site's colour world. [hex, spoken-name-for-the-aria-label]. */
+     The wardrobe's panel. Each part carries a SHAPE (style pills - hat, hair,
+     outfit, shades) and/or a COLOUR (swatch row); picking either rebuilds the
+     player's sprite set on the spot via makeSpriteSet(), the same call that
+     dresses every guest in the room. The whole look is saved to localStorage as
+     one blob, so the guest you build is the one you walk back in as next visit,
+     and a small canvas struts that guest while you pick. All of this lives in
+     the main closure because it leans on makeSpriteSet, the player and HEX. */
+  var GUEST_KEY = "frost_guest_v2";
+
+  /* One curated palette shared by the tintable slots: every swatch is a room
+     ice tone or a warm accent, so any combination still sits inside the site's
+     colour world. [hex, spoken-name-for-the-aria-label]. */
   var WARD_SWATCHES = [
     ["#38e6ff", "ice"],    ["#b8ecff", "frost"],  ["#6bb8dd", "steel"],
     ["#2b6f96", "deep"],   ["#0e4a6e", "navy"],   ["#eafcff", "snow"],
     ["#ffd68a", "gold"],   ["#ff8a1a", "amber"],  ["#ff5aa0", "rose"],
     ["#c9b3ff", "violet"], ["#2f6b3a", "pine"],   ["#c84a6e", "wine"]
   ];
-  var SLOTS = ["hat", "coat", "pants"];
+  /* Skin rides its own warm ramp rather than the cool ice swatches. */
+  var SKIN_SWATCHES = [
+    ["#f2c99a", "porcelain"], ["#d9a06b", "tan"],    ["#c98d5a", "amber"],
+    ["#a9683c", "bronze"],    ["#7c4a28", "umber"],  ["#4f2f1c", "espresso"]
+  ];
+  /* Which look field each swatch row drives, and the palette it draws from. The
+     row's DOM id is "wc-" + key, matching the panel markup. */
+  var COLOR_SLOTS = [
+    { key: "hatColor",   sw: WARD_SWATCHES, label: "hat" },
+    { key: "hairColor",  sw: WARD_SWATCHES, label: "hair" },
+    { key: "coatColor",  sw: WARD_SWATCHES, label: "outfit" },
+    { key: "pantsColor", sw: WARD_SWATCHES, label: "pants" },
+    { key: "skinColor",  sw: SKIN_SWATCHES, label: "skin" }
+  ];
+  /* The SHAPE options for each part. A boolean value (glasses) rides the same
+     machinery as the string styles. Row id is "wc-" + key + "-style". */
+  var STYLE_SLOTS = [
+    { key: "hat",     opts: [["none", "NONE"], ["beanie", "BEANIE"], ["cap", "CAP"]] },
+    { key: "hair",    opts: [["short", "SHORT"], ["long", "LONG"], ["buzz", "BUZZ"]] },
+    { key: "outfit",  opts: [["coat", "COAT"], ["hoodie", "HOODIE"], ["tee", "TEE"]] },
+    { key: "glasses", opts: [[false, "OFF"], [true, "ON"]] }
+  ];
 
   var wardEl = document.getElementById("wardrobe");
   var wcCanvas = document.getElementById("wc-canvas");
@@ -2046,31 +2346,30 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var wcExit = document.getElementById("wc-exit");
   var wcRandom = document.getElementById("wc-random");
   var wcReset = document.getElementById("wc-reset");
-  var wcRows = { hat: document.getElementById("wc-hat"),
-                 coat: document.getElementById("wc-coat"),
-                 pants: document.getElementById("wc-pants") };
 
   function isHex(s) { return typeof s === "string" && /^#[0-9a-f]{6}$/i.test(s); }
-  function loadColors() {
+  /* Accept a saved v2 look as-is; migrate a v1 {hat,coat,pants} colour blob so
+     returning guests keep their colours; else fall back to the stock Frost
+     look. makeLook() sanitises any unknown style or missing field. */
+  function loadLook() {
     try {
       var v = JSON.parse(localStorage.getItem(GUEST_KEY));
-      if (v && isHex(v.hat) && isHex(v.coat) && isHex(v.pants))
-        return [v.hat, v.coat, v.pants];
+      if (v && typeof v === "object") return makeLook(v);
+      var old = JSON.parse(localStorage.getItem("frost_guest_v1"));
+      if (old && isHex(old.hat) && isHex(old.coat) && isHex(old.pants))
+        return makeLook({ hairColor: old.hat, coatColor: old.coat,
+                          pantsColor: old.pants });
     } catch (e) {}
-    return DEFAULT_COLORS.slice();
+    return makeLook({});
   }
-  var guestColors = loadColors();
-  function saveColors() {
-    try {
-      localStorage.setItem(GUEST_KEY, JSON.stringify(
-        { hat: guestColors[0], coat: guestColors[1], pants: guestColors[2] }));
-    } catch (e) {}
+  var guestLook = loadLook();
+  function saveLook() {
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify(guestLook)); }
+    catch (e) {}
   }
-  /* Rebuild the player's sprites from the current colours. The player object
+  /* Rebuild the player's sprites from the current look. The player object
      survives room changes, so one call re-dresses it everywhere at once. */
-  function dress() {
-    player.sprites = makeSpriteSet(guestColors[0], guestColors[1], guestColors[2]);
-  }
+  function dress() { player.sprites = makeSpriteSet(guestLook); }
 
   /* --- the live preview: struts the guest in the modal, cycling walk frames
      and turning slowly so both the face and the hair-banked back show. Freezes
@@ -2079,9 +2378,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     window.matchMedia("(prefers-reduced-motion:reduce)").matches;
   var WC_DIRS = ["SE", "SW", "NW", "NE"];
   var wcSet = null, wcRAF = 0, wcT = 0;
-  function buildPreviewSet() {
-    wcSet = makeSpriteSet(guestColors[0], guestColors[1], guestColors[2]);
-  }
+  function buildPreviewSet() { wcSet = makeSpriteSet(guestLook); }
   function drawPreview() {
     if (!wcCtx || !wcSet) return;
     wcCtx.clearRect(0, 0, wcCanvas.width, wcCanvas.height);
@@ -2103,50 +2400,75 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     wcRAF = wardReduce ? 0 : requestAnimationFrame(wcTick);
   }
 
-  /* --- swatches --- */
-  function markRow(slot) {
-    var row = wcRows[slot], idx = SLOTS.indexOf(slot);
-    if (!row) return;
-    [].forEach.call(row.children, function (b) {
-      b.setAttribute("aria-pressed",
-        b.dataset.c.toLowerCase() === guestColors[idx].toLowerCase()
-          ? "true" : "false");
-    });
-  }
-  function buildSwatches() {
-    SLOTS.forEach(function (slot) {
-      var row = wcRows[slot];
+  /* --- controls: build the swatch rows and style pills, keep them in sync --- */
+  function markColors() {
+    COLOR_SLOTS.forEach(function (slot) {
+      var row = document.getElementById("wc-" + slot.key);
       if (!row) return;
-      row.innerHTML = "";
-      WARD_SWATCHES.forEach(function (sw) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "ward__sw";
-        b.style.setProperty("--c", sw[0]);
-        b.dataset.c = sw[0];
-        b.setAttribute("aria-pressed", "false");
-        b.setAttribute("aria-label", slot + " colour: " + sw[1]);
-        b.addEventListener("click", function () { pick(slot, sw[0]); });
-        row.appendChild(b);
+      [].forEach.call(row.children, function (b) {
+        b.setAttribute("aria-pressed",
+          b.dataset.c.toLowerCase() === String(guestLook[slot.key]).toLowerCase()
+            ? "true" : "false");
       });
-      markRow(slot);
     });
   }
-  function applyColors() {
-    saveColors();
+  function markStyles() {
+    STYLE_SLOTS.forEach(function (slot) {
+      var row = document.getElementById("wc-" + slot.key + "-style");
+      if (!row) return;
+      [].forEach.call(row.children, function (b) {
+        b.setAttribute("aria-pressed",
+          b.dataset.v === String(guestLook[slot.key]) ? "true" : "false");
+      });
+    });
+  }
+  function markAll() { markColors(); markStyles(); }
+
+  function apply() {
+    saveLook();
     dress();            /* the room's player updates immediately */
     buildPreviewSet();  /* and so does the modal preview */
     if (!wcRAF) drawPreview();
   }
-  function pick(slot, color) {
-    guestColors[SLOTS.indexOf(slot)] = color;
-    applyColors();
-    markRow(slot);
+  function pickColor(key, color) { guestLook[key] = color; apply(); markColors(); }
+  function pickStyle(key, val)   { guestLook[key] = val;   apply(); markStyles(); }
+
+  function buildControls() {
+    COLOR_SLOTS.forEach(function (slot) {
+      var row = document.getElementById("wc-" + slot.key);
+      if (!row) return;
+      row.innerHTML = "";
+      slot.sw.forEach(function (sw) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "ward__sw";
+        b.style.setProperty("--c", sw[0]); b.dataset.c = sw[0];
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", slot.label + " colour: " + sw[1]);
+        b.addEventListener("click", function () { pickColor(slot.key, sw[0]); });
+        row.appendChild(b);
+      });
+    });
+    STYLE_SLOTS.forEach(function (slot) {
+      var row = document.getElementById("wc-" + slot.key + "-style");
+      if (!row) return;
+      row.innerHTML = "";
+      slot.opts.forEach(function (opt) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "ward__style";
+        b.dataset.v = String(opt[0]); b.textContent = opt[1];
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", slot.key + ": " + opt[1]);
+        b.addEventListener("click", function () { pickStyle(slot.key, opt[0]); });
+        row.appendChild(b);
+      });
+    });
+    markAll();
   }
-  function setAll(cols) {
-    guestColors = cols.slice();
-    applyColors();
-    SLOTS.forEach(markRow);
+  /* Swap the whole look at once (random / reset) and re-sync every control. */
+  function setLook(look) {
+    guestLook = makeLook(look);
+    apply();
+    markAll();
   }
 
   /* --- open / close, mirroring the game cabinets --- */
@@ -2156,7 +2478,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     wardLastFocus = document.activeElement;
     wardOpen = true;
     buildPreviewSet();
-    SLOTS.forEach(markRow);
+    markAll();
     wardEl.classList.add("is-open");
     wardEl.removeAttribute("aria-hidden");
     document.addEventListener("keydown", wardKey);
@@ -2178,20 +2500,22 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 
   if (wcExit) wcExit.addEventListener("click", closeWardrobe);
   if (wcRandom) wcRandom.addEventListener("click", function () {
-    function rnd() {
-      return WARD_SWATCHES[(Math.random() * WARD_SWATCHES.length) | 0][0];
-    }
-    /* nudge the coat off the hat colour so the guest never melts into one block */
-    var h = rnd(), co = rnd(), pa = rnd();
-    if (co === h) co = rnd();
-    setAll([h, co, pa]);
+    function rnd(arr) { return arr[(Math.random() * arr.length) | 0][0]; }
+    var next = {
+      hatColor:  rnd(WARD_SWATCHES), hairColor: rnd(WARD_SWATCHES),
+      coatColor: rnd(WARD_SWATCHES), pantsColor: rnd(WARD_SWATCHES),
+      skinColor: rnd(SKIN_SWATCHES),
+      hat:  rnd(STYLE_SLOTS[0].opts), hair:   rnd(STYLE_SLOTS[1].opts),
+      outfit: rnd(STYLE_SLOTS[2].opts), glasses: Math.random() < 0.5
+    };
+    /* nudge the outfit off the hair colour so the guest never melts into one block */
+    if (next.coatColor === next.hairColor) next.coatColor = rnd(WARD_SWATCHES);
+    setLook(next);
   });
-  if (wcReset) wcReset.addEventListener("click", function () {
-    setAll(DEFAULT_COLORS);
-  });
+  if (wcReset) wcReset.addEventListener("click", function () { setLook({}); });
 
-  buildSwatches();
-  dress();   /* dress the player from the saved (or default) colours at startup */
+  buildControls();
+  dress();   /* dress the player from the saved (or default) look at startup */
 
   /* ================= loop ================= */
   var last = performance.now();
@@ -2247,8 +2571,9 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     render: render,
     scene: function () { return scene; },
     enterScene: enterScene,
-    openWardrobe: openWardrobe, dressGuest: setAll,
-    guestColors: function () { return guestColors.slice(); },
+    openWardrobe: openWardrobe, dressGuest: setLook,
+    guestLook: function () { return makeLook(guestLook); },
+    makeLook: makeLook, makeSpriteSet: makeSpriteSet,
     step: function (dt, n) {
       for (var i = 0; i < (n || 1); i++) {
         guests.forEach(function (g) { g.update(dt); });
