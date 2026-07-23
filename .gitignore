@@ -16,3 +16,10 @@ desktop.ini
 # committed for them to appear on the live site. Keep each clip small
 # (~8 MB, see video/README.txt); git keeps every version of a binary
 # forever, so re-exporting a clip repeatedly will grow the repo permanently.
+
+# Raw phone/camera source files, though — keep those local only. They're huge
+# (HEVC .mov straight off a phone) and browsers can't play them anyway; the
+# committed clip-*.mp4 files are the transcoded versions. See video/README.txt.
+video/*.mov
+video/*.MOV
+video/*.mp4.orig
