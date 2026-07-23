@@ -8,10 +8,10 @@ The lounge boombox is a jukebox: it steps through a list of tracks and
 wraps back to the top. The list lives in lounge.html (search TRACKS) and
 points at these files:
 
-    audio/lately.mp3     LATELY    (also a release card + Record Room sleeve)
-    audio/mmp.mp3        MMP
-    audio/monster.mp3    MONSTER   (also a release card + Record Room sleeve)
-    audio/rockstar.mp3   ROCKSTAR  (unreleased — Record Room preview only)
+    audio/lately-full.mp3  LATELY    (full master; also a release card + Record Room sleeve)
+    audio/rockstar.mp3     ROCKSTAR  (unreleased — Record Room preview only)
+    audio/monster.mp3      MONSTER   (also a release card + Record Room sleeve)
+    audio/mmp.mp3          MMP
 
 Drop an .mp3 in with the matching name and it plays. MP3 alone plays
 everywhere that matters (Chrome, Safari, Firefox, Edge, iOS, Android).
@@ -57,7 +57,7 @@ ADDING OR REORDERING TRACKS
 Everything is driven by the TRACKS array in lounge.html:
 
     var TRACKS = [
-      { title: "LATELY",   src: "audio/lately.mp3" },
+      { title: "LATELY",   src: "audio/lately-full.mp3" },
       ...
     ];
 
