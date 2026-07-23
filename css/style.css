@@ -408,6 +408,35 @@ a{ color:var(--ice-bright); }
 .badge--yt{ background:linear-gradient(180deg,#ff3b3b,#a10000); border-color:#ffb3b3; color:#fff; }
 .badge--sc{ background:linear-gradient(180deg,#ff8a3d,#c65200); border-color:#ffd0a8; color:#fff; }
 
+/* ---------- LOUNGE SHOWCASE ---------- */
+/* Violet-tinted frame so the whole panel reads as the after-hours room and
+   ties back to the hero's STEP INTO THE LOUNGE button. */
+.panel--lounge{
+  border-color:#8f6bd8;
+  background:linear-gradient(180deg, rgba(40,20,74,.5), rgba(12,6,28,.6));
+}
+.lroom{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+.lroom__card{
+  display:flex; gap:12px; align-items:center; text-decoration:none;
+  background:linear-gradient(180deg,rgba(60,30,110,.42),rgba(18,10,40,.55));
+  border:3px ridge #8f6bd8; border-radius:8px; padding:12px;
+  transition:transform .1s ease, box-shadow .15s ease, filter .12s ease;
+}
+.lroom__card:hover{ transform:translateY(-3px); box-shadow:0 6px 18px rgba(150,110,255,.3); filter:brightness(1.08); }
+.lroom__card:focus-visible{ outline:2px solid #c9a3ff; outline-offset:2px; }
+.lroom__art{
+  width:58px; height:58px; flex:0 0 58px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; font-size:2rem;
+  border:2px solid #efe2ff; box-shadow:inset 0 0 16px rgba(255,255,255,.35);
+}
+.lroom__art--1{ background:linear-gradient(135deg,#c9a3ff,#6a2fb5,#0a2740); }
+.lroom__art--2{ background:linear-gradient(135deg,#38e6ff,#4b2f8f,#0a2740); }
+.lroom__art--3{ background:linear-gradient(135deg,#ff86c2,#6a2fb5,#0a2740); }
+.lroom__body{ display:flex; flex-direction:column; gap:3px; }
+.lroom__name{ font-family:var(--display); letter-spacing:1px; font-size:1.15rem; color:#f2e9ff; }
+.lroom__desc{ font-family:var(--pixel); font-size:1.02rem; color:#d9c9ff; line-height:1.15; }
+.lroom__cta{ text-align:center; margin-top:20px; }
+
 /* ---------- VIDEO VAULT (a wall of CRT televisions) ---------- */
 .vault{
   display:grid;
