@@ -108,33 +108,43 @@ variables). Change those and the whole site updates.
 
 ## 📬 The forms + counter (real, via Cloudflare KV)
 
-The **Ice List signup**, the **guestbook**, and the **visitor counter** are
-backed by three Cloudflare Pages Functions in `functions/api/` that read and
-write a Cloudflare KV namespace. If the API isn't reachable — you opened the
-page as a local file, or the KV binding isn't set up yet — every one of them
-quietly falls back to the old browser-only behaviour, so the site never looks
-broken.
+The **Ice List signup**, the **guestbook**, the **visitor counter**, and the
+lounge's **arcade high-score boards** are backed by Cloudflare Pages Functions
+in `functions/api/` that read and write a Cloudflare KV namespace. If the API
+isn't reachable — you opened the page as a local file, or the KV binding isn't
+set up yet — every one of them quietly falls back to the old browser-only
+behaviour, so the site never looks broken.
 
 | Endpoint | What it does |
 |---|---|
 | `functions/api/visits.js` | Shared hit counter. POST bumps it, GET reads it; the page counts once per session. |
 | `functions/api/subscribe.js` | Stores each Ice List email in KV as `sub:<email>` (duplicates collapse). |
-| `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 30s-per-IP cooldown). |
+| `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 60s-per-IP cooldown). |
+| `functions/api/scores.js` | Shared high-score boards for the lounge's two arcade cabinets. `GET ?game=bricksmash\|snake` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
 
 ### One-time setup: bind the KV namespace
-The Functions look for a binding named **`FROST_KV`**. In the Cloudflare
-dashboard: **Workers & Pages → your Pages project → Settings → Functions → KV
-namespace bindings → Add binding**, variable name `FROST_KV`, and select the
-namespace you created (`ee9fcf13dac5479787cc42f9089246e6`). Add it to
-**Production** (and Preview if you want the previews to work too), then
-redeploy. Until this binding exists the endpoints return 503 and the site uses
-the local fallback.
+The Functions look for a binding named **`FrostMilanoKV`** (a **`FROST_KV`**
+binding also works, as a fallback). In the Cloudflare dashboard: **Workers &
+Pages → your Pages project → Settings → Functions → KV namespace bindings → Add
+binding**, variable name `FrostMilanoKV`, and select the namespace you created
+(named `FrostMilanoKV`, id `ee9fcf13dac5479787cc42f9089246e6`). Note the
+**variable name** and the **namespace** happen to share the label `FrostMilanoKV`
+here — that's fine. Add it to **Production** (and Preview if you want the
+previews to work too), then redeploy. Until this binding exists the endpoints
+return 503 and the site uses the local fallback.
+
+> **This must be a Cloudflare _Pages_ project, not a Worker.** Pages is what
+> turns the `functions/` folder into the `/api/*` endpoints; a plain Worker
+> ignores that folder and every `/api/*` route 404s. If `/api/visits` returns
+> **404**, it's deployed as the wrong product; **503** means Pages is running
+> but the KV binding is missing.
 
 ### Reading what comes in
 - **Emails:** in the dashboard open the KV namespace and filter keys by the
   `sub:` prefix, or from a terminal:
   `wrangler kv key list --namespace-id ee9fcf13dac5479787cc42f9089246e6 --prefix "sub:"`
 - **Guestbook:** it renders on the site; the raw JSON is the `guestbook` key.
+- **High scores:** the raw JSON lives under `scores:bricksmash` and `scores:snake`.
 
 ### Want signups emailed to you instead?
 KV storage is the no-extra-service option. To also get an email on each signup,

@@ -256,13 +256,60 @@
     /* Bigger, thumb-friendly transport and exit controls. */
     .decks__btn, .arcade__exit{ padding:10px 16px; font-size:.8rem; }
   }
+
+  /* ================= WARDROBE (make your own guest) =================
+     Reuses the .arcade backdrop, cabinet, marquee and exit chrome so it reads
+     as the same room. The body is a live sprite preview beside three rows of
+     colour swatches - hat, coat, pants - that redress your guest on the spot. */
+  .ward__body{
+    display:flex; gap:16px; flex-wrap:wrap;
+    justify-content:center; align-items:flex-start;
+  }
+  .ward__stage{
+    flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:8px;
+    background:rgba(2,16,28,.6); border:2px ridge #2b6f96; border-radius:6px;
+    padding:12px 20px;
+  }
+  #wc-canvas{
+    /* Native pixel buffer, upscaled by CSS - never resample the sprite. */
+    image-rendering:pixelated;
+    width:120px; height:auto; display:block;
+    background:#05131f; border:2px inset #17415c; border-radius:4px;
+  }
+  .ward__you{ font-size:.62rem; letter-spacing:2px; color:#6bb8dd; }
+  .ward__controls{
+    flex:1 1 240px; min-width:210px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .ward__slot h4{ margin:0 0 5px; font-size:.72rem; letter-spacing:2px; color:#b8ecff; }
+  .ward__swatches{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ward__sw{
+    width:24px; height:24px; padding:0; cursor:pointer; border-radius:5px;
+    border:2px solid #17415c; background:var(--c);
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .06s ease, border-color .06s ease;
+  }
+  .ward__sw:hover{ transform:translateY(-1px); border-color:#6bb8dd; }
+  .ward__sw[aria-pressed="true"]{
+    border-color:#eafcff; box-shadow:0 0 0 2px #38e6ff, 0 0 8px var(--c);
+  }
+  .ward__sw:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .ward__actions{
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:2px;
+  }
+  @media (prefers-reduced-motion:reduce){ .ward__sw{ transition:none; } }
+  @media (max-width:560px){
+    .ward__sw{ width:30px; height:30px; }
+    #wc-canvas{ width:100px; }
+  }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
 <p>click a tile to walk &mdash; step up to the <b>DECKS</b> to build a loop &mdash;
 click a cabinet for <b>BRICK SMASH</b> or <b>SNAKE</b> &mdash; click the boombox
-to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
+to work the <b>JUKEBOX</b> &mdash; hit the <b>WARDROBE</b> to make your guest &mdash;
+take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
 
@@ -358,6 +405,40 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     <p class="decks__hint">tap a pad to place a sound &middot; every change updates the link</p>
 
     <button type="button" class="arcade__exit" id="dk-exit">&#10005; EXIT TO LOUNGE</button>
+  </div>
+</div>
+
+<!-- ================= WARDROBE (make your own guest) ================= -->
+<div id="wardrobe" class="arcade" role="dialog" aria-modal="true"
+     aria-label="Make your own guest" aria-hidden="true">
+  <div class="arcade__cab">
+    <div class="arcade__marquee">&#10052; MAKE YOUR GUEST &#10052;</div>
+    <p class="decks__sub">pick a look &middot; <b>your guest is saved for next time</b></p>
+    <div class="ward__body">
+      <div class="ward__stage">
+        <canvas id="wc-canvas" width="44" height="56"></canvas>
+        <span class="ward__you">THIS IS YOU</span>
+      </div>
+      <div class="ward__controls">
+        <div class="ward__slot">
+          <h4>HAT</h4>
+          <div class="ward__swatches" id="wc-hat" role="group" aria-label="Hat colour"></div>
+        </div>
+        <div class="ward__slot">
+          <h4>COAT</h4>
+          <div class="ward__swatches" id="wc-coat" role="group" aria-label="Coat colour"></div>
+        </div>
+        <div class="ward__slot">
+          <h4>PANTS</h4>
+          <div class="ward__swatches" id="wc-pants" role="group" aria-label="Pants colour"></div>
+        </div>
+        <div class="ward__actions">
+          <button type="button" class="decks__btn" id="wc-random">&#10052; RANDOM</button>
+          <button type="button" class="decks__btn" id="wc-reset">&#8634; FROST DEFAULT</button>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="arcade__exit" id="wc-exit">&#10005; EXIT TO LOUNGE</button>
   </div>
 </div>
 
@@ -609,6 +690,10 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   var ARCADE = [0, 4];
   var SNAKE = [6, 0];
   var DECKS = [0, 1];
+  /* The wardrobe: the one fixture you dress at rather than play. Stands further
+     down the back-left wall, below the arcade cabinet. Clicking it opens the
+     make-your-own-guest panel; its mirror reflects whatever you last chose. */
+  var WARDROBE = [0, 6];
 
   /* ================= scenes =================
      The lounge and the two rooms you reach through doorways in its back wall:
@@ -676,6 +761,7 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
       block(SNAKE[0], SNAKE[1]);
       block(DECKS[0], DECKS[1]);
       block(BOOMBOX[0], BOOMBOX[1]);
+      block(WARDROBE[0], WARDROBE[1]);
     }
   }
 
@@ -1107,6 +1193,45 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     if (hovered) cabinetLabelAt(DECKS, DECK_H, "▶ THE DECKS");
   }
 
+  /* ================= the wardrobe =================
+     A standing mirrored wardrobe against the back-left wall - furniture, not a
+     machine, so its glass is silvered and bright where the arcade cabinets are
+     dark screens, and the two never read as a third game. It faces SE like the
+     arcade cabinet and the decks, so the mirror turns toward the room, and it
+     reflects the player in their CURRENT colours: restyle your guest and the
+     furniture wears it too. A click opens the make-your-own-guest panel. */
+  var WARD_H = 40;
+  function drawWardrobe(hovered) {
+    var tx = WARDROBE[0], ty = WARDROBE[1];
+    drawBox(tx, ty, WARD_H, css(shade(rgb(HEX.deep2), 1.25)),
+            css(shade(rgb(HEX.deep2), 1.05)), css(shade(rgb(HEX.O), 1.2)));
+    var q = function (u0, u1, v0, v1, fill) {
+      cabQuad(WARDROBE, u0, u1, v0, v1, fill, "SE", WARD_H);
+    };
+    /* frame, then the silvered glass - lighter up top like a lit mirror */
+    q(0.12, 0.88, 0.07, 0.92, css(shade(rgb(HEX.f4), 0.95)));      /* frame */
+    q(0.18, 0.82, 0.12, 0.86, css(shade(rgb(HEX.mid), 1.1)));      /* glass ground */
+    q(0.18, 0.82, 0.12, 0.5, css(shade(rgb(HEX.f3), 0.85)));       /* brighter top half */
+    /* the mirror's diagonal gleam, echoing the poster and record-sleeve flashes */
+    q(0.30, 0.4, 0.12, 0.86, rgba(rgb(HEX.light), 0.5));
+    q(0.46, 0.5, 0.12, 0.86, rgba(rgb(HEX.chkLight), 0.45));
+
+    /* your reflection: the player's own SE sprite, dimmed, standing in the glass */
+    var refl = player.sprites && player.sprites.SE && player.sprites.SE[0];
+    if (refl) {
+      var m = cabFace(WARDROBE, 0.5, 0.55, "SE", WARD_H);
+      var s = 0.6;
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(refl, Math.round(m.x - (SPR_W * s) / 2),
+                    Math.round(m.y - SPR_H * s), SPR_W * s, SPR_H * s);
+      ctx.restore();
+    }
+
+    if (hovered) cabinetLabelAt(WARDROBE, WARD_H, "▶ MAKE YOUR GUEST");
+  }
+
   /* Screen-space box a cabinet occupies, for hit-testing. The tall art rises
      over off-grid tiles, so we click the machine we can see rather than its
      footprint diamond. */
@@ -1123,6 +1248,11 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     var c = centre(DECKS[0], DECKS[1]);
     return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
            p.y >= c.y - TH / 2 - DECK_H && p.y <= c.y + TH / 2;
+  }
+  function inWardrobe(p) {
+    var c = centre(WARDROBE[0], WARDROBE[1]);
+    return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
+           p.y >= c.y - TH / 2 - WARD_H && p.y <= c.y + TH / 2;
   }
 
   /* ================= the boombox / jukebox =================
@@ -1600,6 +1730,7 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   var snakeHover = false;
   var decksHover = false;
   var boomHover = false;
+  var wardrobeHover = false;
   var hoveredDoor = null;     /* the door object under the cursor, or null */
   var hoveredRecord = null;   /* the record-room sleeve under the cursor, or null */
 
@@ -1677,6 +1808,8 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
                  f: function () { snakeCab(snakeHover); } });
     items.push({ d: DECKS[0] + DECKS[1],
                  f: function () { decksCab(decksHover); } });
+    items.push({ d: WARDROBE[0] + WARDROBE[1],
+                 f: function () { drawWardrobe(wardrobeHover); } });
     guests.forEach(function (g) {
       items.push({ d: g.depth(), f: function () { g.draw(); } });
     });
@@ -1819,7 +1952,7 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     player.dir = "SW";
     buildGuests();
     hover = null;
-    arcadeHover = snakeHover = decksHover = boomHover = false;
+    arcadeHover = snakeHover = decksHover = boomHover = wardrobeHover = false;
     hoveredDoor = null;
     hoveredRecord = null;
   }
@@ -1837,10 +1970,13 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
       snakeHover = inSnake(p);
       decksHover = !arcadeHover && !snakeHover && inDecks(p);
       boomHover = !arcadeHover && !snakeHover && !decksHover && inBoombox(p);
+      wardrobeHover = !arcadeHover && !snakeHover && !decksHover && !boomHover &&
+                      inWardrobe(p);
     } else {
-      arcadeHover = snakeHover = decksHover = boomHover = false;
+      arcadeHover = snakeHover = decksHover = boomHover = wardrobeHover = false;
     }
-    var overFixture = arcadeHover || snakeHover || decksHover || boomHover;
+    var overFixture = arcadeHover || snakeHover || decksHover || boomHover ||
+                      wardrobeHover;
     hoveredRecord = overFixture ? null : recordAt(p);
     hoveredDoor = (overFixture || hoveredRecord) ? null : doorAt(p);
     /* Suppress the tile highlight while over a fixture, a sleeve or a door, so
@@ -1850,7 +1986,7 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   });
   cv.addEventListener("mouseleave", function () {
     hover = null; arcadeHover = false; snakeHover = false;
-    decksHover = false; boomHover = false;
+    decksHover = false; boomHover = false; wardrobeHover = false;
     hoveredDoor = null; hoveredRecord = null;
   });
   cv.addEventListener("click", function (ev) {
@@ -1862,6 +1998,7 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
       if (inSnake(p))  { if (window.FrostSnake)  window.FrostSnake.open();  return; }
       if (inDecks(p))  { if (window.FrostDecks)  window.FrostDecks.open();  return; }
       if (inBoombox(p)) { toggleMusic(); return; }
+      if (inWardrobe(p)) { openWardrobe(); return; }
     }
     /* Click a record sleeve: a released one opens its Spotify track in a new
        tab, an upcoming one (no link yet) cues its preview on the jukebox. */
@@ -1882,6 +2019,179 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     var t = screenToTile(p.x, p.y);
     if (walkable(t.x, t.y)) player.goto(t.x, t.y);
   });
+
+  /* ================= make your own guest =================
+     The wardrobe's panel. Three rows of swatches - hat, coat, pants - rebuild
+     the player's sprite set on the spot via makeSpriteSet(), the same call that
+     dresses every guest in the room. The choice is saved to localStorage, so
+     the guest you build is the one you walk back in as next visit, and a small
+     canvas struts that guest while you pick. All of this lives in the main
+     closure because it leans on makeSpriteSet, the player object and HEX. */
+  var GUEST_KEY = "frost_guest_v1";
+  var DEFAULT_COLORS = [HEX.f3, HEX.bright, HEX.f4];   /* the stock Frost look */
+  /* One curated palette shared by all three slots: every swatch is a room ice
+     tone or a warm accent, so any hat/coat/pants combination still sits inside
+     the site's colour world. [hex, spoken-name-for-the-aria-label]. */
+  var WARD_SWATCHES = [
+    ["#38e6ff", "ice"],    ["#b8ecff", "frost"],  ["#6bb8dd", "steel"],
+    ["#2b6f96", "deep"],   ["#0e4a6e", "navy"],   ["#eafcff", "snow"],
+    ["#ffd68a", "gold"],   ["#ff8a1a", "amber"],  ["#ff5aa0", "rose"],
+    ["#c9b3ff", "violet"], ["#2f6b3a", "pine"],   ["#c84a6e", "wine"]
+  ];
+  var SLOTS = ["hat", "coat", "pants"];
+
+  var wardEl = document.getElementById("wardrobe");
+  var wcCanvas = document.getElementById("wc-canvas");
+  var wcCtx = wcCanvas ? wcCanvas.getContext("2d") : null;
+  var wcExit = document.getElementById("wc-exit");
+  var wcRandom = document.getElementById("wc-random");
+  var wcReset = document.getElementById("wc-reset");
+  var wcRows = { hat: document.getElementById("wc-hat"),
+                 coat: document.getElementById("wc-coat"),
+                 pants: document.getElementById("wc-pants") };
+
+  function isHex(s) { return typeof s === "string" && /^#[0-9a-f]{6}$/i.test(s); }
+  function loadColors() {
+    try {
+      var v = JSON.parse(localStorage.getItem(GUEST_KEY));
+      if (v && isHex(v.hat) && isHex(v.coat) && isHex(v.pants))
+        return [v.hat, v.coat, v.pants];
+    } catch (e) {}
+    return DEFAULT_COLORS.slice();
+  }
+  var guestColors = loadColors();
+  function saveColors() {
+    try {
+      localStorage.setItem(GUEST_KEY, JSON.stringify(
+        { hat: guestColors[0], coat: guestColors[1], pants: guestColors[2] }));
+    } catch (e) {}
+  }
+  /* Rebuild the player's sprites from the current colours. The player object
+     survives room changes, so one call re-dresses it everywhere at once. */
+  function dress() {
+    player.sprites = makeSpriteSet(guestColors[0], guestColors[1], guestColors[2]);
+  }
+
+  /* --- the live preview: struts the guest in the modal, cycling walk frames
+     and turning slowly so both the face and the hair-banked back show. Freezes
+     to a standing pose when the visitor asks for reduced motion. --- */
+  var wardReduce = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var WC_DIRS = ["SE", "SW", "NW", "NE"];
+  var wcSet = null, wcRAF = 0, wcT = 0;
+  function buildPreviewSet() {
+    wcSet = makeSpriteSet(guestColors[0], guestColors[1], guestColors[2]);
+  }
+  function drawPreview() {
+    if (!wcCtx || !wcSet) return;
+    wcCtx.clearRect(0, 0, wcCanvas.width, wcCanvas.height);
+    var dir = wardReduce ? "SE" : WC_DIRS[((wcT / 1.6) | 0) % 4];
+    var frame = wardReduce ? 0 : (1 + (((wcT * 6) | 0) % 4));
+    wcCtx.save();
+    wcCtx.globalAlpha = 0.3; wcCtx.fillStyle = "#02080e";
+    wcCtx.beginPath();
+    wcCtx.ellipse(wcCanvas.width / 2, wcCanvas.height - 4, 9, 3, 0, 0, Math.PI * 2);
+    wcCtx.fill(); wcCtx.restore();
+    wcCtx.imageSmoothingEnabled = false;
+    wcCtx.drawImage(wcSet[dir][frame],
+                    Math.round((wcCanvas.width - SPR_W) / 2),
+                    wcCanvas.height - SPR_H - 3);
+  }
+  function wcTick() {
+    wcT += 1 / 60;
+    drawPreview();
+    wcRAF = wardReduce ? 0 : requestAnimationFrame(wcTick);
+  }
+
+  /* --- swatches --- */
+  function markRow(slot) {
+    var row = wcRows[slot], idx = SLOTS.indexOf(slot);
+    if (!row) return;
+    [].forEach.call(row.children, function (b) {
+      b.setAttribute("aria-pressed",
+        b.dataset.c.toLowerCase() === guestColors[idx].toLowerCase()
+          ? "true" : "false");
+    });
+  }
+  function buildSwatches() {
+    SLOTS.forEach(function (slot) {
+      var row = wcRows[slot];
+      if (!row) return;
+      row.innerHTML = "";
+      WARD_SWATCHES.forEach(function (sw) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "ward__sw";
+        b.style.setProperty("--c", sw[0]);
+        b.dataset.c = sw[0];
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", slot + " colour: " + sw[1]);
+        b.addEventListener("click", function () { pick(slot, sw[0]); });
+        row.appendChild(b);
+      });
+      markRow(slot);
+    });
+  }
+  function applyColors() {
+    saveColors();
+    dress();            /* the room's player updates immediately */
+    buildPreviewSet();  /* and so does the modal preview */
+    if (!wcRAF) drawPreview();
+  }
+  function pick(slot, color) {
+    guestColors[SLOTS.indexOf(slot)] = color;
+    applyColors();
+    markRow(slot);
+  }
+  function setAll(cols) {
+    guestColors = cols.slice();
+    applyColors();
+    SLOTS.forEach(markRow);
+  }
+
+  /* --- open / close, mirroring the game cabinets --- */
+  var wardLastFocus = null, wardOpen = false;
+  function openWardrobe() {
+    if (!wardEl || wardOpen) return;
+    wardLastFocus = document.activeElement;
+    wardOpen = true;
+    buildPreviewSet();
+    SLOTS.forEach(markRow);
+    wardEl.classList.add("is-open");
+    wardEl.removeAttribute("aria-hidden");
+    document.addEventListener("keydown", wardKey);
+    wcT = 0;
+    if (!wardReduce) { if (!wcRAF) wcRAF = requestAnimationFrame(wcTick); }
+    else drawPreview();
+    if (wcExit) wcExit.focus();
+  }
+  function closeWardrobe() {
+    if (!wardOpen) return;
+    wardOpen = false;
+    if (wcRAF) { cancelAnimationFrame(wcRAF); wcRAF = 0; }
+    document.removeEventListener("keydown", wardKey);
+    wardEl.classList.remove("is-open");
+    wardEl.setAttribute("aria-hidden", "true");
+    if (wardLastFocus && wardLastFocus.focus) wardLastFocus.focus();
+  }
+  function wardKey(e) { if (e.key === "Escape") closeWardrobe(); }
+
+  if (wcExit) wcExit.addEventListener("click", closeWardrobe);
+  if (wcRandom) wcRandom.addEventListener("click", function () {
+    function rnd() {
+      return WARD_SWATCHES[(Math.random() * WARD_SWATCHES.length) | 0][0];
+    }
+    /* nudge the coat off the hat colour so the guest never melts into one block */
+    var h = rnd(), co = rnd(), pa = rnd();
+    if (co === h) co = rnd();
+    setAll([h, co, pa]);
+  });
+  if (wcReset) wcReset.addEventListener("click", function () {
+    setAll(DEFAULT_COLORS);
+  });
+
+  buildSwatches();
+  dress();   /* dress the player from the saved (or default) colours at startup */
 
   /* ================= loop ================= */
   var last = performance.now();
@@ -1937,6 +2247,8 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     render: render,
     scene: function () { return scene; },
     enterScene: enterScene,
+    openWardrobe: openWardrobe, dressGuest: setAll,
+    guestColors: function () { return guestColors.slice(); },
     step: function (dt, n) {
       for (var i = 0; i < (n || 1); i++) {
         guests.forEach(function (g) { g.update(dt); });
@@ -1958,8 +2270,9 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
 /* =======================================================================
    BRICK SMASH :: the lounge's arcade cabinet
    A self-contained Breakout, opened from the isometric room. The board of
-   high scores persists in localStorage, the same trick the guestbook and the
-   visitor counter use on the main site - no server, it's the 90s.
+   high scores is shared across all visitors via /api/scores (Cloudflare KV),
+   the same trick the guestbook and visitor counter use; a localStorage copy
+   is the warm cache and the offline fallback when the API can't be reached.
    ======================================================================= */
 (function () {
   "use strict";
@@ -2000,32 +2313,38 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   var PADDLE_KEYS = 430;                /* px/sec for arrow-key steering */
   var START_LIVES = 3;
 
-  /* ---- leaderboard (localStorage; entries escaped on render) ---- */
-  var KEY = "frost_bricksmash_v1";
+  /* ---- leaderboard — a real shared board via /api/scores when it's
+     reachable, otherwise the visitor's own localStorage copy (opened as a
+     file, or before KV is bound). Initials are escaped on render, so an entry
+     can't inject markup no matter where it came from. ---- */
+  var GAME = "bricksmash";
+  var KEY = "frost_bricksmash_v1";   /* local cache + offline fallback */
   var MAX_SCORES = 8;
   /* Obvious factory defaults, arcade-style, so the board is never empty. Not
-     invented people - initials on a machine nobody has beaten yet. */
+     invented people - initials on a machine nobody has beaten yet. Mirrors the
+     server seed so the cabinet looks the same before the live board arrives. */
   var SEED = [
     { i: "FRO", s: 2500 }, { i: "ICE", s: 1800 }, { i: "MIL", s: 1200 },
     { i: "SNO", s: 800 }, { i: "AAA", s: 400 }
   ];
+  var apiOK = false;   /* flips true once the shared board answers */
 
-  function loadScores() {
-    var list = SEED.slice();
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (raw) {
-        var v = JSON.parse(raw);
-        if (Array.isArray(v)) list = v;
-      }
-    } catch (e) {}
-    /* Sort and cap on the way in too, so a legacy or hand-edited store can
-       never render an over-long or out-of-order board. */
+  /* Sort and cap on the way in, so a legacy store or a slow-arriving server
+     payload can never render an over-long or out-of-order board. */
+  function sortCap(list) {
     return list.filter(function (e) { return e && typeof e.s === "number"; })
                .sort(function (a, b) { return b.s - a.s; })
                .slice(0, MAX_SCORES);
   }
-  function saveScores(list) {
+  function localLoad() {
+    var list = SEED.slice();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var v = JSON.parse(raw); if (Array.isArray(v)) list = v; }
+    } catch (e) {}
+    return sortCap(list);
+  }
+  function localSave(list) {
     try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
   }
   function esc(s) {
@@ -2041,25 +2360,61 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
         '<span class="pts">' + e.s + "</span></li>";
     }).join("");
   }
-  /* A score makes the table if the board isn't full or it beats the last row. */
+  /* A score makes the table if the board isn't full or it beats the last row.
+     Checked against the last board we saw; the server has the final say. */
   function qualifies(sc) {
     if (sc <= 0) return false;
     return scores.length < MAX_SCORES || sc > scores[scores.length - 1].s;
   }
+  function rankOf(name, sc) {
+    for (var i = 0; i < scores.length; i++) {
+      if (scores[i].i === name && scores[i].s === sc) return i;
+    }
+    return -1;
+  }
+  /* Pull the shared board; if it answers it becomes the source of truth. */
+  function refresh() {
+    fetch("/api/scores?game=" + GAME)
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        apiOK = true;
+        scores = sortCap(d.scores);
+        localSave(scores);
+        renderBoard(-1);
+      })
+      .catch(function () { /* API absent — the local board already shows */ });
+  }
   function submit(initials, sc) {
     var name = (initials || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
-    scores.push({ i: name, s: sc });
-    scores.sort(function (a, b) { return b.s - a.s; });
-    scores = scores.slice(0, MAX_SCORES);
-    saveScores(scores);
-    var at = scores.indexOf(scores.filter(function (e) {
-      return e.i === name && e.s === sc;
-    })[0]);
-    renderBoard(at);
-    return at;
+
+    /* Splice the row in against our local copy first, so entry feels instant;
+       the server response (below) then reconciles the real ranking. */
+    function localAppend() {
+      scores.push({ i: name, s: sc });
+      scores = sortCap(scores);
+      localSave(scores);
+      renderBoard(rankOf(name, sc));
+    }
+
+    localAppend();
+    if (!apiOK) return;   /* file:// or KV unbound — the local row is all we can do */
+    fetch("/api/scores", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ game: GAME, initials: name, score: sc })
+    })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        scores = sortCap(d.scores);
+        localSave(scores);
+        renderBoard(rankOf(name, sc));
+      })
+      .catch(function () { /* rate-limited or offline — the local row stays */ });
   }
 
-  var scores = loadScores();
+  var scores = localLoad();
 
   /* ================= game state ================= */
   var STATE = { IDLE: 0, SERVE: 1, PLAY: 2, OVER: 3, ENTER: 4 };
@@ -2344,8 +2699,9 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   function open() {
     if (running) return;
     lastFocus = document.activeElement;
-    scores = loadScores();
+    scores = localLoad();       /* warm board instantly, then go live */
     renderBoard(-1);
+    refresh();
     overlay.classList.add("is-open");
     overlay.removeAttribute("aria-hidden");
     document.addEventListener("keydown", onKeyDown);
@@ -2403,8 +2759,8 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
 <script>
 /* =======================================================================
    SNAKE :: the lounge's second arcade cabinet
-   Same shell as Brick Smash (state machine, localStorage leaderboard, pause
-   on a hidden tab) so the two machines feel like one arcade, not two bolted-
+   Same shell as Brick Smash (state machine, shared /api/scores leaderboard,
+   pause on a hidden tab) so the two machines feel like one arcade, not two bolted-
    together widgets. The board itself borrows the room's own black-and-white
    check for its floor and the checkerboard-striped body, and the food is a
    plain callback to the site's snowflake motif rather than an invented icon.
@@ -2441,28 +2797,37 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   var GROW_PER_LEVEL = 5;    /* food eaten before the level (and speed) ticks up */
   var START_LEN = 3;
 
-  /* ---- leaderboard (localStorage; entries escaped on render) ---- */
-  var KEY = "frost_snake_v1";
+  /* ---- leaderboard — a real shared board via /api/scores when it's
+     reachable, otherwise the visitor's own localStorage copy (opened as a
+     file, or before KV is bound). Initials are escaped on render, so an entry
+     can't inject markup no matter where it came from. ---- */
+  var GAME = "snake";
+  var KEY = "frost_snake_v1";   /* local cache + offline fallback */
   var MAX_SCORES = 8;
+  /* Factory defaults, arcade-style, so the board is never empty. Mirrors the
+     server seed so the cabinet looks the same before the live board arrives. */
   var SEED = [
     { i: "FRO", s: 300 }, { i: "ICE", s: 220 }, { i: "MIL", s: 160 },
     { i: "SNO", s: 100 }, { i: "AAA", s: 50 }
   ];
+  var apiOK = false;   /* flips true once the shared board answers */
 
-  function loadScores() {
-    var list = SEED.slice();
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (raw) {
-        var v = JSON.parse(raw);
-        if (Array.isArray(v)) list = v;
-      }
-    } catch (e) {}
+  /* Sort and cap on the way in, so a legacy store or a slow-arriving server
+     payload can never render an over-long or out-of-order board. */
+  function sortCap(list) {
     return list.filter(function (e) { return e && typeof e.s === "number"; })
                .sort(function (a, b) { return b.s - a.s; })
                .slice(0, MAX_SCORES);
   }
-  function saveScores(list) {
+  function localLoad() {
+    var list = SEED.slice();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var v = JSON.parse(raw); if (Array.isArray(v)) list = v; }
+    } catch (e) {}
+    return sortCap(list);
+  }
+  function localSave(list) {
     try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
   }
   function esc(s) {
@@ -2482,20 +2847,55 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
     if (sc <= 0) return false;
     return scores.length < MAX_SCORES || sc > scores[scores.length - 1].s;
   }
+  function rankOf(name, sc) {
+    for (var i = 0; i < scores.length; i++) {
+      if (scores[i].i === name && scores[i].s === sc) return i;
+    }
+    return -1;
+  }
+  /* Pull the shared board; if it answers it becomes the source of truth. */
+  function refresh() {
+    fetch("/api/scores?game=" + GAME)
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        apiOK = true;
+        scores = sortCap(d.scores);
+        localSave(scores);
+        renderBoard(-1);
+      })
+      .catch(function () { /* API absent — the local board already shows */ });
+  }
   function submit(initials, sc) {
     var name = (initials || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
-    scores.push({ i: name, s: sc });
-    scores.sort(function (a, b) { return b.s - a.s; });
-    scores = scores.slice(0, MAX_SCORES);
-    saveScores(scores);
-    var at = scores.indexOf(scores.filter(function (e) {
-      return e.i === name && e.s === sc;
-    })[0]);
-    renderBoard(at);
-    return at;
+
+    /* Splice the row in against our local copy first, so entry feels instant;
+       the server response (below) then reconciles the real ranking. */
+    function localAppend() {
+      scores.push({ i: name, s: sc });
+      scores = sortCap(scores);
+      localSave(scores);
+      renderBoard(rankOf(name, sc));
+    }
+
+    localAppend();
+    if (!apiOK) return;   /* file:// or KV unbound — the local row is all we can do */
+    fetch("/api/scores", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ game: GAME, initials: name, score: sc })
+    })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        scores = sortCap(d.scores);
+        localSave(scores);
+        renderBoard(rankOf(name, sc));
+      })
+      .catch(function () { /* rate-limited or offline — the local row stays */ });
   }
 
-  var scores = loadScores();
+  var scores = localLoad();
 
   /* ================= game state ================= */
   var STATE = { IDLE: 0, PLAY: 1, PAUSED: 2, OVER: 3, ENTER: 4 };
@@ -2727,8 +3127,9 @@ to work the <b>JUKEBOX</b> &mdash; take the doors to the <b>BAR</b> and the <b>R
   function open() {
     if (running) return;
     lastFocus = document.activeElement;
-    scores = loadScores();
+    scores = localLoad();       /* warm board instantly, then go live */
     renderBoard(-1);
+    refresh();
     overlay.classList.add("is-open");
     overlay.removeAttribute("aria-hidden");
     document.addEventListener("keydown", onKeyDown);
