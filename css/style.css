@@ -266,6 +266,9 @@ a{ color:var(--ice-bright); }
 .btn--big{ font-size:1.3rem; padding:14px 26px; }
 .btn--sm{ font-size:.85rem; padding:7px 14px; }
 .btn--warm{ --b1:#ff86c2; --b2:#c00e63; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4); border-color:#ffd7ec; }
+/* The lounge doorway: an after-hours violet so it stands apart from the cyan
+   (music) and pink (shows) calls to action in the hero. */
+.btn--lounge{ --b1:#c9a3ff; --b2:#6a2fb5; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4); border-color:#efe2ff; }
 
 /* ---------- NAV ---------- */
 .navbar{
