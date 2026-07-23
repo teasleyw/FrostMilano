@@ -116,12 +116,26 @@
         });
       }
 
-      /* Only a frame that actually decoded proves the file is really there. */
-      video.addEventListener("loadeddata", function () {
+      /* Reveal the screen once a real frame is behind the static. iOS Safari
+         won't decode one from preload alone — only once playback starts — so
+         we also listen for "playing", not just "loadeddata". Without it an
+         iPhone never fires either event on its own and the TV stays stuck on
+         NO SIGNAL even though the clip is there. */
+      function goLive() {
         tv.classList.add("tv--live");
         if (reduceMotion) video.controls = true;
-        if (io) io.observe(video);
-      });
+      }
+      video.addEventListener("loadeddata", goLive);
+      video.addEventListener("playing", goLive);
+
+      /* Start playback when the TV scrolls into view. Observe every TV up
+         front — NOT inside the load handler — because on iOS that first
+         muted, inline play() is itself what forces the frame to decode and
+         fire the events above, so gating it behind them would deadlock.
+         With reduced motion we don't autoplay; reveal it with controls so
+         it can still be played. */
+      if (io) io.observe(video);
+      else goLive();
 
       if (soundBtn) {
         soundBtn.addEventListener("click", function () {
