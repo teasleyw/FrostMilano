@@ -18,7 +18,10 @@
 var MAX_ENTRIES = 200;
 var MAX_NAME = 24;
 var MAX_MSG = 140;
-var COOLDOWN_SECONDS = 30;
+/* Cloudflare KV rejects an expirationTtl below 60s, and the cooldown is a
+   TTL key, so 60 is the floor - anything less makes the rate-limit put fail
+   (and, since it shares a Promise.all with the entry write, 400s the post). */
+var COOLDOWN_SECONDS = 60;
 
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {

@@ -108,18 +108,19 @@ variables). Change those and the whole site updates.
 
 ## 📬 The forms + counter (real, via Cloudflare KV)
 
-The **Ice List signup**, the **guestbook**, and the **visitor counter** are
-backed by three Cloudflare Pages Functions in `functions/api/` that read and
-write a Cloudflare KV namespace. If the API isn't reachable — you opened the
-page as a local file, or the KV binding isn't set up yet — every one of them
-quietly falls back to the old browser-only behaviour, so the site never looks
-broken.
+The **Ice List signup**, the **guestbook**, the **visitor counter**, and the
+lounge's **arcade high-score boards** are backed by Cloudflare Pages Functions
+in `functions/api/` that read and write a Cloudflare KV namespace. If the API
+isn't reachable — you opened the page as a local file, or the KV binding isn't
+set up yet — every one of them quietly falls back to the old browser-only
+behaviour, so the site never looks broken.
 
 | Endpoint | What it does |
 |---|---|
 | `functions/api/visits.js` | Shared hit counter. POST bumps it, GET reads it; the page counts once per session. |
 | `functions/api/subscribe.js` | Stores each Ice List email in KV as `sub:<email>` (duplicates collapse). |
-| `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 30s-per-IP cooldown). |
+| `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 60s-per-IP cooldown). |
+| `functions/api/scores.js` | Shared high-score boards for the lounge's two arcade cabinets. `GET ?game=bricksmash\|snake` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
 
 ### One-time setup: bind the KV namespace
 The Functions look for a binding named **`FrostMilanoKV`** (a **`FROST_KV`**
@@ -143,6 +144,7 @@ return 503 and the site uses the local fallback.
   `sub:` prefix, or from a terminal:
   `wrangler kv key list --namespace-id ee9fcf13dac5479787cc42f9089246e6 --prefix "sub:"`
 - **Guestbook:** it renders on the site; the raw JSON is the `guestbook` key.
+- **High scores:** the raw JSON lives under `scores:bricksmash` and `scores:snake`.
 
 ### Want signups emailed to you instead?
 KV storage is the no-extra-service option. To also get an email on each signup,
