@@ -677,13 +677,39 @@ a{ color:var(--ice-bright); }
 /* ---------- GUESTBOOK ---------- */
 .guestbook{ margin-top:14px; max-height:280px; overflow-y:auto; padding-right:4px; }
 .gb-entry{
+  display:flex; gap:10px; align-items:flex-start;
   background:linear-gradient(180deg,rgba(20,70,100,.4),rgba(6,24,40,.5));
   border:2px ridge var(--frost-4); border-radius:6px;
   padding:8px 10px; margin-bottom:8px;
 }
+/* The signer's own custom guest, drawn from the wardrobe engine (js/guest-sprite.js).
+   Native-pixel canvas, upscaled by CSS so it stays crisp. Anonymous/legacy
+   entries get the stock guest at half strength so the row still reads. */
+.gb-entry__avatar{
+  flex:0 0 auto; width:34px; height:auto; align-self:flex-start;
+  image-rendering:pixelated;
+  background:rgba(2,16,28,.55); border:2px inset var(--frost-4);
+  border-radius:5px; padding:3px 2px 0;
+}
+.gb-entry__avatar--anon{ opacity:.5; }
+.gb-entry__body{ flex:1 1 auto; min-width:0; }
 .gb-entry__head{ font-family:var(--display); letter-spacing:.5px; color:#bff0ff; font-size:1.05rem; }
 .gb-entry__date{ font-family:var(--pixel); font-size:.85rem; color:#6bb8dd; float:right; }
 .gb-entry__msg{ margin:2px 0 0; word-break:break-word; }
+
+/* "Your guest" preview that sits above the sign form. */
+.gb-you{
+  display:flex; gap:10px; align-items:center;
+  margin:0 0 10px; padding:8px 10px;
+  background:rgba(2,16,28,.4); border:2px ridge var(--frost-4); border-radius:6px;
+}
+.gb-you__av{
+  flex:0 0 auto; width:34px; height:auto; image-rendering:pixelated;
+  background:rgba(2,16,28,.55); border:2px inset var(--frost-4);
+  border-radius:5px; padding:3px 2px 0;
+}
+.gb-you__txt{ font-size:.9rem; color:#9fd8ef; line-height:1.3; }
+.gb-you__txt a{ color:#38e6ff; }
 
 /* ---------- FOOTER ---------- */
 /* No border-top: the checker band directly above is the divider now, and

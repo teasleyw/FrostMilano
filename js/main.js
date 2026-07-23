@@ -238,12 +238,22 @@
     var KEY = "frost_guestbook_v2";
     /* One entry, so the guestbook isn't empty on first load.
        No invented fans and no invented song titles — the old seed had
-       strangers raving about a track called "SUBZERO" that doesn't exist. */
+       strangers raving about a track called "SUBZERO" that doesn't exist.
+       The webmaster signs as the stock Frost guest (empty look = defaults). */
     var seed = [
-      { name: "webmaster", msg: "site's up. sign below. ❄", ts: "1999-08-14" }
+      { name: "webmaster", msg: "site's up. sign below. ❄", ts: "1999-08-14", look: {} }
     ];
     var apiOK = false;   /* flips true once the shared book answers */
 
+    /* The guest the visitor built in the lounge, saved there under this key. It
+       travels with their signature so the book shows their own character. */
+    function loadMyLook() {
+      try {
+        var v = JSON.parse(localStorage.getItem("frost_guest_v2"));
+        if (v && typeof v === "object") return v;
+      } catch (e) {}
+      return null;
+    }
     function localLoad() {
       try {
         var raw = localStorage.getItem(KEY);
@@ -259,15 +269,55 @@
       d.textContent = s;
       return d.innerHTML;
     }
+    /* A small canvas of the signer's guest via the shared wardrobe engine.
+       Entries without a look (legacy, or a signer who never visited the lounge)
+       get the stock guest at half strength. Returns null if the engine is
+       absent, so the book still works without avatars. */
+    function avatar(look, cls) {
+      if (!window.GuestSprite) return null;
+      var c = GuestSprite.renderLook(look || {}, { scale: 2 });
+      c.className = cls;
+      c.setAttribute("aria-hidden", "true");
+      return c;
+    }
     function render(entries) {
-      list.innerHTML = entries.map(function (e) {
-        return '<div class="gb-entry">' +
+      list.innerHTML = "";
+      entries.forEach(function (e) {
+        var row = document.createElement("div");
+        row.className = "gb-entry";
+        var av = avatar(e.look, "gb-entry__avatar" + (e.look ? "" : " gb-entry__avatar--anon"));
+        if (av) row.appendChild(av);
+        var body = document.createElement("div");
+        body.className = "gb-entry__body";
+        body.innerHTML =
           '<span class="gb-entry__date">' + esc(e.ts) + "</span>" +
           '<div class="gb-entry__head">' + esc(e.name) + " wrote:</div>" +
-          '<p class="gb-entry__msg">' + esc(e.msg) + "</p>" +
-          "</div>";
-      }).join("");
+          '<p class="gb-entry__msg">' + esc(e.msg) + "</p>";
+        row.appendChild(body);
+        list.appendChild(row);
+      });
     }
+
+    /* "This is you" preview above the form: shows the guest that will sign, and
+       points first-timers to the lounge to build one. */
+    var youWrap = document.createElement("div");
+    youWrap.className = "gb-you";
+    form.parentNode.insertBefore(youWrap, form);
+    function renderYou() {
+      var look = loadMyLook();
+      youWrap.innerHTML = "";
+      var av = avatar(look, "gb-you__av");
+      if (av) youWrap.appendChild(av);
+      var txt = document.createElement("div");
+      txt.className = "gb-you__txt";
+      txt.innerHTML = look
+        ? "this is <b>your guest</b> — they sign with you.<br>" +
+          '<a href="lounge.html">re-dress them in the lounge →</a>'
+        : "sign with your own guest — " +
+          '<a href="lounge.html">make one in the lounge →</a>';
+      youWrap.appendChild(txt);
+    }
+    renderYou();
 
     var entries = localLoad();
     render(entries);
@@ -288,7 +338,9 @@
       var name = document.getElementById("gb-name").value.trim();
       var text = document.getElementById("gb-msg").value.trim();
       if (!name || !text) return;
+      var myLook = loadMyLook();
       var entry = { name: name, msg: text, ts: new Date().toISOString().slice(0, 10) };
+      if (myLook) entry.look = myLook;
 
       function localAppend() {
         entries.unshift(entry);
@@ -301,7 +353,8 @@
       fetch("/api/guestbook", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name, msg: text, website: hp ? hp.value : "" })
+        body: JSON.stringify({ name: name, msg: text, look: myLook || undefined,
+                               website: hp ? hp.value : "" })
       })
         .then(function (r) { if (!r.ok) throw 0; return r.json(); })
         .then(function (d) {

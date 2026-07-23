@@ -1,8 +1,12 @@
 /* =======================================================================
    /api/guestbook  —  the shared guestbook (Cloudflare Pages Function)
 
-   GET  -> { entries: [ { name, msg, ts }, ... ] }, newest first.
-   POST { name, msg, website } -> validates, prepends, returns the list.
+   GET  -> { entries: [ { name, msg, ts, look? }, ... ] }, newest first.
+   POST { name, msg, website, look? } -> validates, prepends, returns the list.
+
+   look (optional) is the guest the signer built in the lounge wardrobe, so the
+   book can draw each signer's own character. It is sanitised hard on the way in
+   (cleanLook) and only used as canvas fill on render, never as markup.
 
    The whole book lives under one KV key ("guestbook") as a JSON array,
    capped at MAX_ENTRIES so it can't grow without bound. Abuse guards:
@@ -30,6 +34,28 @@ function json(obj, status) {
   });
 }
 
+/* The guest a signer built in the lounge wardrobe travels with their entry so
+   the book can draw it. Sanitise hard: only known fields, hex colours, and
+   whitelisted style names survive - never trust the shape the client sent.
+   Colours are only ever used as canvas fill on render (never innerHTML), and
+   the client's makeLook() fills any gaps, so a partial look is fine. */
+var HAT_STYLES = { none: 1, beanie: 1, cap: 1 };
+var HAIR_STYLES = { short: 1, long: 1, buzz: 1 };
+var OUTFIT_STYLES = { coat: 1, hoodie: 1, tee: 1 };
+function isHex(s) { return typeof s === "string" && /^#[0-9a-f]{6}$/i.test(s); }
+function cleanLook(o) {
+  if (!o || typeof o !== "object") return undefined;
+  var out = {};
+  ["hairColor", "coatColor", "pantsColor", "skinColor", "hatColor"].forEach(function (k) {
+    if (isHex(o[k])) out[k] = o[k].toLowerCase();
+  });
+  if (HAT_STYLES[o.hat]) out.hat = o.hat;
+  if (HAIR_STYLES[o.hair]) out.hair = o.hair;
+  if (OUTFIT_STYLES[o.outfit]) out.outfit = o.outfit;
+  if (typeof o.glasses === "boolean") out.glasses = o.glasses;
+  return Object.keys(out).length ? out : undefined;
+}
+
 function loadBook(kv) {
   return kv.get("guestbook").then(function (raw) {
     if (!raw) return [];
@@ -55,6 +81,7 @@ export function onRequestPost(context) {
     var name = String(body.name || "").trim().slice(0, MAX_NAME);
     var msg = String(body.msg || "").trim().slice(0, MAX_MSG);
     if (!name || !msg) return json({ error: "name and message are both required" }, 400);
+    var look = cleanLook(body.look);
 
     /* one post per IP per cooldown window */
     var ip = context.request.headers.get("cf-connecting-ip") || "anon";
@@ -63,7 +90,9 @@ export function onRequestPost(context) {
       if (recent) return json({ error: "easy — one message every " + COOLDOWN_SECONDS + "s" }, 429);
 
       return loadBook(kv).then(function (entries) {
-        entries.unshift({ name: name, msg: msg, ts: new Date().toISOString().slice(0, 10) });
+        var entry = { name: name, msg: msg, ts: new Date().toISOString().slice(0, 10) };
+        if (look) entry.look = look;
+        entries.unshift(entry);
         if (entries.length > MAX_ENTRIES) entries.length = MAX_ENTRIES;
         return Promise.all([
           kv.put("guestbook", JSON.stringify(entries)),
