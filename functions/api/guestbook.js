@@ -12,7 +12,7 @@
 
    Entries are stored raw and escaped when rendered (js/main.js esc()), so
    markup in a message can never execute. Bind the namespace in Pages
-   settings as the variable name FROST_KV.
+   settings as the variable name FrostMilanoKV.
    ======================================================================= */
 
 var MAX_ENTRIES = 200;
@@ -36,13 +36,13 @@ function loadBook(kv) {
 }
 
 export function onRequestGet(context) {
-  var kv = context.env.FROST_KV;
+  var kv = context.env.FrostMilanoKV || context.env.FROST_KV;
   if (!kv) return json({ entries: [] });
   return loadBook(kv).then(function (entries) { return json({ entries: entries }); });
 }
 
 export function onRequestPost(context) {
-  var kv = context.env.FROST_KV;
+  var kv = context.env.FrostMilanoKV || context.env.FROST_KV;
   if (!kv) return json({ error: "storage unavailable" }, 503);
 
   return context.request.json().then(function (body) {

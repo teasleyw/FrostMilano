@@ -122,13 +122,21 @@ broken.
 | `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 30s-per-IP cooldown). |
 
 ### One-time setup: bind the KV namespace
-The Functions look for a binding named **`FROST_KV`**. In the Cloudflare
-dashboard: **Workers & Pages → your Pages project → Settings → Functions → KV
-namespace bindings → Add binding**, variable name `FROST_KV`, and select the
-namespace you created (`ee9fcf13dac5479787cc42f9089246e6`). Add it to
-**Production** (and Preview if you want the previews to work too), then
-redeploy. Until this binding exists the endpoints return 503 and the site uses
-the local fallback.
+The Functions look for a binding named **`FrostMilanoKV`** (a **`FROST_KV`**
+binding also works, as a fallback). In the Cloudflare dashboard: **Workers &
+Pages → your Pages project → Settings → Functions → KV namespace bindings → Add
+binding**, variable name `FrostMilanoKV`, and select the namespace you created
+(named `FrostMilanoKV`, id `ee9fcf13dac5479787cc42f9089246e6`). Note the
+**variable name** and the **namespace** happen to share the label `FrostMilanoKV`
+here — that's fine. Add it to **Production** (and Preview if you want the
+previews to work too), then redeploy. Until this binding exists the endpoints
+return 503 and the site uses the local fallback.
+
+> **This must be a Cloudflare _Pages_ project, not a Worker.** Pages is what
+> turns the `functions/` folder into the `/api/*` endpoints; a plain Worker
+> ignores that folder and every `/api/*` route 404s. If `/api/visits` returns
+> **404**, it's deployed as the wrong product; **503** means Pages is running
+> but the KV binding is missing.
 
 ### Reading what comes in
 - **Emails:** in the dashboard open the KV namespace and filter keys by the

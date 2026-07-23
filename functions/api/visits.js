@@ -3,9 +3,9 @@
 
    POST increments the count and returns it; GET just reads it. The client
    (js/main.js) POSTs once per session, then GETs, so a refresh doesn't
-   inflate the tally. Backed by the FROST_KV namespace — bind it in the
-   Pages project settings (Settings → Functions → KV namespace bindings)
-   as the variable name FROST_KV.
+   inflate the tally. Backed by a KV namespace bound in the Pages project
+   settings (Settings → Functions → KV namespace bindings) as the variable
+   name FrostMilanoKV (a FROST_KV binding also works, as a fallback).
 
    KV is eventually consistent, so two visits landing in the exact same
    instant can lose one increment. For a nostalgic hit counter on a small
@@ -30,13 +30,13 @@ function read(kv) {
 }
 
 export function onRequestGet(context) {
-  var kv = context.env.FROST_KV;
+  var kv = context.env.FrostMilanoKV || context.env.FROST_KV;
   if (!kv) return json({ error: "storage unavailable" }, 503);
   return read(kv).then(function (n) { return json({ count: n }); });
 }
 
 export function onRequestPost(context) {
-  var kv = context.env.FROST_KV;
+  var kv = context.env.FrostMilanoKV || context.env.FROST_KV;
   if (!kv) return json({ error: "storage unavailable" }, 503);
   return read(kv).then(function (n) {
     var next = n + 1;
