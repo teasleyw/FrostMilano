@@ -23,3 +23,8 @@ desktop.ini
 video/*.mov
 video/*.MOV
 video/*.mp4.orig
+
+# Same story for audio: the uncompressed .wav masters are the local source,
+# and some are >25 MB which fails the Cloudflare Pages per-file limit. The
+# site only ever plays the small committed .mp3 versions. Keep .wav local.
+audio/*.wav
