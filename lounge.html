@@ -144,6 +144,37 @@
   .arcade__scores li .who{ flex:1; letter-spacing:2px; color:#eafcff; }
   .arcade__scores li .pts{ color:#38e6ff; font-variant-numeric:tabular-nums; }
   .arcade__scores li.is-new .who{ color:#ffd68a; animation:arcadeBlink 1s steps(1) infinite; }
+  /* Capsule legend. The letters stamped on a falling capsule are terse by
+     necessity - 22px of canvas - so the cabinet spells them out once, the way
+     a real machine prints the table on the bezel. */
+  .arcade__legend{ margin-top:14px; }
+  .arcade__pu{ margin:0; padding:0; list-style:none;
+    font-size:.66rem; color:#6bb8dd; letter-spacing:1px; }
+  /* Beats the score-row rule above, which is shared by every li in this aside:
+     a legend reads left-to-right, and it doesn't want the dotted rules. */
+  .arcade__pu li{
+    display:flex; align-items:center; gap:7px; padding:2px 0;
+    justify-content:flex-start; border-bottom:0;
+  }
+  .arcade__pu i{
+    flex:0 0 15px; text-align:center; font-style:normal; font-weight:bold;
+    color:#02101c; border-radius:2px; line-height:1.5;
+  }
+  .arcade__pu .pu-w{ background:#38e6ff; }
+  .arcade__pu .pu-m{ background:#eafcff; }
+  .arcade__pu .pu-s{ background:#b8ecff; }
+  .arcade__pu .pu-c{ background:#8ad9ff; }
+  .arcade__pu .pu-l{ background:#ffd68a; }
+  .arcade__pu .pu-n{ background:#ff7b9c; }
+  .arcade__pu .pu-f{ background:#ff9d5c; }
+  /* The two hazards are named in their own colour so the list reads at a
+     glance as "mostly good, watch these two". */
+  .arcade__pu .bad{ color:#ff9d5c; }
+  .arcade__note{
+    margin:10px 0 0; font-size:.62rem; line-height:1.5; color:#2b6f96;
+    letter-spacing:.5px;
+  }
+  .arcade__note b{ color:#6bb8dd; }
   /* Reuse the .back button's look for the exit control. */
   .arcade__exit{
     align-self:center; font:inherit; font-size:.78rem; letter-spacing:1px;
@@ -322,12 +353,173 @@
     .ward__style{ padding:7px 12px; font-size:.66rem; }
     #wc-canvas{ width:100px; }
   }
+
+  /* ================= WINTER MAUL =================
+     Reuses the .arcade backdrop, cabinet, marquee and exit chrome like every
+     other fixture. What's new is the control deck under the screen: a maul is
+     the one game here you play with your hands off the keyboard, so the tower
+     palette, the wave call and the sends are real buttons rather than canvas
+     art - they tab, they announce their state, and they stay tappable on a
+     phone where a 20px grid cell does not. */
+  /* Beats the file-wide canvas{} rule for the same reason #bs-canvas does:
+     this board is isometric, so it's all diagonals, and pixelated rendering
+     would put a staircase on every edge. It's drawn into a buffer twice the
+     logical size instead, which stays clean at any scale. */
+  #wm-canvas{
+    image-rendering:auto;
+    /* border-box, unlike the other two cabinets' canvases: this one sits in a
+       scrolling pane, so a ridge hanging 6px past width:100% would show up as
+       a scrollbar on a board that already fits. */
+    box-sizing:border-box;
+    width:100%; height:auto; display:block;
+    border:3px ridge #6bb8dd; border-radius:6px;
+    background:#05131f; cursor:crosshair;
+    /* Own the touch: drag-to-build must never scroll or zoom the page. */
+    touch-action:none;
+  }
+  /* The maul carries more chrome than the other cabinets - a palette, a wave
+     clock, a rival panel and the sends - and its board is wider than it is
+     tall, so its cabinet gets more room than the shared 720px. */
+  .arcade__cab--wide{ width:min(880px,100%); }
+  /* Holds the board when it's wider than the cabinet (phones, see the query at
+     the foot of this block). Sits inside .arcade__screen rather than replacing
+     it, so the start/pause banner and the scanlines stay pinned over the
+     visible board instead of scrolling off with it. */
+  .maul__pan{ overflow-x:auto; -webkit-overflow-scrolling:touch; line-height:0; }
+  .maul__deck{ display:flex; flex-direction:column; gap:6px; }
+  .maul__row{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  /* One chip per tower: swatch, name, price. Wraps to two rows on a phone. */
+  .maul__pick{
+    display:flex; align-items:center; gap:5px;
+    font:inherit; font-size:.64rem; letter-spacing:1px; color:#eafcff;
+    padding:5px 8px; border-radius:5px; cursor:pointer;
+    background:linear-gradient(180deg,#0e3d5c,#07253a);
+    border:2px outset #2b6f96; text-shadow:0 1px 0 #02101c;
+    transition:filter .12s ease, transform .08s ease;
+  }
+  .maul__pick:hover{ filter:brightness(1.25); transform:translateY(-1px); }
+  .maul__pick:active{ border-style:inset; transform:translateY(1px); }
+  .maul__pick:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .maul__pick[aria-pressed="true"]{
+    border-color:#38e6ff; border-style:inset;
+    background:linear-gradient(180deg,#1a6a99,#0b3a5a);
+    box-shadow:0 0 8px rgba(56,230,255,.45);
+  }
+  /* Priced out of a tower, the chip dims rather than disappearing: the point
+     of a maul economy is seeing what you are saving toward. */
+  .maul__pick.is-broke{ opacity:.42; }
+  .maul__pick i{
+    flex:0 0 9px; height:9px; border-radius:2px; font-style:normal;
+    box-shadow:0 0 5px currentColor;
+  }
+  .maul__pick b{ color:#eafcff; }
+  .maul__pick s{ text-decoration:none; color:#ffd68a;
+    font-variant-numeric:tabular-nums; }
+  /* The wave clock. Its own line so the countdown never reflows the palette. */
+  .maul__wave{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:.68rem; letter-spacing:1px; color:#6bb8dd; min-height:26px;
+  }
+  .maul__wave b{ color:#38e6ff; font-variant-numeric:tabular-nums; }
+  .maul__call{
+    font:inherit; font-size:.64rem; letter-spacing:1px; color:#02101c;
+    padding:4px 10px; border-radius:5px; cursor:pointer;
+    background:linear-gradient(180deg,#ffd68a,#c99a3e);
+    border:2px outset #ffd68a; font-weight:bold;
+  }
+  .maul__call:hover{ filter:brightness(1.15); }
+  .maul__call:active{ border-style:inset; }
+  .maul__call:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .maul__call[hidden]{ display:none; }
+  /* The selected-tower strip: stats on the left, upgrade/sell on the right.
+     Fixed height so picking a tower doesn't jump the buttons under your thumb. */
+  .maul__sel{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    flex-wrap:wrap; min-height:28px;
+    font-size:.64rem; letter-spacing:1px; color:#6bb8dd;
+  }
+  .maul__sel b{ color:#b8ecff; }
+  .maul__sel em{ font-style:normal; color:#ffd68a; }
+  .maul__act{
+    font:inherit; font-size:.62rem; letter-spacing:1px; color:#eafcff;
+    padding:4px 9px; border-radius:5px; cursor:pointer;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    border:2px outset #4bb4d8; text-shadow:0 1px 0 #02101c;
+  }
+  .maul__act:hover{ filter:brightness(1.25); }
+  .maul__act:active{ border-style:inset; }
+  .maul__act:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .maul__act.is-broke{ opacity:.42; }
+
+  /* ---- the rival panel, in the aside beside the high scores ---- */
+  .maul__rival{ font-size:.68rem; color:#6bb8dd; letter-spacing:1px; }
+  .maul__meter{
+    position:relative; height:12px; margin:5px 0 4px;
+    background:#02141f; border:2px inset #17415c; border-radius:4px;
+    overflow:hidden;
+  }
+  .maul__meter i{
+    position:absolute; inset:0 auto 0 0; display:block;
+    background:linear-gradient(180deg,#ff7b9c,#a11f5a);
+    transition:width .3s ease;
+  }
+  /* Your own lives ride the same meter in the room's cyan, so the two bars
+     read as one race at a glance rather than two unrelated readouts. */
+  .maul__meter.is-you i{ background:linear-gradient(180deg,#38e6ff,#155a82); }
+  .maul__meter b{
+    position:relative; display:block; text-align:center; font-size:.58rem;
+    line-height:12px; color:#eafcff; text-shadow:0 1px 0 #02101c;
+  }
+  .maul__note{ font-size:.62rem; color:#2b6f96; text-align:center; margin:2px 0 0; }
+  .maul__note.is-hit{ color:#ffd68a; }
+  /* Sends stack full-width in the aside: each one is a purchase, and a price
+     you can't read is a price you won't spend. */
+  .maul__sends{ display:flex; flex-direction:column; gap:5px; }
+  .maul__send{
+    display:flex; align-items:center; gap:6px; text-align:left;
+    font:inherit; font-size:.62rem; letter-spacing:1px; color:#eafcff;
+    padding:5px 7px; border-radius:5px; cursor:pointer;
+    background:linear-gradient(180deg,#5c1a35,#2f0d1c);
+    border:2px outset #a3496b; text-shadow:0 1px 0 #02101c;
+    transition:filter .12s ease, transform .08s ease;
+  }
+  .maul__send:hover{ filter:brightness(1.3); transform:translateY(-1px); }
+  .maul__send:active{ border-style:inset; transform:translateY(1px); }
+  .maul__send:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .maul__send.is-broke{ opacity:.42; }
+  .maul__send b{ flex:1; color:#ffd9e4; }
+  .maul__send s{ text-decoration:none; color:#ffd68a;
+    font-variant-numeric:tabular-nums; }
+  .maul__send u{ text-decoration:none; color:#8ad9ff; }
+  .maul__sub{
+    font-size:.6rem; color:#2b6f96; letter-spacing:1px;
+    text-align:center; margin:4px 0 10px;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .maul__pick, .maul__send, .maul__meter i{ transition:none; }
+  }
+  @media (max-width:560px){
+    /* Thumb-sized controls, matching the decks' phone treatment. */
+    .maul__pick, .maul__send{ padding:8px 10px; font-size:.68rem; }
+    .maul__act, .maul__call{ padding:7px 12px; font-size:.68rem; }
+    /* Squeezed to phone width a tile is 18x9 - too small to put a finger on.
+       Same answer the decks give their pads: hold the board at its real size
+       and let it pan sideways rather than crushing it. */
+    #wm-canvas{
+      width:520px; max-width:none;
+      /* Hand horizontal drags to the browser as a pan. A tap still builds, and
+         a pan cancels the pointer stream, so drag-painting bows out cleanly
+         instead of laying a wall while the board slides. */
+      touch-action:pan-x;
+    }
+  }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
 <p>click a tile to walk &mdash; step up to the <b>DECKS</b> to build a loop &mdash;
-click a cabinet for <b>BRICK SMASH</b> or <b>SNAKE</b> &mdash; click the boombox
+click a cabinet for <b>BRICK SMASH</b>, <b>SNAKE</b> or <b>WINTER MAUL</b>
+&mdash; click the boombox
 to work the <b>JUKEBOX</b> &mdash; hit the <b>WARDROBE</b> to make your guest &mdash;
 take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
@@ -351,17 +543,34 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
         <div class="arcade__hud">
           <span>SCORE <b id="bs-score">0</b></span>
           <span>LEVEL <b id="bs-level">1</b></span>
-          <span>BALLS <b id="bs-lives">3</b></span>
+          <!-- "LIVES", not "BALLS": the same counter covers the ship in the
+               level's second wave. -->
+          <span>LIVES <b id="bs-lives">3</b></span>
         </div>
         <div class="arcade__screen">
           <canvas id="bs-canvas" width="340" height="440"></canvas>
           <div class="arcade__msg" id="bs-msg"></div>
         </div>
-        <p class="arcade__hint">drag or &#9664;&#9654; / mouse to move &middot; tap or SPACE to launch &middot; ESC to exit</p>
+        <p class="arcade__hint">drag or &#9664;&#9654; / mouse to move &middot; tap or SPACE to launch, hold to fire &middot; catch the capsules &middot; ESC to exit</p>
       </div>
       <aside class="arcade__scores">
         <h3>&#127942; HIGH SCORES</h3>
         <ol id="bs-board"></ol>
+        <div class="arcade__legend">
+          <h3>&#10052; CAPSULES</h3>
+          <ul class="arcade__pu">
+            <li><i class="pu-w">W</i> wide paddle</li>
+            <li><i class="pu-m">M</i> multiball</li>
+            <li><i class="pu-s">S</i> slow ball</li>
+            <li><i class="pu-c">C</i> catch &amp; aim</li>
+            <li><i class="pu-l">+</i> extra ball</li>
+            <li class="bad"><i class="pu-n">N</i> narrow paddle</li>
+            <li class="bad"><i class="pu-f">F</i> speed up</li>
+          </ul>
+          <p class="arcade__note">every level is two waves: the wall, then the
+            squadron. In the squadron <b>W</b> arms a second cannon and
+            <b>S</b>/<b>F</b> set the swarm's tempo.</p>
+        </div>
       </aside>
     </div>
     <button type="button" class="arcade__exit" id="bs-exit">&#10005; EXIT TO LOUNGE</button>
@@ -477,6 +686,65 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   </div>
 </div>
 
+<!-- ================= WINTER MAUL =================
+     The maze tower defence. Towers ARE the walls: you can build anywhere the
+     creeps aren't standing, but never so as to seal the run - the cabinet
+     refuses a placement that leaves no route from the gate to the drain. The
+     palette, the wave call and the sends are markup rather than canvas art so
+     they stay tappable and reachable by keyboard; only the maze itself is
+     drawn. -->
+<div id="maul" class="arcade" role="dialog" aria-modal="true"
+     aria-label="Winter Maul" aria-hidden="true">
+  <div class="arcade__cab arcade__cab--wide">
+    <div class="arcade__marquee">&#10052; WINTER MAUL &#10052;</div>
+    <div class="arcade__body">
+      <div class="arcade__stage">
+        <div class="arcade__hud">
+          <span>LIVES <b id="wm-lives">20</b></span>
+          <span>GOLD <b id="wm-gold">0</b></span>
+          <span>WAVE <b id="wm-wave">0</b></span>
+          <span>SCORE <b id="wm-score">0</b></span>
+        </div>
+        <div class="arcade__screen">
+          <div class="maul__pan"><canvas id="wm-canvas" width="1040" height="624"></canvas></div>
+          <div class="arcade__msg" id="wm-msg"></div>
+        </div>
+        <div class="maul__deck">
+          <div class="maul__wave">
+            <span id="wm-clock">BUILD YOUR MAZE</span>
+            <button type="button" class="maul__call" id="wm-call" hidden>
+              &#9654; CALL IT NOW
+            </button>
+          </div>
+          <div class="maul__row" id="wm-towers" role="group"
+               aria-label="Tower to build"></div>
+          <div class="maul__sel" id="wm-sel"></div>
+        </div>
+        <p class="arcade__hint">tap or drag the grid to build &middot; 1-4 picks a
+          tower &middot; tap a tower to upgrade or sell &middot; SPACE calls the
+          next wave &middot; ESC to exit</p>
+      </div>
+      <aside class="arcade__scores">
+        <h3>&#9876; THE RACE</h3>
+        <div class="maul__rival">
+          <div class="maul__meter is-you"><i id="wm-youbar"></i><b id="wm-youlab">YOU 20</b></div>
+          <div class="maul__meter"><i id="wm-rivalbar"></i><b id="wm-rivallab">RIVAL 20</b></div>
+          <p class="maul__note" id="wm-note">first maze to leak out loses</p>
+        </div>
+
+        <h3 style="margin-top:14px">&#10052; SEND</h3>
+        <div class="maul__sends" id="wm-sends"></div>
+        <p class="maul__sub">a send hits the rival <b>and</b> raises your income
+          for every wave after it</p>
+
+        <h3>&#127942; HIGH SCORES</h3>
+        <ol id="wm-board"></ol>
+      </aside>
+    </div>
+    <button type="button" class="arcade__exit" id="wm-exit">&#10005; EXIT TO LOUNGE</button>
+  </div>
+</div>
+
 <script src="js/guest-sprite.js"></script>
 <script>
 (function () {
@@ -545,6 +813,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
      and can't stand inside the machines. */
   var ARCADE = [0, 4];
   var SNAKE = [6, 0];
+  var MAUL = [0, 2];
   var DECKS = [0, 1];
   /* The wardrobe: the one fixture you dress at rather than play. Stands further
      down the back-left wall, below the arcade cabinet. Clicking it opens the
@@ -615,6 +884,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       BENCH.forEach(function (b) { block(b[0], b[1]); });
       block(ARCADE[0], ARCADE[1]);
       block(SNAKE[0], SNAKE[1]);
+      block(MAUL[0], MAUL[1]);
       block(DECKS[0], DECKS[1]);
       block(BOOMBOX[0], BOOMBOX[1]);
       block(WARDROBE[0], WARDROBE[1]);
@@ -984,6 +1254,38 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     if (hovered) cabinetLabel(SNAKE, "▶ SNAKE");
   }
 
+  /* WINTER MAUL's screen preview: three offset walls with a gap at alternating
+     ends - the switchback every maul maze comes down to - and a creep working
+     its way along them. Same "frozen game in progress" idea as the other two
+     cabinets, drawn from the one shape that says *maze* at 20px. */
+  function maulCab(hovered) {
+    /* Back-left wall like BRICK SMASH, so it takes the SE face and the same
+       body shading; only the screen art and the marquee tone differ. */
+    drawBox(MAUL[0], MAUL[1], CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
+            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.92)));
+    var q = function (u0, u1, v0, v1, fill) { cabQuad(MAUL, u0, u1, v0, v1, fill); };
+
+    /* Third phase offset, so all three screens breathe independently. */
+    var glow = 0.6 + 0.4 * Math.sin(cabPulse + 3.2) * 0.5 + (hovered ? 0.35 : 0);
+    glow = Math.max(0, Math.min(1, glow));
+
+    /* Ice-white marquee: cyan and gold are already spoken for by the machines
+       either side of it. */
+    q(0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.light), 0.4 + glow * 0.5)));
+    q(0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
+    q(0.14, 0.86, 0.24, 0.58, "#02171f");
+
+    var wall = css(shade(rgb(HEX.bright), 0.5 + glow * 0.55));
+    q(0.17, 0.70, 0.285, 0.325, wall);
+    q(0.30, 0.83, 0.375, 0.415, wall);
+    q(0.17, 0.70, 0.465, 0.505, wall);
+    /* the creep, mid-switchback, and the drain it is trying to reach */
+    q(0.74, 0.79, 0.335, 0.365, css(shade(rgb(HEX.gold), 0.7 + glow * 0.5)));
+    q(0.20, 0.25, 0.525, 0.555, css(shade(rgb(HEX.f3), 0.6 + glow * 0.5)));
+
+    if (hovered) cabinetLabel(MAUL, "▶ WINTER MAUL");
+  }
+
   /* ================= the decks =================
      The room's centrepiece, and the one fixture you build with rather than
      beat: a pair of turntables over a mixer, against the back-left wall. Its
@@ -1098,6 +1400,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   }
   function inArcade(p) { return inCabinet(p, ARCADE); }
   function inSnake(p) { return inCabinet(p, SNAKE); }
+  function inMaul(p) { return inCabinet(p, MAUL); }
   /* The decks are shorter than the game cabinets, so they get their own box
      rather than borrowing inCabinet's CAB_H reach. */
   function inDecks(p) {
@@ -1591,6 +1894,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var hover = null;
   var arcadeHover = false;
   var snakeHover = false;
+  var maulHover = false;
   var decksHover = false;
   var boomHover = false;
   var wardrobeHover = false;
@@ -1669,6 +1973,8 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
                  f: function () { arcadeCab(arcadeHover); } });
     items.push({ d: SNAKE[0] + SNAKE[1],
                  f: function () { snakeCab(snakeHover); } });
+    items.push({ d: MAUL[0] + MAUL[1],
+                 f: function () { maulCab(maulHover); } });
     items.push({ d: DECKS[0] + DECKS[1],
                  f: function () { decksCab(decksHover); } });
     items.push({ d: WARDROBE[0] + WARDROBE[1],
@@ -1815,7 +2121,8 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     player.dir = "SW";
     buildGuests();
     hover = null;
-    arcadeHover = snakeHover = decksHover = boomHover = wardrobeHover = false;
+    arcadeHover = snakeHover = maulHover = decksHover = boomHover =
+      wardrobeHover = false;
     hoveredDoor = null;
     hoveredRecord = null;
   }
@@ -1831,15 +2138,20 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     if (scene === "lounge") {
       arcadeHover = inArcade(p);
       snakeHover = inSnake(p);
-      decksHover = !arcadeHover && !snakeHover && inDecks(p);
-      boomHover = !arcadeHover && !snakeHover && !decksHover && inBoombox(p);
-      wardrobeHover = !arcadeHover && !snakeHover && !decksHover && !boomHover &&
-                      inWardrobe(p);
+      /* WINTER MAUL stands one tile in front of the DECKS and its art rises
+         over them, so it has to win the hover where the two boxes overlap. */
+      maulHover = !arcadeHover && !snakeHover && inMaul(p);
+      decksHover = !arcadeHover && !snakeHover && !maulHover && inDecks(p);
+      boomHover = !arcadeHover && !snakeHover && !maulHover && !decksHover &&
+                  inBoombox(p);
+      wardrobeHover = !arcadeHover && !snakeHover && !maulHover && !decksHover &&
+                      !boomHover && inWardrobe(p);
     } else {
-      arcadeHover = snakeHover = decksHover = boomHover = wardrobeHover = false;
+      arcadeHover = snakeHover = maulHover = decksHover = boomHover =
+        wardrobeHover = false;
     }
-    var overFixture = arcadeHover || snakeHover || decksHover || boomHover ||
-                      wardrobeHover;
+    var overFixture = arcadeHover || snakeHover || maulHover || decksHover ||
+                      boomHover || wardrobeHover;
     hoveredRecord = overFixture ? null : recordAt(p);
     hoveredDoor = (overFixture || hoveredRecord) ? null : doorAt(p);
     /* Suppress the tile highlight while over a fixture, a sleeve or a door, so
@@ -1848,7 +2160,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
-    hover = null; arcadeHover = false; snakeHover = false;
+    hover = null; arcadeHover = false; snakeHover = false; maulHover = false;
     decksHover = false; boomHover = false; wardrobeHover = false;
     hoveredDoor = null; hoveredRecord = null;
   });
@@ -1859,6 +2171,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     if (scene === "lounge") {
       if (inArcade(p)) { if (window.FrostArcade) window.FrostArcade.open(); return; }
       if (inSnake(p))  { if (window.FrostSnake)  window.FrostSnake.open();  return; }
+      if (inMaul(p))   { if (window.FrostMaul)   window.FrostMaul.open();   return; }
       if (inDecks(p))  { if (window.FrostDecks)  window.FrostDecks.open();  return; }
       if (inBoombox(p)) { toggleMusic(); return; }
       if (inWardrobe(p)) { openWardrobe(); return; }
@@ -2179,7 +2492,8 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 <script>
 /* =======================================================================
    BRICK SMASH :: the lounge's arcade cabinet
-   A self-contained Breakout, opened from the isometric room. The board of
+   A self-contained Breakout with falling power-up capsules (see the PU table
+   below), opened from the isometric room. The board of
    high scores is shared across all visitors via /api/scores (Cloudflare KV),
    the same trick the guestbook and visitor counter use; a localStorage copy
    is the warm cache and the offline fallback when the API can't be reached.
@@ -2213,15 +2527,72 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var COLS = 9, ROWS = ROW.length;      /* 9 columns nods to the 9x9 room */
   var SIDE = 10, TOPGAP = 46, GAP = 3, BRICK_H = 15;
   var BRICK_W = (W - SIDE * 2 - GAP * (COLS - 1)) / COLS;
-  var PW = 62, PH = 10, PADDLE_Y = H - 24;
+  var PW_BASE = 62, PW_WIDE = 92, PW_NARROW = 40;
+  var PH = 10, PADDLE_Y = H - 24;
   var BALL_R = 5;
 
   /* ---- tuning ---- */
-  var BASE_SPEED = 200;                 /* px/sec, level 1 */
-  var LEVEL_MULT = 1.09;                /* ball speed per level */
+  var BASE_SPEED = 300;                 /* px/sec, level 1 */
+  var LEVEL_MULT = 1.11;                /* ball speed per level */
+  var MAX_SPEED = 620;                  /* ceiling, reached around level 8 */
   var MAX_BOUNCE = 1.05;                /* rad, steepest paddle deflection */
-  var PADDLE_KEYS = 430;                /* px/sec for arrow-key steering */
+  /* Keyboard steering has to out-run the ball or arrow keys can't cover a
+     cross-court return; mouse/touch aim the paddle directly and don't care. */
+  var PADDLE_KEYS = 640;                /* px/sec for arrow-key steering */
   var START_LIVES = 3;
+
+  /* ---- power-ups ----
+     A smashed brick sometimes drops a capsule; catch it on the paddle and it
+     fires. The table is weighted so roughly three quarters of what falls helps
+     you - the two hazards exist to make "should I go get that one?" a real
+     question, which is the whole point of drops in a game this simple.
+     Timed effects stack their clocks, never their strength: catching WIDE
+     twice buys more seconds, not a paddle the width of the screen. */
+  var DROP_CHANCE = 0.16;               /* per brick smashed */
+  var DROP_SPEED = 140;                 /* px/sec: slow enough to be a choice */
+  var DROP_W = 22, DROP_H = 11;
+  var DROP_BONUS = 50;                  /* points for the catch itself */
+  var MAX_BALLS = 8;                    /* multiball cap: chaos, not confetti */
+  var SLOW_MUL = 0.7, FAST_MUL = 1.3;
+  /* k: effect key, w: drop weight, t: seconds (0 = fires once, no clock),
+     l: the letter stamped on the capsule, n: the banner it flashes. */
+  var PU = [
+    { k: "wide",   w: 3, t: 14, c: "#38e6ff", l: "W", n: "WIDE PADDLE" },
+    { k: "multi",  w: 3, t: 0,  c: "#eafcff", l: "M", n: "MULTIBALL" },
+    { k: "slow",   w: 2, t: 10, c: "#b8ecff", l: "S", n: "SLOW BALL" },
+    { k: "catch",  w: 2, t: 14, c: "#8ad9ff", l: "C", n: "CATCH" },
+    { k: "life",   w: 1, t: 0,  c: "#ffd68a", l: "+", n: "EXTRA BALL" },
+    { k: "narrow", w: 2, t: 10, c: "#ff7b9c", l: "N", n: "NARROW PADDLE" },
+    { k: "fast",   w: 2, t: 8,  c: "#ff9d5c", l: "F", n: "SPEED UP" }
+  ];
+  function puByKey(k) {
+    for (var i = 0; i < PU.length; i++) { if (PU[i].k === k) return PU[i]; }
+    return PU[0];
+  }
+  /* MULTIBALL and CATCH mean nothing to a gun, so the squadron half drops from
+     a subset. The rest carry over with a shooter reading: WIDE arms a second
+     cannon, SLOW/FAST set the swarm's tempo instead of the ball's. */
+  var PU_WAVE = ["wide", "slow", "life", "narrow", "fast"];
+
+  /* ---- the squadron half ----
+     Every level is two waves: smash the wall, then hold the board against a
+     formation that flies in, settles, and peels off in dives. Same paddle, same
+     lives, same capsules - only the thing coming at you changes. */
+  var PHASE = { SMASH: 0, SHOOT: 1 };
+  var EN = { ENTER: 0, FORM: 1, DIVE: 2, RETURN: 3 };
+  var EN_COLS = 7, EN_W = 20, EN_H = 14, EN_GAP = 10;
+  var EN_TOP = 58, EN_ROW_H = 26;
+  var EN_PTS = [120, 80, 60, 40];       /* by row: the front rank is the prize */
+  var EN_DROP_CHANCE = 0.14;
+  var ENTRY_TIME = 1.1, ENTRY_STAGGER = 0.07;
+  var DIVE_TIME = 2.4, RETURN_TIME = 0.9;
+  var BULLET_SPEED = 540, FIRE_GAP = 0.18, MAX_BULLETS = 8;
+  var BOMB_SPEED = 170;
+  /* The ship is much smaller than the paddle it replaces, so WIDE is a real
+     trade in this half: a second cannon, but a fatter target. */
+  var SHIP_RATIO = 0.45, SHIP_MIN = 16;
+  var INVULN = 1.6;                     /* blink time after a hit */
+  var WAVE_BONUS = 250;                 /* + 100 per level, for clearing it */
 
   /* ---- leaderboard — a real shared board via /api/scores when it's
      reachable, otherwise the visitor's own localStorage copy (opened as a
@@ -2331,11 +2702,41 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var state = STATE.IDLE;
   var score = 0, level = 1, lives = START_LIVES;
   var bricks = [], liveCount = 0;
-  var paddleX = (W - PW) / 2, paddleVX = 0;
-  var ball = { x: W / 2, y: PADDLE_Y - BALL_R, vx: 0, vy: 0 };
+  var pw = PW_BASE;                     /* live paddle width; WIDE/NARROW move it */
+  var paddleX = (W - pw) / 2;
+  /* Multiball means the array is the game, not a single ball. A "stuck" ball
+     is riding the paddle - the serve, or one held by CATCH. */
+  var balls = [];
+  var drops = [];                       /* capsules currently falling */
+  var fx = { wide: 0, narrow: 0, slow: 0, catch: 0, fast: 0 };   /* seconds left */
+  var flash = null;                     /* {t, text, c}: banner for a fresh catch */
   var speed = BASE_SPEED;
   var keyLeft = false, keyRight = false;
   var raf = null, lastT = 0, running = false;
+
+  /* ---- squadron half ---- */
+  var phase = PHASE.SMASH;
+  var enemies = [], bullets = [], bombs = [];
+  var waveT = 0, diveGap = 0, fireCool = 0, invuln = 0, firing = false;
+
+  function newBall(x, y, vx, vy) {
+    return { x: x, y: y, vx: vx || 0, vy: vy || 0, stuck: false, off: 0 };
+  }
+  /* One tempo dial for both halves: it scales the ball in SMASH and the swarm
+     and its bombs in SHOOT, so SLOW and FAST mean the same thing all game. */
+  function tempoMul() {
+    var m = 1;
+    if (fx.slow > 0) m *= SLOW_MUL;
+    if (fx.fast > 0) m *= FAST_MUL;
+    return m;
+  }
+  /* The speed the ball should be flying right now. Every ball is renormalised
+     to this each frame, so an effect starting or expiring mid-rally works. */
+  function curSpeed() { return speed * tempoMul(); }
+  function hasStuck() {
+    for (var i = 0; i < balls.length; i++) { if (balls[i].stuck) return true; }
+    return false;
+  }
 
   function buildLevel() {
     bricks = []; liveCount = 0;
@@ -2350,17 +2751,58 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     }
   }
 
-  function resetBallOnPaddle() {
-    ball.x = paddleX + PW / 2;
-    ball.y = PADDLE_Y - BALL_R - 1;
-    ball.vx = 0; ball.vy = 0;
+  /* Back to one ball, parked on the paddle and waiting for a serve. */
+  function resetBalls() {
+    balls = [newBall(paddleX + pw / 2, PADDLE_Y - BALL_R - 1, 0, 0)];
+    balls[0].stuck = true;
+    balls[0].off = pw / 2;
+  }
+
+  /* Everything a lost ball or a new level should wipe: every running clock and
+     everything in mid-air, in either half. Effects surviving a death would let
+     one lucky WIDE carry a whole game; bombs surviving one would be unfair. */
+  function clearFx() {
+    fx.wide = fx.narrow = fx.slow = fx.catch = fx.fast = 0;
+    drops.length = 0;
+    bombs.length = 0;
+    bullets.length = 0;
+    flash = null;
+    resizePaddle();
+  }
+
+  /* WIDE and NARROW are the same dial in opposite directions, so the width is
+     derived from the clocks rather than nudged, and the paddle grows about its
+     own centre instead of jumping sideways under your hand. */
+  function resizePaddle() {
+    var cx = paddleX + pw / 2;
+    pw = fx.wide > 0 ? PW_WIDE : (fx.narrow > 0 ? PW_NARROW : PW_BASE);
+    paddleX = Math.max(0, Math.min(W - pw, cx - pw / 2));
+    for (var i = 0; i < balls.length; i++) {
+      if (balls[i].stuck) balls[i].off = Math.min(balls[i].off, pw);
+    }
   }
 
   function launch() {
-    /* Always up, with a small random lean so no two serves are identical. */
-    var ang = (Math.random() * 0.5 - 0.25);   /* +/- ~14deg off vertical */
-    ball.vx = speed * Math.sin(ang);
-    ball.vy = -speed * Math.cos(ang);
+    /* In the squadron half there is nothing to serve: the same press just puts
+       you back in the fight, with a moment of grace so you don't respawn into
+       the bomb that killed you. */
+    if (phase === PHASE.SHOOT) {
+      bombs.length = 0;
+      invuln = INVULN;
+      state = STATE.PLAY;
+      showMsg(null);
+      return;
+    }
+    /* Serves and CATCH releases are the same move: everything riding the
+       paddle goes up, with a small random lean so no two are identical. */
+    for (var i = 0; i < balls.length; i++) {
+      var b = balls[i];
+      if (!b.stuck) continue;
+      var ang = (Math.random() * 0.5 - 0.25);   /* +/- ~14deg off vertical */
+      b.vx = curSpeed() * Math.sin(ang);
+      b.vy = -curSpeed() * Math.cos(ang);
+      b.stuck = false;
+    }
     state = STATE.PLAY;
     showMsg(null);
   }
@@ -2368,21 +2810,29 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   function newGame() {
     score = 0; level = 1; lives = START_LIVES;
     speed = BASE_SPEED;
-    paddleX = (W - PW) / 2;
+    phase = PHASE.SMASH;
+    enemies.length = 0;
+    clearFx();
+    paddleX = (W - pw) / 2;
     buildLevel();
-    resetBallOnPaddle();
+    resetBalls();
     syncHud();
     state = STATE.IDLE;
     showMsg('<b>BRICK SMASH</b>' +
       '<small class="blink">CLICK OR PRESS SPACE TO START</small>');
   }
 
+  /* A level is two waves. The wall falling doesn't end it - it calls the
+     squadron in; only clearing them both moves the counter. */
   function nextLevel() {
     level++;
-    speed = BASE_SPEED * Math.pow(LEVEL_MULT, level - 1);
+    speed = Math.min(MAX_SPEED, BASE_SPEED * Math.pow(LEVEL_MULT, level - 1));
+    phase = PHASE.SMASH;
+    enemies.length = 0;
+    clearFx();
     buildLevel();
-    paddleX = (W - PW) / 2;
-    resetBallOnPaddle();
+    paddleX = (W - pw) / 2;
+    resetBalls();
     syncHud();
     state = STATE.SERVE;
     showMsg('<b>LEVEL ' + level + '</b>' +
@@ -2392,11 +2842,22 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   function loseLife() {
     lives--;
     syncHud();
+    clearFx();
+    /* Re-seed before the game-over branch, not after it: the board must always
+       hold a ball, or anything reading balls[0] (peek, draw) meets an empty
+       array on the last life. */
+    resetBalls();
     if (lives <= 0) { gameOver(); return; }
-    resetBallOnPaddle();
     state = STATE.SERVE;
-    showMsg('<b>BALL LOST</b><small class="blink">' + lives +
-      ' LEFT &middot; CLICK OR PRESS SPACE</small>');
+    if (phase === PHASE.SHOOT) {
+      /* The squadron holds position while you're down, rather than picking off
+         a player who isn't in control yet. */
+      showMsg('<b>SHIP DOWN</b><small class="blink">' + lives +
+        ' LEFT &middot; CLICK OR PRESS SPACE</small>');
+    } else {
+      showMsg('<b>BALL LOST</b><small class="blink">' + lives +
+        ' LEFT &middot; CLICK OR PRESS SPACE</small>');
+    }
   }
 
   function gameOver() {
@@ -2441,72 +2902,408 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   function movePaddle(dt) {
     if (keyLeft) paddleX -= PADDLE_KEYS * dt;
     if (keyRight) paddleX += PADDLE_KEYS * dt;
-    paddleX = Math.max(0, Math.min(W - PW, paddleX));
-    if (state === STATE.SERVE || state === STATE.IDLE) {
-      ball.x = paddleX + PW / 2;
+    paddleX = Math.max(0, Math.min(W - pw, paddleX));
+    /* Anything riding the paddle rides it exactly: the serve and CATCH holds. */
+    for (var i = 0; i < balls.length; i++) {
+      var b = balls[i];
+      if (b.stuck) { b.x = paddleX + b.off; b.y = PADDLE_Y - BALL_R - 1; }
     }
   }
 
-  function reflectBrick(b) {
+  function reflectBrick(ba, b) {
     /* Reflect on the axis of shallower penetration: the side the ball more
        likely came through. Cheap, and correct for nearly every hit. */
     var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    var ox = (b.w / 2 + BALL_R) - Math.abs(ball.x - cx);
-    var oy = (b.h / 2 + BALL_R) - Math.abs(ball.y - cy);
+    var ox = (b.w / 2 + BALL_R) - Math.abs(ba.x - cx);
+    var oy = (b.h / 2 + BALL_R) - Math.abs(ba.y - cy);
     if (ox < oy) {
-      ball.vx = -ball.vx;
-      ball.x += ball.x < cx ? -ox : ox;
+      ba.vx = -ba.vx;
+      ba.x += ba.x < cx ? -ox : ox;
     } else {
-      ball.vy = -ball.vy;
-      ball.y += ball.y < cy ? -oy : oy;
+      ba.vy = -ba.vy;
+      ba.y += ba.y < cy ? -oy : oy;
     }
   }
 
-  function hitBricks() {
+  /* True when that hit emptied the wall, so the caller stops stepping a ball
+     that belongs to a level which no longer exists. */
+  function hitBricks(ba) {
     for (var i = 0; i < bricks.length; i++) {
       var b = bricks[i];
       if (!b.alive) continue;
-      if (ball.x + BALL_R > b.x && ball.x - BALL_R < b.x + b.w &&
-          ball.y + BALL_R > b.y && ball.y - BALL_R < b.y + b.h) {
+      if (ba.x + BALL_R > b.x && ba.x - BALL_R < b.x + b.w &&
+          ba.y + BALL_R > b.y && ba.y - BALL_R < b.y + b.h) {
         b.alive = false; liveCount--;
         score += b.s; syncHud();
-        reflectBrick(b);
-        if (liveCount <= 0) nextLevel();
-        return;   /* one brick per step keeps reflection unambiguous */
+        reflectBrick(ba, b);
+        maybeDrop(b);
+        if (liveCount <= 0) { startWave(); return true; }
+        return false;   /* one brick per step keeps reflection unambiguous */
       }
     }
+    return false;
   }
 
-  function stepBall(dt) {
-    var dist = Math.hypot(ball.vx, ball.vy) * dt;
+  /* Renormalise to the current pace. This is what makes SLOW/FAST and the
+     per-level ramp apply to a ball already in flight without touching its
+     heading - only the magnitude moves. */
+  function renorm(ba, target) {
+    var m = Math.hypot(ba.vx, ba.vy);
+    if (m < 0.001) return;
+    ba.vx = ba.vx / m * target;
+    ba.vy = ba.vy / m * target;
+  }
+
+  /* Returns false when this ball has left the board and should be dropped. */
+  function stepOne(ba, dt) {
+    var dist = Math.hypot(ba.vx, ba.vy) * dt;
     /* Substep so a fast ball can't tunnel through a thin brick or the paddle. */
     var steps = Math.max(1, Math.ceil(dist / (BALL_R * 0.9)));
     var sdt = dt / steps;
     for (var s = 0; s < steps; s++) {
-      ball.x += ball.vx * sdt;
-      ball.y += ball.vy * sdt;
+      ba.x += ba.vx * sdt;
+      ba.y += ba.vy * sdt;
 
-      if (ball.x - BALL_R < 0) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
-      else if (ball.x + BALL_R > W) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
-      if (ball.y - BALL_R < 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+      if (ba.x - BALL_R < 0) { ba.x = BALL_R; ba.vx = Math.abs(ba.vx); }
+      else if (ba.x + BALL_R > W) { ba.x = W - BALL_R; ba.vx = -Math.abs(ba.vx); }
+      if (ba.y - BALL_R < 0) { ba.y = BALL_R; ba.vy = Math.abs(ba.vy); }
 
       /* paddle: only while descending, so a ball leaving the paddle isn't
          re-caught on the same frame */
-      if (ball.vy > 0 &&
-          ball.y + BALL_R >= PADDLE_Y && ball.y + BALL_R <= PADDLE_Y + PH + 6 &&
-          ball.x >= paddleX - BALL_R && ball.x <= paddleX + PW + BALL_R) {
-        var off = (ball.x - (paddleX + PW / 2)) / (PW / 2);
+      if (ba.vy > 0 &&
+          ba.y + BALL_R >= PADDLE_Y && ba.y + BALL_R <= PADDLE_Y + PH + 6 &&
+          ba.x >= paddleX - BALL_R && ba.x <= paddleX + pw + BALL_R) {
+        if (fx.catch > 0) {
+          /* CATCH: park it where it landed and wait for a release. */
+          ba.stuck = true;
+          ba.off = Math.max(0, Math.min(pw, ba.x - paddleX));
+          ba.x = paddleX + ba.off; ba.y = PADDLE_Y - BALL_R - 1;
+          ba.vx = 0; ba.vy = 0;
+          return true;
+        }
+        var off = (ba.x - (paddleX + pw / 2)) / (pw / 2);
         off = Math.max(-1, Math.min(1, off));
         var ang = off * MAX_BOUNCE;
-        ball.vx = speed * Math.sin(ang);
-        ball.vy = -speed * Math.cos(ang);
-        ball.y = PADDLE_Y - BALL_R;
+        var sp = curSpeed();
+        ba.vx = sp * Math.sin(ang);
+        ba.vy = -sp * Math.cos(ang);
+        ba.y = PADDLE_Y - BALL_R;
       }
 
-      hitBricks();
+      if (hitBricks(ba)) return true;
 
-      if (ball.y - BALL_R > H) { loseLife(); return; }
+      if (ba.y - BALL_R > H) return false;
     }
+    return true;
+  }
+
+  function stepBalls(dt) {
+    var target = curSpeed();
+    /* Held by reference: nextLevel() re-seeds balls mid-loop, and when it does
+       this pass is walking a wall that no longer exists. */
+    var arr = balls;
+    for (var i = arr.length - 1; i >= 0; i--) {
+      var ba = arr[i];
+      if (ba.stuck) continue;
+      renorm(ba, target);
+      var alive = stepOne(ba, dt);
+      if (balls !== arr) return;
+      if (!alive) arr.splice(i, 1);
+    }
+    /* A life goes only when the last ball does - that's the point of multiball. */
+    if (arr.length === 0) loseLife();
+  }
+
+  /* ---- capsules ---- */
+  /* `only` limits the table to a list of keys - the squadron half hands out a
+     subset, since a gun has no use for MULTIBALL or CATCH. */
+  function pickPU(only) {
+    var pool = [], i;
+    for (i = 0; i < PU.length; i++) {
+      if (!only || only.indexOf(PU[i].k) >= 0) pool.push(PU[i]);
+    }
+    var total = 0;
+    for (i = 0; i < pool.length; i++) total += pool[i].w;
+    var r = Math.random() * total;
+    for (i = 0; i < pool.length; i++) { r -= pool[i].w; if (r < 0) return pool[i].k; }
+    return pool[0].k;
+  }
+  function maybeDrop(b) {
+    if (Math.random() >= DROP_CHANCE) return;
+    drops.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, k: pickPU(null) });
+  }
+  function stepDrops(dt) {
+    for (var i = drops.length - 1; i >= 0; i--) {
+      var d = drops[i];
+      d.y += DROP_SPEED * dt;
+      /* Caught: the capsule's box overlapping the paddle's face. */
+      if (d.y + DROP_H / 2 >= PADDLE_Y && d.y - DROP_H / 2 <= PADDLE_Y + PH &&
+          d.x + DROP_W / 2 >= paddleX && d.x - DROP_W / 2 <= paddleX + pw) {
+        drops.splice(i, 1);
+        applyPU(d.k);
+      } else if (d.y - DROP_H / 2 > H) {
+        drops.splice(i, 1);
+      }
+    }
+  }
+
+  /* Three balls out of one: the original keeps its heading, the clones leave
+     at +/- 23deg so they fan out instead of stacking into one thick ball. */
+  function splitBalls() {
+    var made = [];
+    for (var i = 0; i < balls.length && balls.length + made.length < MAX_BALLS; i++) {
+      var b = balls[i];
+      var vx = b.vx, vy = b.vy;
+      if (!vx && !vy) { vx = 0; vy = -curSpeed(); }   /* still on the paddle */
+      made.push(spin(b, vx, vy, 0.4));
+      if (balls.length + made.length < MAX_BALLS) made.push(spin(b, vx, vy, -0.4));
+    }
+    balls = balls.concat(made);
+  }
+  function spin(src, vx, vy, ang) {
+    var c = Math.cos(ang), s = Math.sin(ang);
+    return newBall(src.x, src.y, vx * c - vy * s, vx * s + vy * c);
+  }
+
+  function applyPU(k) {
+    var def = puByKey(k);
+    if (k === "multi") splitBalls();
+    else if (k === "life") lives++;
+    else {
+      fx[k] += def.t;
+      /* Opposites cancel: catching WIDE while NARROW runs clears NARROW rather
+         than leaving two clocks fighting over the same paddle. */
+      if (k === "wide") fx.narrow = 0;
+      else if (k === "narrow") fx.wide = 0;
+      else if (k === "slow") fx.fast = 0;
+      else if (k === "fast") fx.slow = 0;
+      resizePaddle();
+    }
+    score += DROP_BONUS;
+    syncHud();
+    flash = { t: 1.2, text: def.n, c: def.c };
+  }
+
+  function tickFx(dt) {
+    var wide = fx.wide > 0, narrow = fx.narrow > 0, held = fx.catch > 0;
+    for (var k in fx) { if (fx[k] > 0) fx[k] = Math.max(0, fx[k] - dt); }
+    if (wide !== (fx.wide > 0) || narrow !== (fx.narrow > 0)) resizePaddle();
+    /* CATCH running out with a ball still parked would freeze the rally, so
+       the expiry serves it for you. Only in the half that has a rally: the
+       squadron's parked ball is always "stuck", and serving it there would hand
+       out a free respawn shield. */
+    if (held && fx.catch <= 0 && hasStuck() && phase === PHASE.SMASH) launch();
+    if (flash) { flash.t -= dt; if (flash.t <= 0) flash = null; }
+  }
+
+  /* ================= the squadron half =================
+     Wave 2 of every level. The paddle becomes a ship, the capsules keep
+     falling, and the wall's replacement flies in under its own power. */
+
+  /* Cubic bezier, the one curve every enemy path is made of: the swoop in, the
+     dive, and the loop back to formation are all four control points and a t. */
+  function bez(p, t) {
+    var u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    return { x: a * p[0].x + b * p[1].x + c * p[2].x + d * p[3].x,
+             y: a * p[0].y + b * p[1].y + c * p[2].y + d * p[3].y };
+  }
+  function shipW() { return Math.max(SHIP_MIN, pw * SHIP_RATIO); }
+  function shipX() { return paddleX + pw / 2; }
+  /* Everything that can kill you tests against this box, not the paddle's. */
+  function hitsShip(x, y, hw, hh) {
+    var w = shipW() / 2, cx = shipX();
+    return x + hw > cx - w && x - hw < cx + w &&
+           y + hh > PADDLE_Y - 8 && y - hh < PADDLE_Y + PH;
+  }
+
+  function startWave() {
+    phase = PHASE.SHOOT;
+    /* Capsules from the wall don't survive the switch - half of them mean
+       nothing to a gun. The clocks do carry over, so a WIDE earned on the last
+       brick arrives as a second cannon. */
+    drops.length = 0;
+    resetBalls();                 /* the ball parks; this half doesn't use it */
+    buildWave();
+    invuln = 1.2; fireCool = 0; waveT = 0;
+    diveGap = 1.6;
+    flash = { t: 1.6, text: "SQUADRON INCOMING", c: "#ffd68a" };
+  }
+
+  function buildWave() {
+    enemies.length = 0;
+    bullets.length = 0;
+    bombs.length = 0;
+    /* Three ranks to start, four from level 3 on. Deeper than that and the
+       formation reaches the bricks' airspace, which reads as clutter. */
+    var rows = Math.min(2 + Math.ceil(level / 2), 4);
+    var span = EN_COLS * EN_W + (EN_COLS - 1) * EN_GAP;
+    var x0 = (W - span) / 2 + EN_W / 2;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < EN_COLS; c++) {
+        var sx = x0 + c * (EN_W + EN_GAP), sy = EN_TOP + r * EN_ROW_H;
+        /* Alternating corners, so the wave arrives as two interleaved streams
+           rather than one queue. */
+        var left = (r + c) % 2 === 0;
+        var start = { x: left ? -30 : W + 30, y: 30 + r * 10 };
+        enemies.push({
+          sx: sx, sy: sy, x: start.x, y: start.y, row: r, st: EN.ENTER,
+          /* negative t = still off-board, waiting its turn to fly in */
+          t: -(r * EN_COLS + c) * ENTRY_STAGGER, dur: ENTRY_TIME, ang: 0, bomb: 0,
+          p: [start,
+              { x: left ? W * 0.30 : W * 0.70, y: H * 0.42 },
+              { x: left ? W * 0.72 : W * 0.28, y: H * 0.12 },
+              { x: sx, y: sy }]
+        });
+      }
+    }
+  }
+
+  function enemyPts(e) {
+    var base = EN_PTS[Math.min(e.row, EN_PTS.length - 1)];
+    /* A diver is worth double: it's the shot that's actually hard. */
+    return e.st === EN.DIVE ? base * 2 : base;
+  }
+
+  function startDive(e) {
+    var side = e.x < W / 2 ? 1 : -1;
+    var tx = shipX();
+    e.st = EN.DIVE; e.t = 0; e.dur = DIVE_TIME;
+    e.p = [{ x: e.x, y: e.y },
+           { x: e.x + side * 95, y: e.y + 95 },
+           { x: tx - side * 55, y: H * 0.62 },
+           { x: tx + (Math.random() * 70 - 35), y: H + 40 }];
+    e.bomb = 0.35 + Math.random() * 0.5;
+  }
+
+  function triggerDives(dt) {
+    diveGap -= dt;
+    if (diveGap > 0) return;
+    /* The wall between dives tightens with the level, to a floor that still
+       leaves room to breathe. */
+    diveGap = Math.max(0.7, 2.4 - level * 0.15);
+    var pool = [];
+    for (var i = 0; i < enemies.length; i++) {
+      if (enemies[i].st === EN.FORM) pool.push(enemies[i]);
+    }
+    if (!pool.length) return;
+    startDive(pool[Math.floor(Math.random() * pool.length)]);
+    /* Sometimes a second one comes with it - a wingman. */
+    if (pool.length > 1 && Math.random() < 0.35) {
+      startDive(pool[Math.floor(Math.random() * pool.length)]);
+    }
+  }
+
+  function stepEnemies(dt) {
+    var tempo = tempoMul();
+    waveT += dt;
+    /* The held formation breathes side to side; the arcade original's tell. */
+    var drift = Math.sin(waveT * 0.9) * 12;
+    for (var i = enemies.length - 1; i >= 0; i--) {
+      var e = enemies[i];
+      if (e.st === EN.FORM) { e.x = e.sx + drift; e.y = e.sy; e.ang = 0; continue; }
+      e.t += dt * tempo;
+      if (e.t < 0) continue;                  /* still queued off-board */
+      var u = Math.min(1, e.t / e.dur);
+      var pt = bez(e.p, u), back = bez(e.p, Math.max(0, u - 0.02));
+      e.x = pt.x; e.y = pt.y;
+      /* Face the way it's flying, so a diver visibly commits to its run. */
+      e.ang = Math.atan2(pt.y - back.y, pt.x - back.x) + Math.PI / 2;
+      if (e.st === EN.DIVE) {
+        e.bomb -= dt * tempo;
+        if (e.bomb <= 0 && e.y > 40 && e.y < H - 90) {
+          bombs.push({ x: e.x, y: e.y + EN_H / 2 });
+          e.bomb = 0.6 + Math.random();
+        }
+        if (invuln <= 0 && hitsShip(e.x, e.y, EN_W / 2, EN_H / 2)) {
+          enemies.splice(i, 1);               /* a ram takes them both */
+          shipHit();
+          return;
+        }
+      }
+      if (u >= 1) {
+        if (e.st === EN.DIVE) {
+          /* Off the bottom, back in at the top, home to its slot. */
+          e.st = EN.RETURN; e.t = 0; e.dur = RETURN_TIME;
+          e.p = [{ x: e.x, y: -30 }, { x: e.x, y: 10 },
+                 { x: e.sx, y: e.sy - 70 }, { x: e.sx + drift, y: e.sy }];
+        } else {
+          e.st = EN.FORM;
+        }
+      }
+    }
+  }
+
+  function fire() {
+    if (fireCool > 0 || bullets.length >= MAX_BULLETS) return;
+    var x = shipX(), y = PADDLE_Y - 8;
+    /* WIDE arms the second cannon: the same capsule that widens the paddle in
+       the other half widens your fire here. */
+    if (fx.wide > 0) {
+      bullets.push({ x: x - 7, y: y });
+      bullets.push({ x: x + 7, y: y });
+    } else {
+      bullets.push({ x: x, y: y });
+    }
+    fireCool = FIRE_GAP;
+  }
+
+  function stepBullets(dt) {
+    for (var i = bullets.length - 1; i >= 0; i--) {
+      var b = bullets[i];
+      b.y -= BULLET_SPEED * dt;
+      if (b.y < -8) { bullets.splice(i, 1); continue; }
+      for (var j = enemies.length - 1; j >= 0; j--) {
+        var e = enemies[j];
+        if (e.t < 0 && e.st === EN.ENTER) continue;   /* not on the board yet */
+        if (Math.abs(b.x - e.x) < EN_W / 2 + 1 && Math.abs(b.y - e.y) < EN_H / 2 + 3) {
+          score += enemyPts(e);
+          syncHud();
+          if (Math.random() < EN_DROP_CHANCE) {
+            drops.push({ x: e.x, y: e.y, k: pickPU(PU_WAVE) });
+          }
+          enemies.splice(j, 1);
+          bullets.splice(i, 1);
+          if (!enemies.length) waveClear();
+          return;   /* one bullet, one kill - and the wave may be over */
+        }
+      }
+    }
+  }
+
+  function stepBombs(dt) {
+    var v = BOMB_SPEED * tempoMul();
+    for (var i = bombs.length - 1; i >= 0; i--) {
+      var b = bombs[i];
+      b.y += v * dt;
+      if (b.y > H + 8) { bombs.splice(i, 1); continue; }
+      if (invuln <= 0 && hitsShip(b.x, b.y, 2, 5)) {
+        bombs.splice(i, 1);
+        shipHit();
+        return;
+      }
+    }
+  }
+
+  function shipHit() {
+    if (invuln > 0) return;
+    loseLife();
+  }
+
+  function waveClear() {
+    score += WAVE_BONUS + level * 100;
+    syncHud();
+    nextLevel();
+  }
+
+  function stepWave(dt) {
+    if (fireCool > 0) fireCool -= dt;
+    if (invuln > 0) invuln -= dt;
+    if (firing) fire();
+    stepBullets(dt);
+    if (phase !== PHASE.SHOOT) return;   /* that shot cleared the wave */
+    triggerDives(dt);
+    stepEnemies(dt);
+    stepBombs(dt);
   }
 
   /* ================= draw ================= */
@@ -2514,6 +3311,20 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
 
+    /* The two halves draw the same three layers - field, capsules, you - so
+       the board never changes character, only what's on it. */
+    if (phase === PHASE.SMASH) drawWall(); else drawSquadron();
+
+    drawDrops();
+
+    if (phase === PHASE.SMASH) { drawPaddle(); drawBalls(); }
+    else drawShip();
+
+    drawFx();
+    drawFlash();
+  }
+
+  function drawWall() {
     for (var i = 0; i < bricks.length; i++) {
       var b = bricks[i];
       if (!b.alive) continue;
@@ -2525,28 +3336,186 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       ctx.fillStyle = "rgba(2,16,28,.35)";
       ctx.fillRect(b.x, b.y + b.h - 2, b.w, 2);
     }
+  }
 
-    /* paddle */
-    ctx.fillStyle = PADDLE;
-    ctx.fillRect(paddleX, PADDLE_Y, PW, PH);
-    ctx.fillStyle = PADDLE_HI;
-    ctx.fillRect(paddleX, PADDLE_Y, PW, 3);
+  function drawPaddle() {
+    /* NARROW recolours it, so a shrunk paddle reads as a penalty even at a
+       glance; CATCH gets a grippy notched lip. */
+    ctx.fillStyle = fx.narrow > 0 ? "#ff7b9c" : PADDLE;
+    ctx.fillRect(paddleX, PADDLE_Y, pw, PH);
+    ctx.fillStyle = fx.narrow > 0 ? "#ffd2de" : PADDLE_HI;
+    ctx.fillRect(paddleX, PADDLE_Y, pw, 3);
+    if (fx.catch > 0) {
+      ctx.fillStyle = INK;
+      for (var g = paddleX + 3; g < paddleX + pw - 2; g += 6) {
+        ctx.fillRect(g, PADDLE_Y, 2, 3);
+      }
+    }
+  }
 
-    /* ball, with a soft glow */
+  function drawBalls() {
     ctx.save();
     ctx.shadowColor = PADDLE;
     ctx.shadowBlur = 10;
     ctx.fillStyle = BALL;
+    for (var n = 0; n < balls.length; n++) {
+      ctx.beginPath();
+      ctx.arc(balls[n].x, balls[n].y, BALL_R, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* The same paddle, flying: a wedge with the cannon (or two, under WIDE) it
+     fires from, blinking through the grace period after a hit. */
+  function drawShip() {
+    if (invuln > 0 && Math.floor(invuln * 12) % 2) return;
+    var w = shipW(), cx = shipX(), y = PADDLE_Y;
+    ctx.fillStyle = fx.narrow > 0 ? "#ff7b9c" : PADDLE;
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+    ctx.moveTo(cx, y - 8);
+    ctx.lineTo(cx + w / 2, y + PH);
+    ctx.lineTo(cx - w / 2, y + PH);
+    ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = fx.narrow > 0 ? "#ffd2de" : PADDLE_HI;
+    if (fx.wide > 0) {
+      ctx.fillRect(cx - 9, y - 6, 3, 8);
+      ctx.fillRect(cx + 6, y - 6, 3, 8);
+    } else {
+      ctx.fillRect(cx - 1.5, y - 12, 3, 9);
+    }
+  }
+
+  function drawSquadron() {
+    var i;
+    /* bombs first, so a diver's own bomb never hides under it */
+    ctx.fillStyle = "#ff9d5c";
+    for (i = 0; i < bombs.length; i++) {
+      ctx.beginPath();
+      ctx.moveTo(bombs[i].x, bombs[i].y - 5);
+      ctx.lineTo(bombs[i].x + 3, bombs[i].y);
+      ctx.lineTo(bombs[i].x, bombs[i].y + 5);
+      ctx.lineTo(bombs[i].x - 3, bombs[i].y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.save();
+    ctx.shadowColor = PADDLE;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = BALL;
+    for (i = 0; i < bullets.length; i++) {
+      ctx.fillRect(bullets[i].x - 1.5, bullets[i].y - 7, 3, 9);
+    }
+    ctx.restore();
+
+    for (i = 0; i < enemies.length; i++) {
+      var e = enemies[i];
+      if (e.t < 0 && e.st === EN.ENTER) continue;   /* still off-board */
+      drawEnemy(e);
+    }
+  }
+
+  /* A bug in the wall's own colours: body, swept wings, two lit eyes. Drawn
+     around its own origin so a diver can bank into its run. */
+  function drawEnemy(e) {
+    var col = ROW[Math.min(e.row, ROW.length - 1)].c;
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    if (e.ang) ctx.rotate(e.ang);
+    var hw = EN_W / 2, hh = EN_H / 2;
+    ctx.fillStyle = col;
+    ctx.beginPath();               /* body: a blunt diamond */
+    ctx.moveTo(0, -hh);
+    ctx.lineTo(hw * 0.55, 0);
+    ctx.lineTo(0, hh);
+    ctx.lineTo(-hw * 0.55, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(2,16,28,.45)";
+    ctx.beginPath();               /* wings, swept back */
+    ctx.moveTo(-hw, -hh * 0.5);
+    ctx.lineTo(-hw * 0.5, hh * 0.2);
+    ctx.lineTo(-hw, hh);
+    ctx.closePath();
+    ctx.moveTo(hw, -hh * 0.5);
+    ctx.lineTo(hw * 0.5, hh * 0.2);
+    ctx.lineTo(hw, hh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = INK;
+    ctx.fillRect(-3, -hh * 0.35, 2, 2);
+    ctx.fillRect(1, -hh * 0.35, 2, 2);
+    ctx.restore();
+  }
+
+  /* Capsules borrow the bricks' bevel so they read as chips off the same wall,
+     with the effect's letter stamped in the board's ink. */
+  function drawDrops() {
+    ctx.font = "bold 9px ui-monospace,Consolas,monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (var i = 0; i < drops.length; i++) {
+      var d = drops[i], def = puByKey(d.k);
+      var x = d.x - DROP_W / 2, y = d.y - DROP_H / 2;
+      ctx.fillStyle = def.c;
+      ctx.fillRect(x, y, DROP_W, DROP_H);
+      ctx.fillStyle = "rgba(255,255,255,.28)";
+      ctx.fillRect(x, y, DROP_W, 2);
+      ctx.fillStyle = "rgba(2,16,28,.35)";
+      ctx.fillRect(x, y + DROP_H - 2, DROP_W, 2);
+      ctx.fillStyle = INK;
+      ctx.fillText(def.l, d.x, d.y + 1);
+    }
+  }
+
+  /* Active effects live in the empty strip above the wall, each with a drain
+     bar - a number would be unreadable at this size, a bar isn't. */
+  function drawFx() {
+    var x = SIDE, i;
+    ctx.font = "bold 9px ui-monospace,Consolas,monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (i = 0; i < PU.length; i++) {
+      var p = PU[i];
+      if (!p.t || fx[p.k] <= 0) continue;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = p.c;
+      ctx.fillRect(x, 8, 16, 12);
+      ctx.fillStyle = INK;
+      ctx.fillText(p.l, x + 8, 14);
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = p.c;
+      ctx.fillRect(x, 22, 16 * Math.min(1, fx[p.k] / p.t), 2);
+      ctx.globalAlpha = 1;
+      x += 22;
+    }
+  }
+
+  /* The name of whatever was just caught, fading out over the board. */
+  function drawFlash() {
+    if (!flash) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, flash.t / 0.4);
+    ctx.fillStyle = flash.c;
+    ctx.font = "bold 13px ui-monospace,Consolas,monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(2,16,28,.9)";
+    ctx.shadowBlur = 6;
+    ctx.fillText(flash.text, W / 2, H * 0.62);
     ctx.restore();
   }
 
   /* ================= loop ================= */
   function update(dt) {
     movePaddle(dt);
-    if (state === STATE.PLAY) stepBall(dt);
+    if (state !== STATE.PLAY) return;
+    tickFx(dt);      /* clocks first: a speed change applies to this frame */
+    stepDrops(dt);   /* capsules fall in both halves */
+    if (phase === PHASE.SMASH) stepBalls(dt);
+    else stepWave(dt);
   }
   function frame(now) {
     if (!running) return;
@@ -2558,10 +3527,16 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   }
 
   /* ================= input ================= */
+  /* One press, read against the state: start, serve, release a caught ball, or
+     - in the squadron half - pull the trigger. */
   function pressLaunch() {
     if (state === STATE.IDLE || state === STATE.SERVE) launch();
     else if (state === STATE.OVER) newGame();
-    /* PLAY and ENTER swallow it: no relaunch mid-flight, no skipping entry. */
+    else if (state === STATE.PLAY) {
+      if (phase === PHASE.SHOOT) fire();
+      else if (hasStuck()) launch();                        /* CATCH release */
+    }
+    /* ENTER swallows it: no skipping the initials entry. */
   }
 
   function pointerX(clientX) {
@@ -2569,23 +3544,29 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     return (clientX - r.left) * (W / r.width);
   }
   function movePaddleTo(px) {
-    paddleX = Math.max(0, Math.min(W - PW, px - PW / 2));
+    paddleX = Math.max(0, Math.min(W - pw, px - pw / 2));
   }
 
   cv.addEventListener("mousemove", function (e) {
     movePaddleTo(pointerX(e.clientX));
   });
+  /* Holding the button auto-fires at the cannon's own cadence, so the squadron
+     half doesn't come down to how fast you can tap. `firing` is cleared on the
+     window, not the canvas: a release that lands off the board still counts. */
   cv.addEventListener("mousedown", function (e) {
-    e.preventDefault(); pressLaunch();
+    e.preventDefault(); firing = true; pressLaunch();
   });
+  window.addEventListener("mouseup", function () { firing = false; });
   cv.addEventListener("touchstart", function (e) {
     if (e.touches[0]) movePaddleTo(pointerX(e.touches[0].clientX));
-    e.preventDefault(); pressLaunch();
+    e.preventDefault(); firing = true; pressLaunch();
   }, { passive: false });
   cv.addEventListener("touchmove", function (e) {
     if (e.touches[0]) movePaddleTo(pointerX(e.touches[0].clientX));
     e.preventDefault();
   }, { passive: false });
+  cv.addEventListener("touchend", function () { firing = false; });
+  cv.addEventListener("touchcancel", function () { firing = false; });
 
   /* Key handling lives at document level but only bites while the cabinet is
      open, so the room's own controls are untouched when it's closed. */
@@ -2596,12 +3577,13 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     else if (k === "ArrowRight") { keyRight = true; e.preventDefault(); }
     else if (k === " " || k === "Spacebar") {
       /* Don't hijack Space while typing initials into the entry field. */
-      if (state !== STATE.ENTER) { pressLaunch(); e.preventDefault(); }
+      if (state !== STATE.ENTER) { firing = true; pressLaunch(); e.preventDefault(); }
     } else if (k === "Escape") { close(); }
   }
   function onKeyUp(e) {
     if (e.key === "ArrowLeft") keyLeft = false;
     else if (e.key === "ArrowRight") keyRight = false;
+    else if (e.key === " " || e.key === "Spacebar") firing = false;
   }
 
   /* ================= open / close ================= */
@@ -2620,7 +3602,13 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     lastT = performance.now();
     newGame();
     raf = requestAnimationFrame(frame);
-    elExit.focus();
+    /* Focus the exit for keyboard and screen-reader users - but preventScroll,
+       and put the cabinet back at the top afterwards. The button sits below the
+       score board and the capsule legend, so on a phone a plain focus() scrolls
+       the playfield clean off the screen before the first serve. */
+    elExit.focus({ preventScroll: true });
+    var cab = overlay.querySelector(".arcade__cab");
+    if (cab) cab.scrollTop = 0;
   }
   function close() {
     if (!running) return;
@@ -2640,7 +3628,13 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   document.addEventListener("visibilitychange", function () {
     if (document.hidden && state === STATE.PLAY) {
       state = STATE.SERVE;
-      resetBallOnPaddle();
+      /* Back to a single ball on the paddle, and anything in mid-air - capsules
+         either half, bombs in the squadron - goes with it. The effect clocks
+         survive: rAF is suspended while you're away, so they simply stop rather
+         than draining against a frozen board. */
+      drops.length = 0;
+      bombs.length = 0;
+      resetBalls();
       showMsg('<b>PAUSED</b><small class="blink">CLICK OR PRESS SPACE</small>');
     }
   });
@@ -2658,10 +3652,32 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     setPaddle: function (px) { movePaddleTo(px); },
     peek: function () {
       return { state: state, score: score, level: level, lives: lives,
-               liveCount: liveCount, paddleX: paddleX,
-               ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy },
+               liveCount: liveCount, paddleX: paddleX, paddleW: pw,
+               /* .ball stays the first ball so older checks still read; .balls
+                  is the real picture once multiball is out. */
+               ball: { x: balls[0].x, y: balls[0].y,
+                       vx: balls[0].vx, vy: balls[0].vy },
+               balls: balls.map(function (b) {
+                 return { x: b.x, y: b.y, vx: b.vx, vy: b.vy, stuck: b.stuck };
+               }),
+               drops: drops.map(function (d) {
+                 return { x: d.x, y: d.y, k: d.k };
+               }),
+               fx: { wide: fx.wide, narrow: fx.narrow, slow: fx.slow,
+                     catch: fx.catch, fast: fx.fast },
+               phase: phase, invuln: invuln,
+               enemies: enemies.map(function (e) {
+                 return { x: e.x, y: e.y, row: e.row, st: e.st, waiting: e.t < 0 };
+               }),
+               bullets: bullets.map(function (b) { return { x: b.x, y: b.y }; }),
+               bombs: bombs.map(function (b) { return { x: b.x, y: b.y }; }),
                scores: scores.slice() };
-    }
+    },
+    /* Hand a capsule straight to the paddle - the drop roll is random, so a
+       headless check needs a way to exercise a specific effect. */
+    give: function (k) { applyPU(k); },
+    /* Jump straight to the squadron half without smashing a wall first. */
+    wave: function () { startWave(); }
   };
 })();
 </script>
@@ -3656,6 +4672,1445 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       return { playing: playing, bpm: bpm, activeCol: activeCol,
                grid: grid.map(function (row) { return row.slice(); }),
                code: encode() };
+    }
+  };
+})();
+</script>
+
+<script>
+/* =======================================================================
+   WINTER MAUL :: the lounge's third cabinet
+   A maze tower defence, after the Warcraft III "maul" maps. The one rule that
+   makes it a maul rather than a tower defence: your towers ARE the walls. The
+   creeps take the shortest open route from the gate to the drain, so every
+   tower you drop is both a gun and a detour - and the cabinet refuses any
+   placement that would seal the route completely, which is the whole game.
+
+   The "wars" half is the rival: a second maze you never see, racing the same
+   wave clock. Spending gold on a SEND buys two things at once - pressure that
+   makes the rival leak, and income that pays you every wave from then on.
+   That trade (defend now vs. earn later) is the engine of the original.
+
+   Same shell as the other two cabinets - state machine, /api/scores board with
+   a localStorage warm cache, pause on a hidden tab - so all three machines
+   feel like one arcade.
+   ======================================================================= */
+(function () {
+  "use strict";
+
+  var overlay = document.getElementById("maul");
+  var cv = document.getElementById("wm-canvas");
+  if (!overlay || !cv) return;
+  var ctx = cv.getContext("2d");
+
+  var elLives = document.getElementById("wm-lives");
+  var elGold = document.getElementById("wm-gold");
+  var elWave = document.getElementById("wm-wave");
+  var elScore = document.getElementById("wm-score");
+  var elMsg = document.getElementById("wm-msg");
+  var elBoard = document.getElementById("wm-board");
+  var elExit = document.getElementById("wm-exit");
+  var elTowers = document.getElementById("wm-towers");
+  var elSends = document.getElementById("wm-sends");
+  var elSel = document.getElementById("wm-sel");
+  var elClock = document.getElementById("wm-clock");
+  var elCall = document.getElementById("wm-call");
+  var elYouBar = document.getElementById("wm-youbar");
+  var elYouLab = document.getElementById("wm-youlab");
+  var elRivalBar = document.getElementById("wm-rivalbar");
+  var elRivalLab = document.getElementById("wm-rivallab");
+  var elNote = document.getElementById("wm-note");
+
+  /* ---- palette: the room's ice tones, plus one warm hazard colour ---- */
+  var INK = "#02101c";
+  /* The cliff the arena is cut into: light enough to hold an edge against the
+     background, or the board looks smaller than it is. */
+  var ROCK = "#1b4661";
+  /* The open floor sits dark on purpose - the lit road across it is the one
+     thing a maul player actually reads, and it can only be bright if the floor
+     under it isn't. */
+  var CELL_A = "#04141f", CELL_B = "#061c29";
+  var CREEP = "#eafcff", CREEP_DARK = "#7fa6bb";
+  var GOLD = "#ffd68a", DANGER = "#ff7b9c";
+
+  /* ---- geometry ----
+     17x17 is the room's 9x9 doubled and squared off: a 15x15 build zone ringed
+     by rock, with a gate cut in the top wall and a drain in the bottom.
+
+     Drawn in the same isometric projection as the lounge itself, at half the
+     room's tile size - walking up to the cabinet shouldn't change the world
+     you're looking at. Grid space stays a flat 17x17 array: every rule in this
+     file is written in whole tiles, and iso() below is the only code that
+     knows what a pixel is. */
+  var COLS = 17, ROWS = 17;
+  var SPAWN = { x: 8, y: 0 }, DRAIN = { x: 8, y: 16 };
+  var B0 = 1, B1 = 15;                      /* build zone, inclusive */
+  var N = COLS * ROWS;
+  var TW = 30, TH = 15;                     /* a floor tile on screen */
+  /* Logical size; the backing buffer is twice this in each direction and the
+     context is scaled to match, so the diagonals stay clean on a retina panel
+     and when the cabinet scales the canvas down on a phone. Sized so the board
+     very nearly fills it - dead margin around an iso field reads as a small
+     board rather than a wide one. */
+  var VW = 520, VH = 312, SCALE = 2;
+  var OX = VW / 2, OY = 44;
+  var TAU = Math.PI * 2;
+  function idx(x, y) { return y * COLS + x; }
+  function inGrid(x, y) { return x >= 0 && y >= 0 && x < COLS && y < ROWS; }
+  function isoX(fx, fy) { return OX + (fx - fy) * (TW / 2); }
+  function isoY(fx, fy) { return OY + (fx + fy) * (TH / 2); }
+  /* Tinting runs to a few hundred calls a frame across a full maze, and the
+     inputs are a handful of fixed palette entries, so the results are worth
+     keeping rather than re-parsing the same six hex strings sixty times a
+     second. */
+  var tintCache = {};
+  function tint(hex, f) {
+    var key = hex + "|" + f;
+    var hit = tintCache[key];
+    if (hit) return hit;
+    var r = parseInt(hex.slice(1, 3), 16),
+        g = parseInt(hex.slice(3, 5), 16),
+        b = parseInt(hex.slice(5, 7), 16);
+    function ch(v) {
+      return Math.max(0, Math.min(255,
+        f <= 1 ? (v * f) | 0 : (v + (255 - v) * (f - 1)) | 0));
+    }
+    return (tintCache[key] = "rgb(" + ch(r) + "," + ch(g) + "," + ch(b) + ")");
+  }
+
+  /* Step order: down, across, then up. Any of the four is a legal shortest
+     step, but fixing the order keeps the route deterministic - which matters
+     because the road drawn on the floor has to be the road the creeps walk. */
+  var DIRS = [[0, 1], [1, 0], [-1, 0], [0, -1]];
+
+  /* ---- towers ----
+     Priced so RIME is the maze and everything else is the damage bolted onto
+     it: at 5 gold you lay walls by the dozen, and the guns cost enough that
+     where you put them is a decision. Range is in cells, rate in shots/sec.
+
+     Each one also carries its silhouette - footprint `s` and rise `h` - because
+     in an isometric maze you read the wall by its shape long before you read
+     its colour: RIME is a low broad block you lay by the dozen, SHARD a narrow
+     spire, BLIZZARD a squat drum under a spinning ring, NOVA a tower with an
+     orb riding above it. */
+  var TOWERS = [
+    /* A muted ice, deliberately: you will own eighty of these and four of
+       anything else, and the walls have to sit back so the guns read. */
+    { k: "rime", name: "RIME", cost: 5, c: "#6fb4d4",
+      dmg: 5, rate: 1.2, range: 1.9, slow: 0.35, slowT: 1.4,
+      s: 0.92, h: 9 },
+    { k: "shard", name: "SHARD", cost: 24, c: "#38e6ff",
+      dmg: 20, rate: 1.05, range: 2.7, s: 0.66, h: 19 },
+    { k: "blizzard", name: "BLIZZARD", cost: 58, c: "#b8ecff",
+      dmg: 17, rate: 0.6, range: 2.3, splash: 1.25, s: 0.84, h: 13 },
+    { k: "nova", name: "NOVA", cost: 120, c: "#ffd68a",
+      dmg: 78, rate: 0.4, range: 4.3, s: 0.6, h: 24 }
+  ];
+  var MAX_LVL = 3;
+  function upCost(t) { return Math.round(t.def.cost * 1.15 * t.lvl); }
+  function lvlMul(l) { return Math.pow(1.8, l - 1); }
+  function lvlRange(t) { return t.def.range + (t.lvl - 1) * 0.35; }
+  var REFUND = 0.7;
+
+  /* ---- sends ----
+     press: how hard it leans on the rival's maze. inc: gold added to every
+     wave payout from now on, forever - which is why a send is an investment
+     and not just an attack. */
+  var SENDS = [
+    { k: "pup", name: "FROST PUP", cost: 14, inc: 2, press: 0.55 },
+    { k: "wolf", name: "ICE WOLF", cost: 40, inc: 5, press: 1.3 },
+    { k: "golem", name: "RIME GOLEM", cost: 105, inc: 13, press: 3.2 }
+  ];
+
+  /* ---- tuning ---- */
+  var START_GOLD = 90, START_LIVES = 20, RIVAL_LIVES = 20;
+  var WAVE_EVERY = 24;        /* seconds; the clock does not wait for a wave to die */
+  var FIRST_WAVE = 22;        /* a longer opening so there's a maze to walk into */
+  var WAVE_GOLD = 20;         /* base payout per wave, before income */
+  var CALL_BONUS = 2;         /* gold per whole second skipped by calling early */
+  var BOSS_EVERY = 5, BOSS_COST = 3;   /* a leaked boss takes three lives */
+
+  function waveSpec(n) {
+    var boss = n % BOSS_EVERY === 0;
+    return {
+      n: n, boss: boss,
+      count: boss ? 3 : 8 + Math.floor(n * 0.7),
+      gap: boss ? 1.6 : 0.5,
+      hp: Math.round(22 * Math.pow(1.27, n - 1) * (boss ? 9 : 1)),
+      speed: (boss ? 2.1 : 2.6) + Math.min(0.9, n * 0.03),
+      bounty: 2 + Math.floor(n / 3) + (boss ? 14 : 0),
+      pts: (4 + n) * (boss ? 6 : 1),
+      cost: boss ? BOSS_COST : 1
+    };
+  }
+  /* What the rival throws back at you, on the same "sends are the wars" logic:
+     a couple of extra bodies, tougher than the wave they ride in with. */
+  function rivalSendCount(n) { return n < 4 ? 0 : Math.floor((n - 1) / 3); }
+  function rivalSendSpec(n) {
+    var s = waveSpec(n);
+    return { n: n, boss: false, hp: Math.round(s.hp * 1.6), speed: s.speed,
+             bounty: s.bounty + 2, pts: s.pts + 6, cost: 1, sent: true };
+  }
+
+  /* ---- leaderboard — a real shared board via /api/scores when it's
+     reachable, otherwise the visitor's own localStorage copy (opened as a
+     file, or before KV is bound). Initials are escaped on render, so an entry
+     can't inject markup no matter where it came from. ---- */
+  var GAME = "wintermaul";
+  var KEY = "frost_maul_v1";
+  var MAX_SCORES = 8;
+  /* Mirrors the server seed so the cabinet looks the same before the live
+     board arrives. Roughly: a win around wave 14, then progressively rougher. */
+  var SEED = [
+    { i: "FRO", s: 9000 }, { i: "ICE", s: 6400 }, { i: "MIL", s: 4200 },
+    { i: "SNO", s: 2400 }, { i: "AAA", s: 900 }
+  ];
+  var apiOK = false;
+
+  function sortCap(list) {
+    return list.filter(function (e) { return e && typeof e.s === "number"; })
+               .sort(function (a, b) { return b.s - a.s; })
+               .slice(0, MAX_SCORES);
+  }
+  function localLoad() {
+    var list = SEED.slice();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var v = JSON.parse(raw); if (Array.isArray(v)) list = v; }
+    } catch (e) {}
+    return sortCap(list);
+  }
+  function localSave(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function renderBoard(highlight) {
+    elBoard.innerHTML = scores.map(function (e, i) {
+      return '<li' + (i === highlight ? ' class="is-new"' : "") + ">" +
+        '<span class="rank">' + (i + 1) + "</span>" +
+        '<span class="who">' + esc(e.i) + "</span>" +
+        '<span class="pts">' + e.s + "</span></li>";
+    }).join("");
+  }
+  function qualifies(sc) {
+    if (sc <= 0) return false;
+    return scores.length < MAX_SCORES || sc > scores[scores.length - 1].s;
+  }
+  function rankOf(name, sc) {
+    for (var i = 0; i < scores.length; i++) {
+      if (scores[i].i === name && scores[i].s === sc) return i;
+    }
+    return -1;
+  }
+  function refresh() {
+    fetch("/api/scores?game=" + GAME)
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        apiOK = true;
+        scores = sortCap(d.scores);
+        localSave(scores);
+        renderBoard(-1);
+      })
+      .catch(function () { /* API absent — the local board already shows */ });
+  }
+  function submit(initials, sc) {
+    var name = (initials || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
+    scores.push({ i: name, s: sc });
+    scores = sortCap(scores);
+    localSave(scores);
+    renderBoard(rankOf(name, sc));
+    if (!apiOK) return;
+    fetch("/api/scores", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ game: GAME, initials: name, score: sc })
+    })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        scores = sortCap(d.scores);
+        localSave(scores);
+        renderBoard(rankOf(name, sc));
+      })
+      .catch(function () { /* rate-limited or offline — the local row stays */ });
+  }
+  var scores = localLoad();
+
+  /* ================= game state ================= */
+  var STATE = { IDLE: 0, PLAY: 1, PAUSED: 2, OVER: 3, ENTER: 4 };
+  var state = STATE.IDLE;
+
+  var rock = new Uint8Array(N);
+  var built = new Array(N);          /* tower object per cell, or undefined */
+  var field = new Int16Array(N);     /* steps from each cell to the drain, -1 = sealed */
+  var scratch = new Int16Array(N);   /* the same, for testing a placement */
+  var bfsQ = new Int32Array(N);
+
+  var lives, gold, score, income, wave, waveT, gameT;
+  var creeps, queue, beams, puffs, route;
+  var rival, pick, sel, flash, note;
+  var raf = null, lastT = 0, running = false, won = false;
+
+  function buildRock() {
+    var x, y;
+    for (x = 0; x < COLS; x++) {
+      rock[idx(x, 0)] = (x === SPAWN.x) ? 0 : 1;
+      rock[idx(x, ROWS - 1)] = (x === DRAIN.x) ? 0 : 1;
+    }
+    for (y = 1; y < ROWS - 1; y++) {
+      rock[idx(0, y)] = 1;
+      rock[idx(COLS - 1, y)] = 1;
+      for (x = 1; x < COLS - 1; x++) rock[idx(x, y)] = 0;
+    }
+  }
+
+  /* ---- pathing ----
+     One BFS out from the drain gives every cell its distance, so a creep only
+     ever has to look at its four neighbours: the road is whichever one is a
+     step closer. `block` lets the same routine answer "what would happen if I
+     dropped a tower here?" without touching the live grid. */
+  function bfs(out, block) {
+    var i;
+    for (i = 0; i < N; i++) out[i] = -1;
+    var head = 0, tail = 0, g = idx(DRAIN.x, DRAIN.y);
+    if (g === block) return;
+    out[g] = 0; bfsQ[tail++] = g;
+    while (head < tail) {
+      var c = bfsQ[head++], cx = c % COLS, cy = (c / COLS) | 0, d = out[c] + 1;
+      for (i = 0; i < 4; i++) {
+        var nx = cx + DIRS[i][0], ny = cy + DIRS[i][1];
+        if (!inGrid(nx, ny)) continue;
+        var nc = idx(nx, ny);
+        if (out[nc] !== -1 || rock[nc] || built[nc] || nc === block) continue;
+        out[nc] = d;
+        bfsQ[tail++] = nc;
+      }
+    }
+  }
+  /* The next cell along the road, or -1 if there is nowhere closer to go. */
+  function stepFrom(f, c) {
+    var cx = c % COLS, cy = (c / COLS) | 0, d = f[c];
+    if (d <= 0) return -1;
+    for (var i = 0; i < 4; i++) {
+      var nx = cx + DIRS[i][0], ny = cy + DIRS[i][1];
+      if (!inGrid(nx, ny)) continue;
+      var nc = idx(nx, ny);
+      if (f[nc] === d - 1) return nc;
+    }
+    return -1;
+  }
+  /* The road itself, walked once per rebuild so the floor can show it. */
+  function traceRoute() {
+    route = [];
+    var c = idx(SPAWN.x, SPAWN.y), guard = 0;
+    if (field[c] < 0) return;
+    route.push(c);
+    while (guard++ < N) {
+      var nx = stepFrom(field, c);
+      if (nx < 0) break;
+      route.push(nx);
+      c = nx;
+    }
+  }
+  function repath() {
+    bfs(field, -1);
+    traceRoute();
+  }
+
+  /* ================= building ================= */
+  /* A cell a creep is standing on or walking into is off limits, so nothing is
+     ever built on top of a body - and so the placement test below only has to
+     prove the route survives, never that a creep can escape a box. */
+  function creepHolds(c) {
+    for (var i = 0; i < creeps.length; i++) {
+      if (creeps[i].cell === c || creeps[i].next === c) return true;
+    }
+    return false;
+  }
+  function buildable(x, y) {
+    return x >= B0 && x <= B1 && y >= B0 && y <= B1;
+  }
+  /* Returns null if the tower can go here, or the reason it can't. */
+  function placeError(x, y, def) {
+    var c = idx(x, y);
+    if (!buildable(x, y)) return "OUTSIDE THE BUILD ZONE";
+    if (built[c]) return "ALREADY BUILT THERE";
+    if (creepHolds(c)) return "A CREEP IS STANDING THERE";
+    if (gold < def.cost) return "NOT ENOUGH GOLD";
+    bfs(scratch, c);
+    if (scratch[idx(SPAWN.x, SPAWN.y)] < 0) return "THAT WOULD SEAL THE MAZE";
+    for (var i = 0; i < creeps.length; i++) {
+      /* A creep mid-step is committed to `next`; that cell has to still find
+         its way out, or the build would strand it. */
+      if (scratch[creeps[i].next] < 0) return "THAT WOULD TRAP A CREEP";
+    }
+    return null;
+  }
+  function place(x, y, def) {
+    var err = placeError(x, y, def);
+    if (err) { flash = { c: idx(x, y), t: 0.4 }; note = err; return false; }
+    var c = idx(x, y);
+    gold -= def.cost;
+    built[c] = { def: def, x: x, y: y, lvl: 1, cd: 0, flash: 0, spent: def.cost,
+                 /* a fixed spin offset so a row of drums doesn't turn in lockstep */
+                 seed: Math.random() * TAU };
+    repath();
+    dirty = true;
+    return true;
+  }
+  function upgrade(t) {
+    if (!t || t.lvl >= MAX_LVL) return;
+    var c = upCost(t);
+    if (gold < c) { note = "NOT ENOUGH GOLD"; return; }
+    gold -= c;
+    t.spent += c;
+    t.lvl++;
+    dirty = true;
+  }
+  function sell(t) {
+    if (!t) return;
+    gold += Math.floor(t.spent * REFUND);
+    built[idx(t.x, t.y)] = undefined;
+    if (sel === t) sel = null;
+    repath();
+    dirty = true;
+  }
+
+  /* ================= sends ================= */
+  function doSend(s) {
+    if (state !== STATE.PLAY) return;
+    if (gold < s.cost) { note = "NOT ENOUGH GOLD"; return; }
+    gold -= s.cost;
+    income += s.inc;
+    rival.press += s.press;
+    note = "SENT " + s.name + " — INCOME +" + s.inc;
+    noteHit = true;
+    dirty = true;
+  }
+
+  /* ================= waves ================= */
+  function spawnCreep(spec) {
+    var c = idx(SPAWN.x, SPAWN.y);
+    creeps.push({
+      cell: c, next: c, t: 1, spec: spec,
+      hp: spec.hp, max: spec.hp, speed: spec.speed,
+      slowMul: 1, slowT: 0, boss: !!spec.boss, sent: !!spec.sent,
+      /* Its own phase, so a pack of them bobs along the maze out of step
+         rather than marching like one animation. */
+      seed: Math.random() * TAU
+    });
+  }
+  function scheduleWave(n) {
+    var s = waveSpec(n), i;
+    for (i = 0; i < s.count; i++) queue.push({ t: gameT + i * s.gap, spec: s });
+    var rs = rivalSendCount(n);
+    if (rs > 0) {
+      var rspec = rivalSendSpec(n);
+      for (i = 0; i < rs; i++) queue.push({ t: gameT + 2.5 + i * 0.7, spec: rspec });
+    }
+  }
+  /* Everything that happens on a wave tick, in order: bank the wave you just
+     survived, let the rival's maze answer for the same wave, pay income, then
+     send the next one. Keeping it all on one tick means the race is resolved
+     at a single readable moment rather than drifting between two clocks. */
+  function startWave() {
+    if (wave >= 1) {
+      score += 40 * wave;
+      resolveRival(wave);
+      if (rival.lives <= 0) { finish(true); return; }
+    }
+    wave++;
+    gold += WAVE_GOLD + income;
+    scheduleWave(wave);
+    waveT = WAVE_EVERY;
+    dirty = true;
+  }
+  /* The rival's maze, modelled rather than simulated: it holds cleanly through
+     the early waves, starts cracking under its own weight around wave 7, and
+     cracks a lot faster under whatever you've been sending. Pressure decays
+     because a send is a spike, not a permanent handicap. */
+  function resolveRival(n) {
+    var expect = Math.max(0, (n - 6) * 0.42) + rival.press * 0.85;
+    var hit = Math.floor(expect);
+    if (Math.random() < expect - hit) hit++;
+    rival.press *= 0.4;
+    if (hit > 0) {
+      rival.lives = Math.max(0, rival.lives - hit);
+      note = "RIVAL LEAKED " + hit + " ON WAVE " + n;
+      noteHit = true;
+    } else {
+      note = "RIVAL HELD WAVE " + n;
+      noteHit = false;
+    }
+    dirty = true;
+  }
+  function callWave() {
+    if (state !== STATE.PLAY || waveT <= 0.4) return;
+    gold += Math.floor(waveT) * CALL_BONUS;
+    note = "CALLED EARLY +" + Math.floor(waveT) * CALL_BONUS + "g";
+    noteHit = true;
+    startWave();
+  }
+
+  /* ================= combat ================= */
+  function hurt(cr, dmg) {
+    cr.hp -= dmg;
+    if (cr.hp <= 0 && !cr.gone) {
+      cr.gone = true;
+      gold += cr.spec.bounty;
+      score += cr.spec.pts;
+      puffs.push({ x: creepFX(cr), y: creepFY(cr), t: 0.35, boss: cr.boss });
+      dirty = true;
+    }
+  }
+  /* Where a creep is, in fractional tiles. Everything - range, splash, the
+     order things are painted in - is measured in this space, so the projection
+     stays a drawing detail rather than something the rules depend on. */
+  function creepFX(cr) {
+    var a = cr.cell % COLS, b = cr.next % COLS;
+    return a + (b - a) * cr.t;
+  }
+  function creepFY(cr) {
+    var a = (cr.cell / COLS) | 0, b = (cr.next / COLS) | 0;
+    return a + (b - a) * cr.t;
+  }
+
+  function fire(t, dt) {
+    if (t.flash > 0) t.flash -= dt;
+    t.cd -= dt;
+    if (t.cd > 0) return;
+    var range = lvlRange(t), r2 = range * range;
+    var tx = t.x, ty = t.y;
+    var best = null, bestD = 1e9;
+    for (var i = 0; i < creeps.length; i++) {
+      var cr = creeps[i];
+      if (cr.gone) continue;
+      var dx = creepFX(cr) - tx, dy = creepFY(cr) - ty;
+      if (dx * dx + dy * dy > r2) continue;
+      /* Target whatever is furthest along the road, the way a maul player
+         would: the one about to reach the drain is the one that matters. */
+      var d = field[cr.cell] < 0 ? 1e8 : field[cr.cell];
+      if (d < bestD) { bestD = d; best = cr; }
+    }
+    if (!best) return;
+    t.cd = 1 / t.def.rate;
+    t.flash = 0.14;
+    var dmg = t.def.dmg * lvlMul(t.lvl);
+    var bx = creepFX(best), by = creepFY(best);
+    beams.push({ x1: tx, y1: ty, x2: bx, y2: by, t: 0.14,
+                 h: towerH(t), c: t.def.c, w: t.def.k === "nova" ? 2.4 : 1.4 });
+    if (t.def.splash) {
+      var s2 = t.def.splash * t.def.splash;
+      for (i = 0; i < creeps.length; i++) {
+        var o = creeps[i];
+        if (o.gone) continue;
+        var ox = creepFX(o) - bx, oy = creepFY(o) - by;
+        if (ox * ox + oy * oy <= s2) hurt(o, dmg);
+      }
+      puffs.push({ x: bx, y: by, t: 0.3, splash: t.def.splash });
+    } else {
+      hurt(best, dmg);
+    }
+    if (t.def.slow) {
+      var mul = 1 - t.def.slow;
+      if (mul < best.slowMul) best.slowMul = mul;
+      best.slowT = Math.max(best.slowT, t.def.slowT);
+    }
+  }
+
+  function moveCreep(cr, dt) {
+    var sp = cr.speed * cr.slowMul;
+    cr.t += (sp * dt);
+    while (cr.t >= 1) {
+      cr.t -= 1;
+      cr.cell = cr.next;
+      if (cr.cell === idx(DRAIN.x, DRAIN.y)) {
+        cr.gone = true;
+        lives -= cr.spec.cost;
+        note = "LEAK! −" + cr.spec.cost + (cr.spec.cost > 1 ? " LIVES" : " LIFE");
+        noteHit = true;
+        dirty = true;
+        return;
+      }
+      var nx = stepFrom(field, cr.cell);
+      if (nx < 0) { cr.next = cr.cell; cr.t = 0; return; }   /* nowhere to go: hold */
+      cr.next = nx;
+    }
+  }
+
+  /* ================= the loop ================= */
+  function update(dt) {
+    if (state !== STATE.PLAY) return;
+    gameT += dt;
+    waveT -= dt;
+    if (waveT <= 0) { startWave(); if (state !== STATE.PLAY) return; }
+
+    var i;
+    for (i = queue.length - 1; i >= 0; i--) {
+      if (queue[i].t <= gameT) { spawnCreep(queue[i].spec); queue.splice(i, 1); }
+    }
+    for (i = 0; i < creeps.length; i++) {
+      var cr = creeps[i];
+      if (cr.gone) continue;
+      if (cr.slowT > 0) {
+        cr.slowT -= dt;
+        if (cr.slowT <= 0) cr.slowMul = 1;
+      }
+      moveCreep(cr, dt);
+    }
+    for (i = 0; i < N; i++) { if (built[i]) fire(built[i], dt); }
+    for (i = creeps.length - 1; i >= 0; i--) { if (creeps[i].gone) creeps.splice(i, 1); }
+    for (i = beams.length - 1; i >= 0; i--) {
+      beams[i].t -= dt;
+      if (beams[i].t <= 0) beams.splice(i, 1);
+    }
+    for (i = puffs.length - 1; i >= 0; i--) {
+      puffs[i].t -= dt;
+      if (puffs[i].t <= 0) puffs.splice(i, 1);
+    }
+    if (flash) { flash.t -= dt; if (flash.t <= 0) flash = null; }
+    if (lives <= 0) { lives = 0; finish(false); }
+  }
+
+  /* ================= drawing =================
+     Painter's algorithm on the same axis the room uses: floor first, then
+     everything that stands up sorted by fx+fy so a creep walking behind a wall
+     goes behind it. Nothing here reads or writes game state - draw() can be
+     called twice on the same frame and produce the same picture. */
+  var hoverCell = -1;
+  var bg = null;               /* the backdrop gradient, built once on first draw */
+  function towerH(t) { return t.def.h + (t.lvl - 1) * 4; }
+
+  /* A tile diamond, optionally shrunk toward its centre and lifted off the
+     floor: every floor tile, shadow and box lid is cut from this one path. */
+  function diamond(fx, fy, s, lift) {
+    var x = isoX(fx, fy), y = isoY(fx, fy) - (lift || 0);
+    var hw = (TW / 2) * s, hh = (TH / 2) * s;
+    ctx.beginPath();
+    ctx.moveTo(x, y - hh);
+    ctx.lineTo(x + hw, y);
+    ctx.lineTo(x, y + hh);
+    ctx.lineTo(x - hw, y);
+    ctx.closePath();
+  }
+  /* A block standing on a tile: the two faces that turn toward the camera,
+     then the lid. The light is fixed - left face dark, right face mid, lid
+     bright - so a maze of a hundred of these still reads as one solid mass
+     lit from one side rather than a field of loose cubes.
+     `c` must be a palette hex; this does the shading. */
+  function box(fx, fy, s, h, c, lift) {
+    var x = isoX(fx, fy), y = isoY(fx, fy) - (lift || 0);
+    var hw = (TW / 2) * s, hh = (TH / 2) * s;
+    ctx.fillStyle = tint(c, 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x - hw, y - h); ctx.lineTo(x, y + hh - h);
+    ctx.lineTo(x, y + hh); ctx.lineTo(x - hw, y);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = tint(c, 0.78);
+    ctx.beginPath();
+    ctx.moveTo(x, y + hh - h); ctx.lineTo(x + hw, y - h);
+    ctx.lineTo(x + hw, y); ctx.lineTo(x, y + hh);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(x, y - hh - h); ctx.lineTo(x + hw, y - h);
+    ctx.lineTo(x, y + hh - h); ctx.lineTo(x - hw, y - h);
+    ctx.closePath(); ctx.fill();
+  }
+  /* A circle of radius r TILES, projected. The iso transform turns it into an
+     axis-aligned ellipse - worth doing properly, because a true circle drawn
+     over an iso floor reads as a sphere hovering above the board. */
+  function isoRing(fx, fy, r, colour, alpha, lift) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = colour;
+    ctx.beginPath();
+    ctx.ellipse(isoX(fx, fy), isoY(fx, fy) - (lift || 0),
+                r * Math.SQRT2 * (TW / 2), r * Math.SQRT2 * (TH / 2), 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function shadow(fx, fy, s) {
+    ctx.fillStyle = "rgba(2,8,16,.42)";
+    diamond(fx + 0.1, fy + 0.1, s, 0);
+    ctx.fill();
+  }
+
+  function draw() {
+    ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    ctx.clearRect(0, 0, VW, VH);
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, 0, VW, VH);
+    /* A cold light behind the arena. Without it an iso board is a diamond
+       floating in a black rectangle; with it the empty corners read as depth
+       rather than as canvas nobody used. */
+    if (!bg) {
+      bg = ctx.createRadialGradient(OX, OY + ROWS * TH / 2, 10,
+                                    OX, OY + ROWS * TH / 2, VW * 0.62);
+      bg.addColorStop(0, "#0a2c45");
+      bg.addColorStop(0.55, "#051a29");
+      bg.addColorStop(1, INK);
+    }
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, VW, VH);
+    drawFloor();
+    drawSolids();
+    drawEffects();
+    drawSnow();
+  }
+
+  function drawFloor() {
+    var x, y, c;
+    /* The open floor. Rock is skipped here and drawn as standing blocks in the
+       depth pass, so the ring around the arena has real height. */
+    for (y = 0; y < ROWS; y++) {
+      for (x = 0; x < COLS; x++) {
+        c = idx(x, y);
+        if (rock[c]) continue;
+        diamond(x, y, 1, 0);
+        ctx.fillStyle = ((x + y) & 1) ? CELL_A : CELL_B;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(56,230,255,.055)";
+        ctx.stroke();
+      }
+    }
+
+    /* The road, and the thing that makes a maul legible at a glance: a lit
+       channel from gate to drain, with a shimmer running down it. How long the
+       shimmer takes to arrive IS your score, so it's worth animating. */
+    if (route.length > 1) {
+      var head = (gameT * 9) % (route.length + 22);
+      for (var i = 0; i < route.length; i++) {
+        var rx = route[i] % COLS, ry = (route[i] / COLS) | 0;
+        var d = head - i;
+        var glow = (d >= 0 && d < 9) ? (1 - d / 9) : 0;
+        diamond(rx, ry, 0.96, 0.5);
+        ctx.fillStyle = "rgba(56,230,255," + (0.26 + glow * 0.5).toFixed(3) + ")";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(140,240,255," + (0.34 + glow * 0.5).toFixed(3) + ")";
+        ctx.stroke();
+        /* a brighter core down the middle of the channel, so the road holds
+           its shape where towers crowd in on both sides */
+        diamond(rx, ry, 0.5, 0.7);
+        ctx.fillStyle = "rgba(184,246,255," + (0.16 + glow * 0.55).toFixed(3) + ")";
+        ctx.fill();
+      }
+    }
+
+    /* Gate and drain: pools of light on the floor, so both ends of the run are
+       findable without a label. */
+    pool(SPAWN.x, SPAWN.y, DANGER, 0.5);
+    pool(DRAIN.x, DRAIN.y, GOLD, 0.62);
+
+    /* Range preview lies on the floor, under everything that stands up. */
+    if (hoverCell >= 0 && state === STATE.PLAY) {
+      var hx = hoverCell % COLS, hy = (hoverCell / COLS) | 0;
+      var t = built[hoverCell];
+      if (t) {
+        isoRing(hx, hy, lvlRange(t), t.def.c, 0.5, 4);
+      } else if (buildable(hx, hy)) {
+        var def = TOWERS[pick];
+        var ok = gold >= def.cost && !creepHolds(hoverCell);
+        isoRing(hx, hy, def.range, ok ? def.c : DANGER, 0.45, 4);
+        diamond(hx, hy, 1, 0);
+        ctx.fillStyle = ok ? "rgba(56,230,255,.22)" : "rgba(255,123,156,.24)";
+        ctx.fill();
+        ctx.strokeStyle = ok ? "#38e6ff" : DANGER;
+        ctx.stroke();
+      }
+    }
+
+    /* The refused-placement flash stays on the floor too: it's about the tile,
+       not about anything standing on it. */
+    if (flash) {
+      diamond(flash.c % COLS, (flash.c / COLS) | 0, 1, 0);
+      ctx.fillStyle = "rgba(255,123,156," + (0.6 * (flash.t / 0.4)).toFixed(3) + ")";
+      ctx.fill();
+    }
+  }
+  function pool(fx, fy, colour, a) {
+    var pulse = 0.75 + 0.25 * Math.sin(gameT * 2.6);
+    ctx.save();
+    ctx.globalAlpha = a * pulse;
+    var g = ctx.createRadialGradient(isoX(fx, fy), isoY(fx, fy), 1,
+                                     isoX(fx, fy), isoY(fx, fy), TW * 1.5);
+    g.addColorStop(0, colour);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.save();
+    /* Squash the glow into the floor plane so it pools on the ground instead
+       of hanging in the air like a ball of light. */
+    ctx.translate(isoX(fx, fy), isoY(fx, fy));
+    ctx.scale(1, TH / TW);
+    ctx.translate(-isoX(fx, fy), -isoY(fx, fy));
+    ctx.fillRect(isoX(fx, fy) - TW * 1.5, isoY(fx, fy) - TW * 1.5, TW * 3, TW * 3);
+    ctx.restore();
+    ctx.globalAlpha = a;
+    diamond(fx, fy, 0.8, 0);
+    ctx.fillStyle = colour;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---- the depth pass ---- */
+  var items = [];
+  function drawSolids() {
+    items.length = 0;
+    var i, x, y, c;
+    for (y = 0; y < ROWS; y++) {
+      for (x = 0; x < COLS; x++) {
+        c = idx(x, y);
+        if (rock[c]) items.push({ d: x + y, k: 0, x: x, y: y });
+        else if (built[c]) items.push({ d: x + y, k: 1, t: built[c] });
+      }
+    }
+    for (i = 0; i < creeps.length; i++) {
+      if (creeps[i].gone) continue;
+      items.push({ d: creepFX(creeps[i]) + creepFY(creeps[i]) + 0.01,
+                   k: 2, cr: creeps[i] });
+    }
+    /* The ghost of what you're about to build sorts in with everything else,
+       so it's occluded by the wall in front of it exactly as the real tower
+       would be. */
+    if (hoverCell >= 0 && state === STATE.PLAY && !built[hoverCell]) {
+      var hx = hoverCell % COLS, hy = (hoverCell / COLS) | 0;
+      if (buildable(hx, hy) && gold >= TOWERS[pick].cost && !creepHolds(hoverCell)) {
+        items.push({ d: hx + hy + 0.02, k: 3, x: hx, y: hy });
+      }
+    }
+    items.sort(function (a, b) { return a.d - b.d; });
+    for (i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it.k === 0) drawRock(it.x, it.y);
+      else if (it.k === 1) drawTower(it.t);
+      else if (it.k === 2) drawCreep(it.cr);
+      else drawGhost(it.x, it.y);
+    }
+  }
+
+  function drawRock(x, y) {
+    /* Deliberately uneven: a ring of identical blocks looks like a spreadsheet,
+       and a couple of pixels of variation per tile reads as cut stone. */
+    var h = 12 + ((x * 7 + y * 13) % 5);
+    box(x, y, 1, h, ROCK);
+    /* A patch of frost on the lid, keyed off the tile so it doesn't crawl. */
+    ctx.fillStyle = "rgba(184,236,255,.13)";
+    diamond(x + 0.1, y - 0.1, 0.55, h);
+    ctx.fill();
+  }
+
+  function drawTower(t) {
+    var h = towerH(t), def = t.def, k = def.k;
+    var lit = t.flash > 0 ? t.flash / 0.14 : 0;
+    shadow(t.x, t.y, def.s * 1.02);
+    /* plinth, then the body: the two-piece silhouette keeps a tall spire from
+       looking like it's balancing on a point. Both take a palette hex - box()
+       does its own face shading, so handing it an already-shaded colour is how
+       you get a maze of grey slabs. */
+    box(t.x, t.y, def.s, 4, "#12384f");
+    box(t.x, t.y, def.s * 0.84, h, def.c, 4);
+
+    var cx = isoX(t.x, t.y), cy = isoY(t.x, t.y) - h - 4;
+    if (k === "shard") {
+      /* a crystal point, taller with each upgrade */
+      var sh = 7 + (t.lvl - 1) * 3;
+      ctx.fillStyle = tint(def.c, 1.5);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - sh);
+      ctx.lineTo(cx + TW * 0.16, cy + 1);
+      ctx.lineTo(cx, cy + TH * 0.3);
+      ctx.lineTo(cx - TW * 0.16, cy + 1);
+      ctx.closePath(); ctx.fill();
+    } else if (k === "blizzard") {
+      /* a ring turning around the drum, faster while it's firing */
+      var a = gameT * 1.5 + t.seed;
+      ctx.save();
+      ctx.globalAlpha = 0.75;
+      ctx.strokeStyle = tint(def.c, 1.4);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 3, TW * 0.36, TH * 0.36, 0, a, a + 4.2);
+      ctx.stroke();
+      ctx.restore();
+      ctx.lineWidth = 1;
+    } else if (k === "nova") {
+      /* an orb riding above the tower, bobbing, with its own halo */
+      var bob = Math.sin(gameT * 2 + t.seed) * 2;
+      var oy = cy - 7 + bob;
+      ctx.save();
+      ctx.globalAlpha = 0.35 + lit * 0.4;
+      ctx.fillStyle = def.c;
+      ctx.beginPath(); ctx.arc(cx, oy, 6.5, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = tint(def.c, 1.5);
+      ctx.beginPath(); ctx.arc(cx, oy, 3.2, 0, TAU); ctx.fill();
+    } else if (t.lvl > 1) {
+      /* RIME has no crown - it's a wall - so its upgrades show as a crust of
+         ice growing on the lid */
+      ctx.fillStyle = tint(def.c, 1.55);
+      diamond(t.x, t.y, 0.5, h + 5);
+      ctx.fill();
+    }
+
+    /* Upgrade pips on the lid, the same gold the HUD uses for money spent. */
+    if (t.lvl > 1 && k !== "rime") {
+      ctx.fillStyle = GOLD;
+      for (var i = 0; i < t.lvl - 1; i++) {
+        ctx.beginPath();
+        ctx.arc(cx - 4 + i * 4, isoY(t.x, t.y) - h + 1, 1.4, 0, TAU);
+        ctx.fill();
+      }
+    }
+    /* muzzle flash: the lid goes white for a frame or two */
+    if (lit > 0) {
+      ctx.save();
+      ctx.globalAlpha = lit * 0.7;
+      ctx.fillStyle = "#eafcff";
+      diamond(t.x, t.y, def.s * 0.84, h + 4);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (t === sel) {
+      ctx.strokeStyle = "#eafcff";
+      ctx.lineWidth = 1.4;
+      diamond(t.x, t.y, 1, 0);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  function drawGhost(x, y) {
+    var def = TOWERS[pick];
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    box(x, y, def.s * 0.84, def.h, def.c, 4);
+    ctx.restore();
+  }
+
+  function drawCreep(cr) {
+    var fx = creepFX(cr), fy = creepFY(cr);
+    var x = isoX(fx, fy), y = isoY(fx, fy);
+    var r = cr.boss ? 7 : 4.6;
+    /* A walk cycle costs one sine: bodies that bob look like they're moving
+       under their own power instead of sliding along a rail. */
+    var hop = Math.abs(Math.sin(gameT * 7 + cr.seed)) * (cr.boss ? 1.6 : 2.6);
+    var by = y - r - 1 - hop;
+
+    ctx.fillStyle = "rgba(2,8,16,.4)";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 1, r * 1.15, r * 0.5, 0, 0, TAU);
+    ctx.fill();
+
+    var body = cr.slowMul < 1 ? "#8ad9ff" : (cr.boss ? GOLD : CREEP);
+    var g = ctx.createLinearGradient(x, by - r, x, by + r);
+    g.addColorStop(0, tint(body, 1.35));
+    g.addColorStop(1, tint(body, 0.55));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, by, r, 0, TAU);
+    ctx.fill();
+
+    if (cr.boss) {
+      /* three horns, so a boss is a different animal at a glance and not just
+         a bigger dot */
+      ctx.fillStyle = tint(GOLD, 1.5);
+      for (var i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + i * 4.5 - 1.4, by - r + 1);
+        ctx.lineTo(x + i * 4.5, by - r - 4);
+        ctx.lineTo(x + i * 4.5 + 1.4, by - r + 1);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    if (cr.slowMul < 1) {
+      /* frozen: a rime shell, so a slow is visible on the creep and not only
+         in the tower that caused it */
+      ctx.strokeStyle = "rgba(234,252,255,.8)";
+      ctx.beginPath(); ctx.arc(x, by, r + 1.6, 0, TAU); ctx.stroke();
+    }
+    if (cr.sent) {
+      /* one the rival sent: a hot rim, so the wars half of the game is visible
+         arriving in your own maze */
+      ctx.strokeStyle = DANGER;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x, by, r + 2.6, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+
+    var w = cr.boss ? 18 : 12, f = Math.max(0, cr.hp / cr.max);
+    var bary = by - r - 5;
+    ctx.fillStyle = "rgba(2,16,28,.85)";
+    ctx.fillRect(x - w / 2 - 1, bary - 1, w + 2, 4);
+    ctx.fillStyle = CREEP_DARK;
+    ctx.fillRect(x - w / 2, bary, w, 2);
+    ctx.fillStyle = f > 0.5 ? "#38e6ff" : (f > 0.25 ? GOLD : DANGER);
+    ctx.fillRect(x - w / 2, bary, w * f, 2);
+  }
+
+  /* ---- shots and hits, over the top of the maze ---- */
+  function drawEffects() {
+    var i;
+    for (i = 0; i < beams.length; i++) {
+      var b = beams[i];
+      var a = Math.max(0, b.t / 0.14);
+      var x1 = isoX(b.x1, b.y1), y1 = isoY(b.x1, b.y1) - b.h - 6;
+      var x2 = isoX(b.x2, b.y2), y2 = isoY(b.x2, b.y2) - 6;
+      ctx.save();
+      /* a wide soft pass under a bright core: two strokes read as light, one
+         reads as a wire */
+      ctx.globalAlpha = a * 0.28;
+      ctx.strokeStyle = b.c;
+      ctx.lineWidth = b.w * 3.2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = "#eafcff";
+      ctx.lineWidth = b.w;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.restore();
+      ctx.lineWidth = 1;
+    }
+    for (i = 0; i < puffs.length; i++) {
+      var p = puffs[i];
+      if (p.splash) {
+        var sa = Math.max(0, p.t / 0.3);
+        isoRing(p.x, p.y, p.splash * (1.35 - sa * 0.55), "#b8ecff", sa * 0.8, 5);
+      } else {
+        /* a kill throws shards outward along the floor plane */
+        var ka = Math.max(0, p.t / 0.35);
+        var kx = isoX(p.x, p.y), ky = isoY(p.x, p.y) - 6;
+        ctx.save();
+        ctx.globalAlpha = ka;
+        ctx.strokeStyle = p.boss ? GOLD : "#eafcff";
+        ctx.lineWidth = p.boss ? 1.8 : 1.2;
+        for (var s = 0; s < 6; s++) {
+          var ang = s * (TAU / 6) + p.x;
+          var d0 = (1 - ka) * (p.boss ? 16 : 10);
+          ctx.beginPath();
+          ctx.moveTo(kx + Math.cos(ang) * d0, ky + Math.sin(ang) * d0 * 0.5);
+          ctx.lineTo(kx + Math.cos(ang) * (d0 + 4), ky + Math.sin(ang) * (d0 + 4) * 0.5);
+          ctx.stroke();
+        }
+        ctx.restore();
+        ctx.lineWidth = 1;
+      }
+    }
+  }
+
+  /* ---- snow ----
+     The site's one recurring motif, and the cheapest way to put air between
+     the camera and the board: a handful of flakes falling in front of it. */
+  var FLAKES = [];
+  (function () {
+    for (var i = 0; i < 34; i++) {
+      FLAKES.push({ x: Math.random() * VW, y: Math.random() * VH,
+                    r: 0.6 + Math.random() * 1.3,
+                    v: 5 + Math.random() * 11, drift: Math.random() * TAU });
+    }
+  })();
+  function drawSnow() {
+    ctx.save();
+    ctx.fillStyle = "#eafcff";
+    for (var i = 0; i < FLAKES.length; i++) {
+      var f = FLAKES[i];
+      /* Driven by the clock rather than by dt, so a paused cabinet holds its
+         snow still and a resumed one doesn't teleport it. */
+      var y = (f.y + gameT * f.v) % (VH + 8);
+      var x = f.x + Math.sin(gameT * 0.6 + f.drift) * 6;
+      ctx.globalAlpha = 0.16 + f.r * 0.14;
+      ctx.beginPath();
+      ctx.arc(x, y, f.r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* ================= chrome ================= */
+  var dirty = true, noteHit = false, lastSel = "";
+  function showMsg(html) { elMsg.innerHTML = html; elMsg.hidden = false; }
+  function hideMsg() { elMsg.hidden = true; elMsg.innerHTML = ""; }
+
+  function buildDeck() {
+    elTowers.innerHTML = TOWERS.map(function (t, i) {
+      return '<button type="button" class="maul__pick" data-i="' + i + '" ' +
+        'aria-pressed="' + (i === pick) + '">' +
+        '<i style="background:' + t.c + ';color:' + t.c + '"></i>' +
+        "<b>" + t.name + "</b><s>" + t.cost + "g</s></button>";
+    }).join("");
+    elSends.innerHTML = SENDS.map(function (s, i) {
+      return '<button type="button" class="maul__send" data-i="' + i + '">' +
+        "<b>" + s.name + "</b><s>" + s.cost + "g</s><u>+" + s.inc + "</u></button>";
+    }).join("");
+  }
+  function syncDeck() {
+    var i, b;
+    var picks = elTowers.children;
+    for (i = 0; i < picks.length; i++) {
+      b = picks[i];
+      b.setAttribute("aria-pressed", String(i === pick));
+      b.classList.toggle("is-broke", gold < TOWERS[i].cost);
+    }
+    var sends = elSends.children;
+    for (i = 0; i < sends.length; i++) {
+      sends[i].classList.toggle("is-broke", gold < SENDS[i].cost);
+    }
+  }
+  function syncSel() {
+    var key;
+    if (sel) {
+      key = sel.x + "," + sel.y + ":" + sel.lvl + ":" + (gold >= upCost(sel));
+    } else {
+      key = "none:" + note;
+    }
+    if (key === lastSel) return;
+    lastSel = key;
+    if (!sel) {
+      elSel.innerHTML = note
+        ? "<span>" + esc(note) + "</span>"
+        : "<span>pick a tower, then tap the grid</span>";
+      return;
+    }
+    var dps = (sel.def.dmg * lvlMul(sel.lvl) * sel.def.rate).toFixed(0);
+    var stars = "";
+    for (var s = 0; s < sel.lvl; s++) stars += "★";
+    var html = "<span><b>" + sel.def.name + " " + stars +
+      "</b> · " + dps + " dps</span>";
+    if (sel.lvl < MAX_LVL) {
+      html += '<button type="button" class="maul__act' +
+        (gold < upCost(sel) ? " is-broke" : "") + '" id="wm-up">UPGRADE ' +
+        "<em>" + upCost(sel) + "g</em></button>";
+    } else {
+      html += "<span><em>MAX</em></span>";
+    }
+    html += '<button type="button" class="maul__act" id="wm-sell">SELL ' +
+      "<em>+" + Math.floor(sel.spent * REFUND) + "g</em></button>";
+    elSel.innerHTML = html;
+    var up = document.getElementById("wm-up");
+    var sl = document.getElementById("wm-sell");
+    if (up) up.addEventListener("click", function () { upgrade(sel); syncAll(); });
+    if (sl) sl.addEventListener("click", function () { sell(sel); syncAll(); });
+  }
+  /* The HUD is re-read every frame but only written when a number actually
+     moved: a maul run is minutes long, and 60 pointless DOM writes a second
+     for the whole of it is a cost with nothing to show for it. */
+  var hudSig = "";
+  function syncHud() {
+    var sig = lives + "|" + Math.floor(gold) + "|" + wave + "|" + score + "|" +
+              rival.lives + "|" + note + "|" + noteHit;
+    if (sig === hudSig) return;
+    hudSig = sig;
+    elLives.textContent = Math.max(0, lives);
+    elGold.textContent = Math.floor(gold);
+    elWave.textContent = wave;
+    elScore.textContent = score;
+    var yf = Math.max(0, lives) / START_LIVES * 100;
+    var rf = Math.max(0, rival.lives) / RIVAL_LIVES * 100;
+    elYouBar.style.width = yf + "%";
+    elRivalBar.style.width = rf + "%";
+    elYouLab.textContent = "YOU " + Math.max(0, lives);
+    elRivalLab.textContent = "RIVAL " + Math.max(0, rival.lives);
+    elNote.textContent = note || "first maze to leak out loses";
+    elNote.classList.toggle("is-hit", !!noteHit);
+  }
+  var clockSig = "";
+  function syncClock() {
+    var sig = state + "|" + wave + "|" + Math.ceil(waveT) + "|" + income;
+    if (sig === clockSig) return;
+    clockSig = sig;
+    if (state === STATE.PLAY) {
+      elClock.innerHTML = "WAVE <b>" + (wave + 1) + "</b> IN <b>" +
+        Math.max(0, Math.ceil(waveT)) + "s</b>" +
+        (income ? " · INCOME <b>+" + income + "</b>" : "");
+      elCall.hidden = false;
+    } else {
+      elClock.textContent = state === STATE.IDLE ? "BUILD YOUR MAZE" : "—";
+      elCall.hidden = true;
+    }
+  }
+  function syncAll() { syncHud(); syncDeck(); syncSel(); syncClock(); dirty = false; }
+
+  /* ================= run control ================= */
+  function newGame() {
+    buildRock();
+    built = new Array(N);
+    creeps = []; queue = []; beams = []; puffs = []; route = [];
+    lives = START_LIVES; gold = START_GOLD; score = 0; income = 0;
+    wave = 0; waveT = FIRST_WAVE; gameT = 0;
+    rival = { lives: RIVAL_LIVES, press: 0 };
+    pick = 0; sel = null; flash = null; note = ""; noteHit = false;
+    won = false; lastSel = "";
+    repath();
+    state = STATE.IDLE;
+    syncAll();
+    showMsg('<b>WINTER MAUL</b>' +
+      "<small>build a maze — you cannot seal it<br>" +
+      "outlast the rival's maze to win</small>" +
+      '<small class="blink">CLICK OR PRESS SPACE TO START</small>');
+  }
+  function finish(victory) {
+    /* Both mazes can fall on the same wave tick; whichever check gets here
+       first owns the ending. */
+    if (state === STATE.OVER || state === STATE.ENTER) return;
+    won = victory;
+    if (victory) score += 2500;
+    score += 40 * Math.max(0, lives);
+    state = STATE.OVER;
+    syncAll();
+    if (qualifies(score)) {
+      state = STATE.ENTER;
+      showMsg("<b>" + (victory ? "THE RIVAL IS OUT!" : "YOUR MAZE FELL") + "</b>" +
+        "<small>" + score + " points · wave " + wave + " · enter your initials</small>" +
+        '<form class="arcade__enter" id="wm-enter">' +
+        '<input id="wm-initials" maxlength="3" autocomplete="off" ' +
+        'aria-label="Your initials" placeholder="AAA">' +
+        '<button type="submit" class="arcade__exit">OK</button></form>');
+      var form = document.getElementById("wm-enter");
+      var inp = document.getElementById("wm-initials");
+      if (inp) inp.focus();
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          submit(inp ? inp.value : "", score);
+          state = STATE.OVER;
+          overMsg(victory);
+        });
+      }
+    } else {
+      overMsg(victory);
+    }
+  }
+  function overMsg(victory) {
+    showMsg("<b>" + (victory ? "VICTORY" : "GAME OVER") + "</b>" +
+      "<small>" + score + " points · wave " + wave +
+      (victory ? " · you outlasted the rival" : " · the rival outlasted you") +
+      "</small>" +
+      '<small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+  }
+  /* SPACE and the screen do double duty: start a run, unpause one, call the
+     next wave while playing, or start over from the end screen. */
+  function pressStart() {
+    if (state === STATE.IDLE || state === STATE.OVER) {
+      if (state === STATE.OVER) newGame();
+      hideMsg();
+      state = STATE.PLAY;
+      note = "";
+      syncAll();
+    } else if (state === STATE.PAUSED) {
+      hideMsg();
+      state = STATE.PLAY;
+    } else if (state === STATE.PLAY) {
+      callWave();
+    }
+  }
+
+  function frame(now) {
+    if (!running) return;
+    var dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    update(dt);
+    draw();
+    if (dirty || state === STATE.PLAY) syncAll();
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* ================= input ================= */
+  /* Screen -> tile. Two passes, because towers stand up: first walk the built
+     ones front to back and take the first whose art the point lands on, so you
+     click the tower you can see rather than the tile it leans over; only then
+     fall back to inverting the projection for the bare floor. Same problem the
+     room solves for its cabinets, one grid larger. */
+  function cellAt(ev) {
+    var r = cv.getBoundingClientRect();
+    /* Measure against the content box, not the border box: the canvas wears a
+       3px ridge, and mapping through the outer width puts every click a couple
+       of pixels off - which on a 15px tile is most of a tile. */
+    var bx = (r.width - cv.clientWidth) / 2, by = (r.height - cv.clientHeight) / 2;
+    var mx = (ev.clientX - r.left - bx) * (VW / cv.clientWidth);
+    var my = (ev.clientY - r.top - by) * (VH / cv.clientHeight);
+    var x, y, c;
+    for (var d = (COLS - 1) + (ROWS - 1); d >= 0; d--) {
+      for (x = Math.min(d, COLS - 1); x >= 0; x--) {
+        y = d - x;
+        if (y >= ROWS) continue;
+        c = idx(x, y);
+        if (!built[c]) continue;
+        var t = built[c], hw = (TW / 2) * t.def.s, h = towerH(t) + 4;
+        var cx = isoX(x, y), cy = isoY(x, y);
+        if (mx >= cx - hw && mx <= cx + hw && my >= cy - TH / 2 - h && my <= cy + TH / 2) {
+          return c;
+        }
+      }
+    }
+    /* Inverse of the projection: rounding in tile space lands in the right
+       diamond, which beats hit-testing each of 289 tiles. */
+    var dx = (mx - OX) / (TW / 2), dy = (my - OY) / (TH / 2);
+    x = Math.round((dx + dy) / 2);
+    y = Math.round((dy - dx) / 2);
+    return inGrid(x, y) ? idx(x, y) : -1;
+  }
+  var painting = false, paintFrom = -1;
+  cv.addEventListener("pointerdown", function (ev) {
+    if (state === STATE.IDLE || state === STATE.OVER || state === STATE.PAUSED) {
+      pressStart();
+      return;
+    }
+    if (state !== STATE.PLAY) return;
+    var c = cellAt(ev);
+    if (c < 0) return;
+    ev.preventDefault();
+    if (built[c]) {
+      /* Tapping a built tower selects it - the upgrade/sell strip below the
+         screen is where the actions live, so a fat finger can reach them. */
+      sel = (sel === built[c]) ? null : built[c];
+      note = "";
+      dirty = true;
+      return;
+    }
+    sel = null;
+    note = "";
+    painting = true;
+    paintFrom = c;
+    place(c % COLS, (c / COLS) | 0, TOWERS[pick]);
+    dirty = true;
+    if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (e) {} }
+  });
+  cv.addEventListener("pointermove", function (ev) {
+    var c = cellAt(ev);
+    hoverCell = c;
+    if (!painting || c < 0 || c === paintFrom) return;
+    paintFrom = c;
+    /* Drag lays a wall. It never selects and never sells, so sweeping a line of
+       rime across the floor can't tip into an action you didn't ask for. */
+    if (!built[c]) place(c % COLS, (c / COLS) | 0, TOWERS[pick]);
+    dirty = true;
+  });
+  function endPaint() { painting = false; paintFrom = -1; }
+  cv.addEventListener("pointerup", endPaint);
+  cv.addEventListener("pointercancel", endPaint);
+  cv.addEventListener("pointerleave", function () { endPaint(); hoverCell = -1; });
+
+  elTowers.addEventListener("click", function (ev) {
+    var b = ev.target.closest ? ev.target.closest(".maul__pick") : null;
+    if (!b) return;
+    pick = +b.getAttribute("data-i");
+    sel = null;
+    note = "";
+    dirty = true;
+    syncAll();
+  });
+  elSends.addEventListener("click", function (ev) {
+    var b = ev.target.closest ? ev.target.closest(".maul__send") : null;
+    if (!b) return;
+    doSend(SENDS[+b.getAttribute("data-i")]);
+    syncAll();
+  });
+  elCall.addEventListener("click", function () { callWave(); syncAll(); });
+
+  /* Key handling lives at document level but only bites while the cabinet is
+     open, so the room's own controls are untouched when it's closed. */
+  function onKeyDown(e) {
+    if (!running) return;
+    var k = e.key, tag = e.target && e.target.tagName;
+    /* Typing initials into the high-score field must not also rebuild your
+       maze: while a field has focus the cabinet only listens for ESC. */
+    if (tag === "INPUT" || tag === "TEXTAREA") {
+      if (k === "Escape") close();
+      return;
+    }
+    /* SPACE and ENTER belong to whichever control has focus - otherwise
+       tabbing to SEND and pressing space would also call the next wave. */
+    if (tag === "BUTTON" && (k === " " || k === "Spacebar" || k === "Enter")) return;
+    if (k >= "1" && k <= String(TOWERS.length)) {
+      pick = +k - 1; sel = null; dirty = true; syncAll(); e.preventDefault();
+    } else if (k === "u" || k === "U") {
+      if (sel) { upgrade(sel); syncAll(); }
+    } else if (k === "x" || k === "X") {
+      if (sel) { sell(sel); syncAll(); }
+    } else if (k === " " || k === "Spacebar") {
+      if (state !== STATE.ENTER) { pressStart(); e.preventDefault(); }
+    } else if (k === "Escape") {
+      close();
+    }
+  }
+
+  /* ================= open / close ================= */
+  var lastFocus = null;
+  function open() {
+    if (running) return;
+    lastFocus = document.activeElement;
+    scores = localLoad();
+    renderBoard(-1);
+    refresh();
+    overlay.classList.add("is-open");
+    overlay.removeAttribute("aria-hidden");
+    document.addEventListener("keydown", onKeyDown);
+    running = true;
+    lastT = performance.now();
+    buildDeck();
+    newGame();
+    draw();
+    raf = requestAnimationFrame(frame);
+    /* Focus the dialog itself rather than a control inside it: SPACE is the
+       start button here, and it would otherwise land on whatever button held
+       focus - EXIT, in the other cabinets' case. */
+    overlay.setAttribute("tabindex", "-1");
+    overlay.focus();
+  }
+  function close() {
+    if (!running) return;
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    document.removeEventListener("keydown", onKeyDown);
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  elExit.addEventListener("click", close);
+  elMsg.addEventListener("click", pressStart);
+  /* Pause mid-run if the tab is hidden: a wave clock that keeps ticking while
+     you're away would leak your maze out from under you. */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === STATE.PLAY) {
+      state = STATE.PAUSED;
+      showMsg('<b>PAUSED</b><small class="blink">CLICK OR PRESS SPACE</small>');
+    }
+  });
+
+  /* Exposed for the same reason the room and the other cabinets expose theirs:
+     requestAnimationFrame is suspended in a hidden tab, so a headless check
+     needs a synchronous way to advance the game and look inside it. */
+  window.FrostMaul = {
+    open: open, close: close,
+    start: pressStart,
+    step: function (dt, n) {
+      for (var i = 0; i < (n || 1); i++) update(dt || 0.016);
+      draw();
+      syncAll();
+    },
+    build: function (x, y, k) {
+      for (var i = 0; i < TOWERS.length; i++) {
+        if (TOWERS[i].k === k) return place(x, y, TOWERS[i]);
+      }
+      return false;
+    },
+    send: function (k) {
+      for (var i = 0; i < SENDS.length; i++) {
+        if (SENDS[i].k === k) { doSend(SENDS[i]); return; }
+      }
+    },
+    give: function (g) { gold += g; dirty = true; },   /* checks only */
+    peek: function () {
+      var towers = 0;
+      for (var i = 0; i < N; i++) if (built[i]) towers++;
+      return { state: state, lives: lives, gold: Math.floor(gold), wave: wave,
+               score: score, income: income, towers: towers,
+               creeps: creeps.length, routeLen: route.length,
+               rival: rival.lives, won: won, note: note,
+               waveIn: Math.max(0, waveT), scores: scores.slice() };
     }
   };
 })();

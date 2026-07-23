@@ -42,6 +42,17 @@ var GAMES = {
       { i: "SNO", s: 100 }, { i: "AAA", s: 50 }
     ],
     max: 100000
+  },
+  /* Winter Maul ends when one maze falls, so scores cluster tighter than the
+     other two: a win around wave 14 is roughly 10k, and a very deep run is
+     tens of thousands. The ceiling leaves room for a run twice as long as any
+     we've seen without letting a console-typed number sit on the board. */
+  wintermaul: {
+    seed: [
+      { i: "FRO", s: 9000 }, { i: "ICE", s: 6400 }, { i: "MIL", s: 4200 },
+      { i: "SNO", s: 2400 }, { i: "AAA", s: 900 }
+    ],
+    max: 250000
   }
 };
 
