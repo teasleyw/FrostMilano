@@ -54,6 +54,19 @@
 
   --line:     #b79a68;
 
+  /* THE BOOTH — the oxblood leather the sections are now upholstered in. The
+     light handbill paper is gone: every section is a deep wine-leather panel,
+     piped in gold, lit by the same low amber bulb. Warm cream ink rides on top,
+     the way gold lettering sits on the back of a good booth. */
+  --booth-1:    #43151b;   /* leather catching the bulb (upper) */
+  --booth-2:    #2e0f14;   /* the field */
+  --booth-3:    #200a0e;   /* deep crease / lower fold */
+  --seam:       #120608;   /* the dark stitched seam / panel edge */
+  --cream:      #efdcb4;   /* body ink, on the leather */
+  --cream-soft: #d6bf95;   /* secondary copy */
+  --cream-faint:#a98f6a;   /* fineprint / tertiary */
+  --red-lit:    #cf4a3b;   /* barn red, lifted to read on the dark leather */
+
   --ornament: "Rye", "Georgia", serif;                 /* woodtype display  */
   --poster:   "Ultra", "Georgia", serif;               /* fat slab, the name */
   --type:     "Special Elite", "Courier New", monospace;/* struck typewriter */
@@ -178,10 +191,10 @@ a:hover{ color:var(--red-deep); }
 }
 
 /* ---------- RULES ---------- */
-.rule{ border:0; border-top:1px solid var(--ink-soft); margin:16px auto; width:100%; opacity:.6; }
+.rule{ border:0; border-top:1px solid var(--gold); margin:16px auto; width:100%; opacity:.5; }
 .rule--fat{
-  border:0; height:6px; opacity:1;
-  border-top:2px solid var(--ink); border-bottom:2px solid var(--ink);
+  border:0; height:6px; opacity:.85;
+  border-top:2px solid var(--gold); border-bottom:2px solid var(--gold);
   background:transparent; margin:14px auto;
 }
 
@@ -190,41 +203,41 @@ a:hover{ color:var(--red-deep); }
    ======================================================================= */
 .bill{
   position:relative; margin-top:26px; padding:30px 26px 34px; text-align:center;
-  /* Aged handbill stock: brown foxing blooms, a fine paper fibre, the old
-     barn-red watermark, then the lit paper underneath. */
+  /* Oxblood leather stretched over the handbill: a soft sheen off the bulb up
+     top, the far corner falling into shadow, a fine diagonal grain, and a barn-
+     red watermark still bled through the hide. */
   background:
-    radial-gradient(circle at 14% 20%, rgba(120,80,30,.07) 0 7px, transparent 8px),
-    radial-gradient(circle at 86% 15%, rgba(92,60,22,.055) 0 5px, transparent 6px),
-    radial-gradient(circle at 74% 84%, rgba(120,80,30,.06) 0 9px, transparent 10px),
-    radial-gradient(circle at 22% 88%, rgba(92,60,22,.05) 0 6px, transparent 7px),
-    repeating-linear-gradient(0deg, rgba(36,26,18,.022) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(45deg, rgba(158,43,30,.05) 0 12px, transparent 12px 24px),
-    var(--paper-1);
-  border:2px solid var(--ink);
-  /* Seated in the dark room and lit by the bulb: a hard ink edge, a deep drop
-     into the dark, and a wide amber halo so it reads as a poster under a light. */
+    radial-gradient(120% 85% at 20% -6%, rgba(232,178,72,.10) 0%, transparent 46%),
+    radial-gradient(150% 130% at 92% 114%, rgba(0,0,0,.5) 0%, transparent 56%),
+    repeating-linear-gradient(48deg, rgba(0,0,0,.05) 0 3px, transparent 3px 7px),
+    repeating-linear-gradient(45deg, rgba(207,74,59,.05) 0 12px, transparent 12px 24px),
+    linear-gradient(180deg, var(--booth-1) 0%, var(--booth-2) 58%, var(--booth-3) 100%);
+  border:2px solid var(--seam);
+  /* Seated in the dark room and lit by the bulb: a stitched-dark edge, a gold
+     piping line just inside it, a deep drop, and a wide amber halo. */
   box-shadow:
-    0 2px 0 var(--ink),
+    inset 0 0 0 1.5px rgba(232,178,72,.22),
+    inset 0 2px 26px rgba(0,0,0,.5),
     0 18px 40px rgba(0,0,0,.6),
-    0 0 70px rgba(232,178,72,.14);
+    0 0 70px rgba(232,178,72,.13);
 }
 /* The two woodcut hands / decorative bands top and bottom of the bill. */
 .bill__edge{ height:14px; margin:0 auto;
-  background:repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px);
-  opacity:.85; }
+  background:repeating-linear-gradient(90deg, var(--gold) 0 8px, transparent 8px 16px);
+  opacity:.7; }
 .bill__edge--top{ margin-bottom:16px; }
 .bill__edge--bottom{ margin-top:22px; }
 
 .bill__eyebrow{
   font-family:var(--type); letter-spacing:.2em; font-size:.8rem;
-  color:var(--red-deep); margin:0 0 4px; text-transform:uppercase;
+  color:var(--whiskey-lit); margin:0 0 4px; text-transform:uppercase;
 }
 
 /* The name. Three weights stacked the way a jobbing printer would set it to
    fill the plate: small word, script connector, then the big slab. */
 .wordmark{ margin:6px 0; line-height:.9; }
 .wordmark__small{
-  display:block; font-family:var(--ornament); color:var(--ink);
+  display:block; font-family:var(--ornament); color:var(--cream);
   font-size:clamp(2rem,7vw,3.4rem); letter-spacing:.04em;
 }
 .wordmark__amp{
@@ -232,40 +245,45 @@ a:hover{ color:var(--red-deep); }
   color:var(--red); font-size:clamp(1rem,3vw,1.5rem); letter-spacing:.08em; margin:2px 0;
 }
 .wordmark__big{
-  display:block; font-family:var(--poster); color:var(--ink);
+  display:block; font-family:var(--poster); color:var(--cream);
   font-size:clamp(3.2rem,15vw,7.5rem); letter-spacing:.01em;
-  /* Letterpress bite: a hair of red offset behind, and an inner light so each
-     glyph looks pressed into the paper rather than printed on top. */
+  /* Gold-leaf lettering pressed into the leather: a red offset behind, a dark
+     seam under the top edge, and a low amber glow so the name lifts off the hide. */
   text-shadow:
-    2px 2px 0 rgba(158,43,30,.28),
-    -1px -1px 0 rgba(255,248,228,.5);
+    2px 2px 0 rgba(158,43,30,.45),
+    0 1px 0 rgba(0,0,0,.5),
+    0 2px 22px rgba(232,178,72,.28);
 }
 
 .bill__sub{
   font-family:var(--type); letter-spacing:.16em; font-size:clamp(.75rem,2.2vw,1rem);
-  margin:10px 0 2px; color:var(--ink-soft);
+  margin:10px 0 2px; color:var(--cream-soft);
 }
 .bill__where{
   font-family:var(--ornament); font-size:clamp(1.1rem,4vw,1.8rem);
-  color:var(--red); margin:2px 0 0; letter-spacing:.05em;
+  color:var(--red-lit); margin:2px 0 0; letter-spacing:.05em;
 }
 /* The split line: "the records" on one side, "loud" on the other. */
 .bill__split{
   font-family:var(--type); font-size:clamp(.66rem,2vw,.82rem); letter-spacing:.1em;
-  color:var(--whiskey-deep); margin:10px 0 0; text-transform:uppercase;
+  color:var(--whiskey); margin:10px 0 0; text-transform:uppercase;
 }
 .bill__pitch{
-  font-style:italic; color:var(--ink-soft); max-width:44ch; margin:10px auto 0; font-size:1.02rem;
+  font-style:italic; color:var(--cream-soft); max-width:44ch; margin:10px auto 0; font-size:1.02rem;
 }
 .bill__buttons{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:22px; }
 
-/* The band logo stamped on the handbill. It's black line-art on cream; multiply
-   drops the cream into the paper and leaves only the ink, so it reads as printed
-   rather than pasted. isolation:isolate keeps the blend inside the bill. */
+/* The band logo stamped on the handbill. It's black line-art on cream. On the
+   dark leather a multiply blend would swallow it whole (black on oxblood), so
+   it's inverted to warm line-art on a near-black field, then SCREENED — screen
+   drops the near-black field into the leather and leaves the light lines
+   glowing, so it reads as a gold-ink seal branded into the hide rather than a
+   pasted sticker. isolation:isolate keeps the blend inside the bill. */
 .bill{ isolation:isolate; }
 .bill__seal{
   display:block; width:clamp(96px,20vw,132px); height:auto; margin:24px auto 0;
-  mix-blend-mode:multiply; transform:rotate(-4deg);
+  filter:invert(1) sepia(.5) saturate(1.6) hue-rotate(-8deg) brightness(1.02);
+  mix-blend-mode:screen; opacity:.92; transform:rotate(-4deg);
 }
 
 /* A rubber approval stamp slapped in the corner, ink half dry so it prints
@@ -275,8 +293,8 @@ a:hover{ color:var(--red-deep); }
   width:98px; height:98px; border-radius:50%;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   text-align:center; transform:rotate(-13deg);
-  color:var(--red); border:2.5px solid var(--red); box-shadow:inset 0 0 0 2px var(--red);
-  opacity:.6; mix-blend-mode:multiply; filter:contrast(1.15);
+  color:var(--red-lit); border:2.5px solid var(--red-lit); box-shadow:inset 0 0 0 2px var(--red-lit);
+  opacity:.7; mix-blend-mode:screen; filter:contrast(1.1);
 }
 .bill__stamp b{ font-family:var(--type); font-size:.56rem; letter-spacing:.16em; display:block; }
 .bill__stamp span{ font-family:var(--ornament); font-size:.9rem; line-height:.95; margin:3px 0; letter-spacing:.02em; }
@@ -286,7 +304,7 @@ a:hover{ color:var(--red-deep); }
    half of them a joke, exactly the register the Frost page's marquee runs in. */
 .bill__matter{
   font-family:var(--type); font-size:clamp(.58rem,1.9vw,.72rem); letter-spacing:.08em;
-  color:var(--ink-soft); text-transform:uppercase; margin:20px auto 0; max-width:46ch;
+  color:var(--cream-faint); text-transform:uppercase; margin:20px auto 0; max-width:46ch;
   line-height:1.7;
 }
 
@@ -322,9 +340,9 @@ a:hover{ color:var(--red-deep); }
 }
 .tab{
   font-family:var(--type); font-size:.82rem; letter-spacing:.08em; text-decoration:none;
-  color:var(--ink); background:var(--paper-3);
-  padding:8px 14px 10px; border:2px solid var(--ink); border-bottom:none;
-  border-radius:8px 8px 0 0; box-shadow:inset 0 3px 0 rgba(255,248,228,.4);
+  color:var(--cream); background:linear-gradient(180deg, #3a161c, #280f13);
+  padding:8px 14px 10px; border:2px solid var(--seam); border-bottom:none;
+  border-radius:8px 8px 0 0; box-shadow:inset 0 3px 0 rgba(232,178,72,.16);
 }
 .tab:hover{ background:var(--gold-lit); color:var(--ink); }
 
@@ -333,25 +351,29 @@ a:hover{ color:var(--red-deep); }
    ======================================================================= */
 .leaf{
   position:relative; margin:22px 0; padding:26px 24px 30px;
-  /* Not a flat fill: foxing blooms, a lamp vignette darkening toward the far
-     corner (so each page reads as lit from the upper-left bulb), and a hair of
-     paper fibre. The dark/stage leaves below reset all of this with their own
+  /* An upholstered oxblood-leather panel, not a flat fill: a sheen off the bulb
+     up top, the far corner falling into shadow, and a fine diagonal grain in the
+     hide. The dark/stage leaves below reset all of this with their own
      background shorthand. */
-  background-color:var(--paper-1);
-  background-image:
-    radial-gradient(circle at 88% 12%, rgba(120,80,30,.055) 0 8px, transparent 9px),
-    radial-gradient(circle at 9% 40%,  rgba(92,60,22,.05)  0 6px, transparent 7px),
-    radial-gradient(circle at 63% 92%, rgba(120,80,30,.05) 0 7px, transparent 8px),
-    radial-gradient(150% 130% at 12% -6%, transparent 52%, rgba(36,22,12,.06) 100%),
-    repeating-linear-gradient(0deg, rgba(36,26,18,.016) 0 1px, transparent 1px 3px);
-  border:1.5px solid var(--ink-soft);
-  /* A lit page in a dark room: an inner top highlight, a deep drop, and a
-     faint amber halo picked up off the bulb. */
+  background:
+    radial-gradient(120% 85% at 22% -4%, rgba(232,178,72,.09) 0%, transparent 44%),
+    radial-gradient(140% 120% at 90% 112%, rgba(0,0,0,.45) 0%, transparent 55%),
+    repeating-linear-gradient(48deg, rgba(0,0,0,.045) 0 3px, transparent 3px 7px),
+    linear-gradient(180deg, var(--booth-1) 0%, var(--booth-2) 58%, var(--booth-3) 100%);
+  border:1.5px solid var(--seam);
+  /* A lit booth in a dark room: a gold piping line just inside the seam, a deep
+     drop, and a faint amber halo picked up off the bulb. */
   box-shadow:
-    inset 0 1px 0 rgba(255,248,228,.6),
+    inset 0 0 0 1px rgba(232,178,72,.16),
     0 14px 34px rgba(0,0,0,.55),
     0 0 46px rgba(232,178,72,.06);
 }
+/* The leather sections read light-on-dark now, so their default ink is warm
+   cream. Anything sitting on its own light surface inside them (a record label,
+   a gold disc centre, a paper ticket button) sets its own colour and overrides
+   this. The two already-dark leaves keep their own copy colours. */
+.bill,
+.leaf:not(.leaf--dark):not(.leaf--stage){ color:var(--cream); }
 .leaf--dark{
   background:
     radial-gradient(120% 100% at 50% 0%, rgba(158,43,30,.10) 0%, transparent 55%),
@@ -377,14 +399,14 @@ a:hover{ color:var(--red-deep); }
 .head{
   text-align:center; margin:2px 0 6px;
   font-family:var(--poster); font-size:clamp(1.6rem,5vw,2.6rem);
-  letter-spacing:.02em; color:var(--ink);
+  letter-spacing:.02em; color:var(--cream);
 }
 .head span{
   display:inline-block; padding:0 16px; position:relative;
 }
 /* The ruled line through a section head, broken by the words. */
 .head::before,.head::after{
-  content:""; display:block; height:3px; background:var(--ink);
+  content:""; display:block; height:3px; background:var(--gold);
   position:absolute; top:50%; width:calc(50% - 8ch);
 }
 .head::before{ left:0; } .head::after{ right:0; }
@@ -393,18 +415,18 @@ a:hover{ color:var(--red-deep); }
 
 .dek{
   text-align:center; max-width:60ch; margin:0 auto 18px;
-  font-style:italic; color:var(--ink-soft);
+  font-style:italic; color:var(--cream-soft);
 }
 .dek--light{ color:var(--paper-3); }
 .dek--tight{ margin-bottom:10px; }
 
-.fineprint{ font-family:var(--type); font-size:.78rem; color:var(--ink-faint); line-height:1.5; }
+.fineprint{ font-family:var(--type); font-size:.78rem; color:var(--cream-faint); line-height:1.5; }
 .leaf--dark .fineprint{ color:var(--paper-4); }
-code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; border-radius:3px; }
+code{ font-family:var(--type); background:rgba(232,178,72,.12); color:var(--cream); padding:1px 5px; border-radius:3px; }
 .leaf--dark code{ background:rgba(255,248,228,.12); color:var(--paper-1); }
 
 .minihead{
-  font-family:var(--ornament); font-size:1.15rem; color:var(--red);
+  font-family:var(--ornament); font-size:1.15rem; color:var(--red-lit);
   margin:20px 0 6px; letter-spacing:.03em;
 }
 
@@ -460,16 +482,16 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 .platter.playing .platter__arm{ transform:rotate(4deg); }
 
 .victrola__panel{ align-self:center; }
-.victrola__note{ font-style:italic; color:var(--ink-soft); margin:12px 0; }
+.victrola__note{ font-style:italic; color:var(--cream-soft); margin:12px 0; }
 
 /* =======================================================================
    THE SIDES (the band's own records)
    ======================================================================= */
 .sides{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:22px; }
 .side{
-  background:var(--paper-2); border:1.5px solid var(--ink-soft);
+  background:linear-gradient(180deg, #351319, #250c11);
+  border:1.5px solid var(--seam); box-shadow:inset 0 0 0 1px rgba(232,178,72,.14), 0 4px 12px rgba(0,0,0,.4);
   padding:18px 16px 16px; text-align:center;
-  box-shadow:0 4px 12px rgba(58,38,18,.22);
 }
 .side__disc{
   position:relative; width:150px; height:150px; margin:0 auto 14px; border-radius:50%;
@@ -490,7 +512,7 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 .side__title{ font-family:var(--type); font-size:.62rem; letter-spacing:.06em; margin:2px 0; }
 .side__credit{ font-family:var(--type); font-size:.42rem; letter-spacing:.08em; opacity:.75; }
 .side__hole{ position:absolute; top:50%; left:50%; width:8%; height:8%; border-radius:50%; background:#120c09; box-shadow:0 0 0 1px rgba(0,0,0,.4); transform:translate(-50%,-50%); }
-.side__cat{ display:block; font-family:var(--type); font-size:.72rem; color:var(--ink-faint); letter-spacing:.06em; }
+.side__cat{ display:block; font-family:var(--type); font-size:.72rem; color:var(--cream-faint); letter-spacing:.06em; }
 .side__play{ display:none; margin:8px auto 0; }
 .side__pending{
   display:block; margin-top:8px; font-family:var(--type); font-size:.72rem;
@@ -601,33 +623,33 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
    THE CARD CATALOG (timeline)
    ======================================================================= */
 .rail{ position:relative; padding:20px 0 8px; }
-.rail__line{ position:absolute; left:0; right:0; top:38px; height:3px; background:var(--ink); opacity:.5; }
+.rail__line{ position:absolute; left:0; right:0; top:38px; height:3px; background:var(--gold); opacity:.4; }
 .rail__years{
   display:flex; gap:10px; overflow-x:auto; padding:6px 2px 14px; scroll-snap-type:x proximity;
 }
 .year{
   flex:0 0 auto; scroll-snap-align:center; cursor:pointer;
   font-family:var(--type); font-size:.9rem; letter-spacing:.04em;
-  background:var(--paper-2); color:var(--ink); border:2px solid var(--ink);
-  padding:8px 12px; box-shadow:2px 2px 0 var(--ink); position:relative;
+  background:linear-gradient(180deg, #351319, #250c11); color:var(--cream); border:2px solid var(--seam);
+  padding:8px 12px; box-shadow:2px 2px 0 var(--seam); position:relative;
 }
 .year::before{ /* the tick down to the rail line */
-  content:""; position:absolute; left:50%; top:-14px; width:2px; height:12px; background:var(--ink); transform:translateX(-50%);
+  content:""; position:absolute; left:50%; top:-14px; width:2px; height:12px; background:var(--gold); transform:translateX(-50%);
 }
-.year:hover{ background:var(--gold-lit); }
+.year:hover{ background:var(--gold-lit); color:var(--ink); }
 .year.on{ background:var(--red); color:var(--paper-1); border-color:var(--red-deep); }
 .year:focus-visible{ outline:3px dashed var(--gold); outline-offset:2px; }
 
 .drawer{ margin-top:16px; min-height:96px; }
 .card{
-  background:var(--paper-2); border:1.5px solid var(--ink-soft);
+  background:linear-gradient(180deg, #351319, #250c11); border:1.5px solid var(--seam);
   border-left:6px solid var(--red); padding:14px 18px;
-  box-shadow:0 4px 12px rgba(58,38,18,.2); animation:pull .35s ease;
+  box-shadow:inset 0 0 0 1px rgba(232,178,72,.12), 0 4px 12px rgba(0,0,0,.4); animation:pull .35s ease;
 }
 @keyframes pull{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
-.card__year{ font-family:var(--poster); font-size:1.6rem; color:var(--red-deep); line-height:1; }
-.card__head{ font-family:var(--ornament); font-size:1.15rem; color:var(--ink); margin:2px 0 6px; }
-.card__body{ color:var(--ink-soft); margin:0; }
+.card__year{ font-family:var(--poster); font-size:1.6rem; color:var(--red-lit); line-height:1; }
+.card__head{ font-family:var(--ornament); font-size:1.15rem; color:var(--cream); margin:2px 0 6px; }
+.card__body{ color:var(--cream-soft); margin:0; }
 
 /* =======================================================================
    WHO'S NECK
@@ -636,42 +658,42 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 .about__plate{ position:relative; text-align:center; }
 .about__img{
   width:100%; aspect-ratio:4/5; object-fit:cover; object-position:50% 42%; display:block;
-  border:6px solid var(--paper-1); outline:2px solid var(--ink);
-  box-shadow:0 6px 16px rgba(58,38,18,.4); filter:sepia(.18) contrast(1.04) saturate(.96);
+  border:6px solid #d9c39a; outline:2px solid var(--seam);
+  box-shadow:0 6px 16px rgba(0,0,0,.5); filter:sepia(.18) contrast(1.04) saturate(.96);
 }
 /* Photo not supplied yet: the <img> fails to load, JS reveals the pending
    card and hides the broken frame. */
 .about__pending{
   aspect-ratio:4/5; display:none; flex-direction:column; align-items:center; justify-content:center;
-  gap:8px; text-align:center; background:var(--paper-3); border:2px dashed var(--ink-faint);
-  color:var(--ink-soft); font-family:var(--type);
+  gap:8px; text-align:center; background:linear-gradient(180deg, #351319, #250c11); border:2px dashed var(--gold-deep, #7a4e14);
+  color:var(--cream-soft); font-family:var(--type);
 }
-.about__pending b{ font-size:1rem; letter-spacing:.12em; color:var(--red); }
+.about__pending b{ font-size:1rem; letter-spacing:.12em; color:var(--red-lit); }
 .about__pending span{ font-size:.78rem; }
 .about.no-photo .about__img{ display:none; }
 .about.no-photo .about__pending{ display:flex; }
-.about__cap{ font-family:var(--ornament); color:var(--red); margin-top:8px; font-size:1.2rem; letter-spacing:.08em; }
+.about__cap{ font-family:var(--ornament); color:var(--red-lit); margin-top:8px; font-size:1.2rem; letter-spacing:.08em; }
 
-.about__body .lede{ font-family:var(--ornament); font-size:1.4rem; color:var(--ink); margin:0 0 10px; }
+.about__body .lede{ font-family:var(--ornament); font-size:1.4rem; color:var(--cream); margin:0 0 10px; }
 /* His mission statement, quoted straight from neckbarham.com. A pressed-in
    pull-quote: barn-red rule down the side, shellac-gold opening mark. */
 .creed{
   position:relative; margin:16px 0; padding:6px 4px 6px 20px;
   border-left:4px solid var(--red);
-  font-style:italic; font-size:1.06rem; line-height:1.6; color:var(--ink-soft);
+  font-style:italic; font-size:1.06rem; line-height:1.6; color:var(--cream-soft);
 }
 .creed cite{
   display:block; margin-top:8px; font-style:normal;
-  font-family:var(--type); font-size:.78rem; letter-spacing:.08em; color:var(--red-deep);
+  font-family:var(--type); font-size:.78rem; letter-spacing:.08em; color:var(--red-lit);
 }
 .stamps{ display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; }
 .stamp{
   font-family:var(--type); font-size:.62rem; letter-spacing:.08em; text-align:center; line-height:1.3;
-  color:var(--red-deep); border:2px solid var(--red-deep); padding:8px 10px;
-  transform:rotate(-3deg); background:rgba(158,43,30,.05);
+  color:var(--red-lit); border:2px solid var(--red-lit); padding:8px 10px;
+  transform:rotate(-3deg); background:rgba(207,74,59,.08);
 }
 .stamp:nth-child(even){ transform:rotate(2deg); }
-.stamp b{ font-size:.82rem; color:var(--red); }
+.stamp b{ font-size:.82rem; color:var(--red-lit); }
 
 /* =======================================================================
    THE HEADS (the band / the stage)
@@ -752,8 +774,8 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
    ======================================================================= */
 .press{
   margin:0 auto 24px; max-width:640px;
-  background:var(--paper-2); border:2px solid var(--ink);
-  box-shadow:0 14px 30px rgba(0,0,0,.55), 0 0 40px rgba(232,178,72,.08);
+  background:linear-gradient(180deg, #351319, #250c11); border:2px solid var(--seam);
+  box-shadow:inset 0 0 0 1px rgba(232,178,72,.16), 0 14px 30px rgba(0,0,0,.55), 0 0 40px rgba(232,178,72,.08);
 }
 .press__bar{
   display:flex; align-items:center; gap:10px;
@@ -768,10 +790,10 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
    but its own class so the #REPLACE-hiding pass never touches these real ones. */
 .play-link{
   font-family:var(--type); font-size:.74rem; letter-spacing:.08em; text-decoration:none;
-  color:var(--ink); background:var(--paper-3); border:2px solid var(--ink);
-  padding:6px 11px; box-shadow:2px 2px 0 var(--ink);
+  color:var(--cream); background:linear-gradient(180deg, #3a161c, #260d12); border:2px solid var(--whiskey-deep);
+  padding:6px 11px; box-shadow:2px 2px 0 var(--seam);
 }
-.play-link:hover{ background:var(--gold-lit); color:var(--ink); }
+.play-link:hover{ background:var(--gold-lit); color:var(--ink); border-color:var(--seam); }
 .side__plays{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:8px; }
 
 /* =======================================================================
@@ -785,34 +807,89 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 }
 .dates td{ padding:12px; border-bottom:1px solid var(--line); vertical-align:top; }
 .dates tbody tr:hover{ background:rgba(158,43,30,.05); }
-.dates__with{ font-family:var(--type); font-size:.72rem; color:var(--red); letter-spacing:.06em; }
-.dates__empty td{ text-align:center; font-family:var(--type); color:var(--ink-faint); letter-spacing:.08em; }
+.dates__with{ font-family:var(--type); font-size:.72rem; color:var(--red-lit); letter-spacing:.06em; }
+.dates__empty td{ text-align:center; font-family:var(--type); color:var(--cream-faint); letter-spacing:.08em; }
+/* The standing Thursday gig, marked with a faint amber wash and a gold date. */
+.dates__residency{ background:rgba(232,178,72,.05); }
+.dates__residency td:first-child{ font-family:var(--type); color:var(--gold-lit); letter-spacing:.06em; font-size:.9rem; }
+
+/* =======================================================================
+   THE SONG MENU
+   The request/tip card he runs at the Dizzy Rooster, set as a leather menu:
+   each drink-deal tier is its own panel, every song ruled off to its price
+   with a dotted leader. Mostly covers; the red tier is SPECIAL REQUESTS.
+   ======================================================================= */
+.menu__where{
+  text-align:center; font-family:var(--type); letter-spacing:.12em;
+  font-size:clamp(.66rem,2vw,.82rem); color:var(--whiskey-lit);
+  text-transform:uppercase; margin:-6px 0 22px;
+}
+.menu{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; align-items:start; }
+.menu__tier{
+  background:linear-gradient(180deg,#351319,#250c11);
+  border:1.5px solid var(--seam);
+  box-shadow:inset 0 0 0 1px rgba(232,178,72,.14), 0 4px 12px rgba(0,0,0,.4);
+  padding:16px 20px 18px;
+}
+/* The SPECIAL REQUESTS tier gets the barn-red spot piping instead of gold. */
+.menu__tier--red{ box-shadow:inset 0 0 0 1px rgba(207,74,59,.32), 0 4px 12px rgba(0,0,0,.4); }
+.menu__deal{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  font-family:var(--ornament); font-size:1.2rem; letter-spacing:.02em; color:var(--cream);
+  margin:0 0 12px; padding-bottom:8px; border-bottom:2px solid var(--gold);
+}
+.menu__tier--red .menu__deal{ color:var(--red-lit); border-bottom-color:var(--red-lit); }
+.menu__deal small{
+  font-family:var(--type); font-size:.6rem; letter-spacing:.12em; color:var(--whiskey-lit);
+  white-space:nowrap; align-self:center;
+}
+.menu__list{ list-style:none; margin:0; padding:0; }
+.menu__row{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:4px; padding:5px 0;
+  font-size:.98rem;
+}
+.menu__song{ color:var(--cream); }
+/* The dotted leader that runs a song out to its price. Empty span, nudged up so
+   the dots sit on the type's baseline rather than under it. */
+.menu__dots{
+  flex:1 1 auto; min-width:14px; align-self:baseline;
+  border-bottom:2px dotted rgba(232,178,72,.42); position:relative; top:-.3em;
+}
+.menu__price{ font-family:var(--type); font-size:.9rem; color:var(--gold-lit); white-space:nowrap; }
+.menu__tier--red .menu__price{ color:var(--red-lit); }
+.menu__by{
+  flex-basis:100%; margin-top:-1px; font-style:italic; font-size:.74rem;
+  color:var(--whiskey); line-height:1.2;
+}
+.menu__note{ text-align:center; max-width:62ch; margin:18px auto 0; }
+.menu__note b{ color:var(--red-lit); font-family:var(--type); font-size:.72rem; letter-spacing:.06em; }
 
 /* =======================================================================
    BOOKING
    ======================================================================= */
 .booking{ display:grid; grid-template-columns:1fr 1fr; gap:30px; }
 .booking__mail{ font-family:var(--ornament); font-size:1.3rem; }
-.booking__mail a{ color:var(--red-deep); }
+.booking__mail a{ color:var(--red-lit); }
 
 .links{ display:flex; flex-wrap:wrap; gap:10px; margin:4px 0 6px; }
 .chip{
   font-family:var(--type); font-size:.78rem; letter-spacing:.1em; text-decoration:none;
-  color:var(--ink); background:var(--paper-3); border:2px solid var(--ink);
-  padding:6px 12px; box-shadow:2px 2px 0 var(--ink);
+  color:var(--cream); background:linear-gradient(180deg, #3a161c, #260d12); border:2px solid var(--whiskey-deep);
+  padding:6px 12px; box-shadow:2px 2px 0 var(--seam);
 }
-.chip:hover{ background:var(--gold-lit); color:var(--ink); }
+.chip:hover{ background:var(--gold-lit); color:var(--ink); border-color:var(--seam); }
 /* A chip still holding #REPLACE is hidden by JS (.chip--dead), same policy as
    the Frost page: a dead social link reads worse than a missing one. */
 .chip--dead{ display:none; }
 
 .subscribe{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .subscribe input[type=email]{
-  flex:1 1 200px; font-family:var(--type); font-size:.95rem; color:var(--ink);
-  background:var(--paper-1); border:2px solid var(--ink); padding:10px 12px;
+  flex:1 1 200px; font-family:var(--type); font-size:.95rem; color:var(--cream);
+  background:rgba(9,6,5,.5); border:2px solid var(--whiskey-deep); padding:10px 12px;
 }
+.subscribe input[type=email]::placeholder{ color:var(--cream-faint); }
 .subscribe input[type=email]:focus-visible{ outline:3px dashed var(--gold); outline-offset:2px; }
-.form-msg{ flex-basis:100%; margin:4px 0 0; font-family:var(--type); font-size:.82rem; color:var(--red-deep); min-height:1em; }
+.form-msg{ flex-basis:100%; margin:4px 0 0; font-family:var(--type); font-size:.82rem; color:var(--red-lit); min-height:1em; }
 
 /* =======================================================================
    FOOTER
@@ -874,7 +951,7 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
   /* Table → cards, the same pattern the Frost tour table uses. */
   .dates thead{ display:none; }
   .dates, .dates tbody, .dates tr, .dates td{ display:block; width:100%; }
-  .dates tr{ margin-bottom:14px; border:1.5px solid var(--ink-soft); background:var(--paper-2); }
+  .dates tr{ margin-bottom:14px; border:1.5px solid var(--seam); background:linear-gradient(180deg, #351319, #250c11); }
   .dates td{ border:none; padding:8px 12px; }
   .dates td::before{
     content:attr(data-label) ": "; font-family:var(--type); font-size:.7rem;
