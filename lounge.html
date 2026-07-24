@@ -5492,10 +5492,17 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   }
   function global3D() { return !!(window.MaulGL && window.MaulGL.create); }
 
-  function set3D(on) {
+  /* `quiet` is for the attempt the cabinet makes on open. Pressing the button
+     and getting nothing needs an explanation; a default that couldn't start
+     does not - the player never asked for 3D, so telling them their browser
+     refused it is noise about a thing they weren't trying to do. Either way
+     the board falls back to 2D, which is the point of keeping 2D. */
+  function set3D(on, quiet) {
     if (on && !ensure3D()) {
-      note = "3D NEEDS WEBGL — THIS BROWSER SAYS NO";
-      dirty = true;
+      if (!quiet) {
+        note = "3D NEEDS WEBGL — THIS BROWSER SAYS NO";
+        dirty = true;
+      }
       return false;
     }
     mode3d = !!on;
@@ -6886,6 +6893,12 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
        programmatic open, or iOS, which has no element fullscreen at all - the
        class-only layout lands anyway and still hands the board the viewport. */
     imm.enter();
+    /* 3D is the board this cabinet is built around now, so it is what you get
+       without asking. Quietly, and after imm.enter() so the GL context is
+       created against the viewport it will actually be drawn at rather than
+       the smaller cabinet one. A browser without WebGL keeps the 2D board and
+       says nothing; the toggle is still there for anyone who wants it back. */
+    set3D(true, true);
     resize();
     draw();
     raf = requestAnimationFrame(frame);

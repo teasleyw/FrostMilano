@@ -47,8 +47,23 @@
 /css/*
   Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
+# JS revalidates instead, unlike the CSS above, and the reason is a bug this
+# rule already caused once: a whole renderer rewrite went live and was
+# invisible on frostmilano.com, because the edge was still serving the
+# previous js/maul3d.js and kept doing so for hours. The page itself always
+# revalidates, so HTML edits appeared instantly while JS edits did not - which
+# is what made it look like the deploy had failed rather than been cached.
+#
+# stale-while-revalidate is deliberately absent here. It is what turns "one
+# hour, worst case" into "at least one more page load after that", because the
+# browser paints the old file first and fetches the new one afterwards. For a
+# script that IS the thing being changed, painting the old one is the failure.
+#
+# Cost of revalidating: one conditional request per file, answered 304 with an
+# empty body. There are four scripts on this site. That is nothing next to a
+# deploy nobody can see.
 /js/*
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+  Cache-Control: public, max-age=0, must-revalidate
 
 
 # ---------- IMAGES ----------
