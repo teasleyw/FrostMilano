@@ -1,7 +1,27 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>FROST LOUNGE :: prototype</title>
+<script>
+/* ================= lounge zoom lock =================
+   The lounge is a full-bleed, fixed-layout experience - 100vh cabinet overlays,
+   viewport-fit:cover, absolutely-placed readouts - not a document meant to be
+   read at an arbitrary magnification. Native pinch-zoom on that layout has no
+   clean 1:1 to snap back to, and the game canvases run touch-action:none, so a
+   pinch that lands on a board does nothing and strands the whole page magnified
+   with no way back. The viewport tag's maximum-scale/user-scalable holds every
+   browser that honours it at 1:1; iOS Safari ignores both for accessibility and
+   only stops on the gesture events being cancelled outright. This is the
+   site-wide twin of the per-cabinet lock in js/arcade-immersive.js, held on for
+   the whole page - the maul's own two-finger camera is driven by pointer events,
+   not these gesture events, so it is untouched. */
+(function () {
+  function block(e) { e.preventDefault(); }
+  document.addEventListener("gesturestart", block, { passive: false });
+  document.addEventListener("gesturechange", block, { passive: false });
+  document.addEventListener("gestureend", block, { passive: false });
+})();
+</script>
 <style>
   body{
     margin:0; background:#05131f; color:#eafcff;
@@ -7446,6 +7466,18 @@
     while (i--) if (ptrs[i].id === id) ptrs.splice(i, 1);
     if (ptrs.length < 2) pinch = null;
   }
+  /* Ground-truth reconcile against the live touch list. Pointer events can drop
+     a pointerup on mobile - iOS especially, when a gesture is interrupted - and
+     the dead finger left behind in ptrs is read as the second half of the next
+     pinch: the camera lurches and every tap after it is misheard as a gesture,
+     with no way back short of a reload. That is the "zoom glitches and won't
+     come back out" trap. touchend/touchcancel carry e.touches, the fingers
+     actually still down, which cannot go stale - so when it says none remain we
+     wipe the tracked set, and when it says one we drop the pinch. */
+  function syncTouches(ev) {
+    if (ev.touches.length === 0) ptrs.length = 0;
+    if (ev.touches.length < 2) pinch = null;
+  }
   function pinchSpan() {
     var dx = ptrs[0].x - ptrs[1].x, dy = ptrs[0].y - ptrs[1].y;
     return { d: Math.max(1, Math.sqrt(dx * dx + dy * dy)),
@@ -7768,6 +7800,10 @@
     el.addEventListener("pointerleave", onLeave);
     el.addEventListener("contextmenu", onContext);
     el.addEventListener("wheel", onWheel, { passive: false });
+    /* Self-heal a dropped pointerup - see syncTouches. Passive: it only reads
+       e.touches and clears bookkeeping, never builds or preventDefaults. */
+    el.addEventListener("touchend", syncTouches);
+    el.addEventListener("touchcancel", syncTouches);
   });
 
   elCam.addEventListener("click", function (ev) {
