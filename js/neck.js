@@ -148,6 +148,77 @@
   })();
 
   /* ----------------------------------------------------------------- *
+   * THE HEADS — "HIT THE AMP": a synthesised dirty chord, the loud answer
+   * to the victrola's quiet hiss. No file is fetched. A stack of detuned
+   * sawtooth voices (an E5-ish power chord) is run through a hard-clipping
+   * WaveShaper (the fuzz box) and a low-pass "cab", with a punchy amp
+   * envelope. Built lazily on the first click so the audio hardware is never
+   * touched until asked — same policy, and the same autoplay-safe path, as
+   * the victrola. It is one-shot (~1.6s), so nothing lingers in a background
+   * tab the way a loop would. This is the guitar's distortion; the point of
+   * the section is that the VOICE has none.
+   * ----------------------------------------------------------------- */
+  (function theHeads() {
+    var btn = document.getElementById("amp");
+    var note = document.getElementById("amp-note");
+    if (!btn) return;
+
+    var ctx = null, revertTimer = null;
+
+    /* A standard hard-clip curve; higher amount = more fuzz. */
+    function makeCurve(amount) {
+      var n = 2048, curve = new Float32Array(n), deg = Math.PI / 180;
+      for (var i = 0; i < n; i++) {
+        var x = i * 2 / n - 1;
+        curve[i] = (3 + amount) * x * 20 * deg / (Math.PI + amount * Math.abs(x));
+      }
+      return curve;
+    }
+
+    function strike() {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { if (note) note.textContent = "Your browser won't do Web Audio — imagine it loud."; return; }
+      if (!ctx) ctx = new AC();
+      if (ctx.state === "suspended") ctx.resume();
+      var t0 = ctx.currentTime;
+
+      /* fuzz box → cab → amp gain → out */
+      var shaper = ctx.createWaveShaper();
+      shaper.curve = makeCurve(420);
+      shaper.oversample = "4x";
+      var cab = ctx.createBiquadFilter();
+      cab.type = "lowpass"; cab.frequency.value = 2200; cab.Q.value = 0.7;
+      var amp = ctx.createGain(); amp.gain.value = 0.0001;
+      shaper.connect(cab); cab.connect(amp); amp.connect(ctx.destination);
+
+      /* an E5-ish stack; two slightly detuned voices per note = grind */
+      [82.41, 123.47, 164.81].forEach(function (f) {
+        [0, 5].forEach(function (det) {
+          var o = ctx.createOscillator();
+          o.type = "sawtooth"; o.frequency.value = f; o.detune.value = det;
+          var g = ctx.createGain(); g.gain.value = 0.22;
+          o.connect(g); g.connect(shaper);
+          o.start(t0); o.stop(t0 + 1.6);
+        });
+      });
+
+      /* amp envelope: quick punch in, long dirty decay */
+      amp.gain.setValueAtTime(0.0001, t0);
+      amp.gain.exponentialRampToValueAtTime(0.6, t0 + 0.012);
+      amp.gain.exponentialRampToValueAtTime(0.16, t0 + 0.35);
+      amp.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.55);
+
+      /* light the switch up while it rings, then let it back out */
+      btn.setAttribute("aria-pressed", "true");
+      if (revertTimer) clearTimeout(revertTimer);
+      revertTimer = setTimeout(function () { btn.setAttribute("aria-pressed", "false"); }, 1500);
+      if (note) note.textContent = "That's the amp — hot, fuzzed, one dirty chord. Hit it again.";
+    }
+
+    btn.addEventListener("click", strike);
+  })();
+
+  /* ----------------------------------------------------------------- *
    * The Sides — a record with a real URL lights up; a blank label stays
    * "AWAITING PRESSING". Same policy as the Frost video vault: never ship
    * a live control that points at a placeholder.
@@ -211,7 +282,7 @@
       { y: "1936", h: "Robert Johnson at the mic",
         b: "The next generation records in a San Antonio hotel room. Johnson is downstream of everyone on this page, and his short catalogue becomes the bridge the post-war world actually crossed." },
       { y: "1942", h: "The music stops pressing",
-        b: "Wartime shellac rationing and a two-year musicians' recording ban close the pre-war era. When records start again the sound is electric, urban, and pointed at a different room. Everything before this line is what Neck plays." },
+        b: "Wartime shellac rationing and a two-year musicians' recording ban close the pre-war era. When records start again the sound is electric, urban, and pointed at a different room. Everything before this line is the well Neck Barham draws from — the ghosts he pulls up onto a modern beat." },
       { y: "1951", h: "Wolf reaches the wire",
         b: "Chester Burnett records Moanin' at Midnight in Memphis. A man who learned at Dockery in 1930 is now on tape and bound for Chicago — the pre-war Delta didn't end in 1942, it moved north." }
     ];

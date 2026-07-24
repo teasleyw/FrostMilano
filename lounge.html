@@ -68,6 +68,29 @@
     background:linear-gradient(180deg,#155a82,#0a3350);
     border:2px outset #4bb4d8; text-shadow:0 0 8px rgba(56,230,255,.7);
   }
+  /* BRICK SMASH? wears its question. Two coloured clones of the title sit dead
+     over it and, every few seconds, shudder apart into a red/cyan split - the
+     same broken-signal tell the in-game countdown uses - so the cabinet reads
+     as slightly wrong before you've even pressed start. */
+  .arcade__marquee--haunt{ position:relative; overflow:hidden; }
+  .arcade__marquee--haunt::before,
+  .arcade__marquee--haunt::after{
+    content:attr(data-text); position:absolute; inset:0; padding:8px;
+    pointer-events:none; opacity:0; mix-blend-mode:screen;
+  }
+  .arcade__marquee--haunt::before{ color:#ff3c6e;
+    animation:marqueeGhost 4.4s steps(2) infinite; }
+  .arcade__marquee--haunt::after{ color:#38e6ff;
+    animation:marqueeGhost 4.4s steps(2) infinite reverse; }
+  @keyframes marqueeGhost{
+    0%,84%,100%{ transform:translate(0,0); opacity:0; }
+    86%{ transform:translate(-2px,1px); opacity:.7; }
+    90%{ transform:translate(2px,-1px); opacity:.7; }
+    94%{ transform:translate(-1px,0); opacity:.4; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .arcade__marquee--haunt::before,.arcade__marquee--haunt::after{ animation:none; }
+  }
   .arcade__body{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
   .arcade__stage{ flex:1 1 320px; min-width:0; display:flex; flex-direction:column; gap:8px; }
   .arcade__hud{
@@ -816,9 +839,10 @@
 
 <!-- ================= BRICK SMASH ================= -->
 <div id="arcade" class="arcade" role="dialog" aria-modal="true"
-     aria-label="Brick Smash" aria-hidden="true">
+     aria-label="Brick Smash?" aria-hidden="true">
   <div class="arcade__cab">
-    <div class="arcade__marquee">&#10052; BRICK SMASH &#10052;</div>
+    <div class="arcade__marquee arcade__marquee--haunt"
+         data-text="&#10052; BRICK SMASH? &#10052;">&#10052; BRICK SMASH? &#10052;</div>
     <div class="arcade__body">
       <div class="arcade__stage">
         <div class="arcade__hud">
@@ -1638,7 +1662,7 @@
     cabScreen(ARCADE, "SE", 0.38, 0.62, 0.80, 0.88, css(shade(rgb(HEX.bright), 0.6 + glow * 0.5)));
     cabScreen(ARCADE, "SE", 0.62, 0.70, 0.62, 0.72, css(shade(rgb(HEX.light), 0.7 + glow * 0.4)));
 
-    if (hovered) cabinetLabel(ARCADE, "▶ BRICK SMASH");
+    if (hovered) cabinetLabel(ARCADE, "▶ BRICK SMASH?");
   }
 
   /* SNAKE's screen preview: a checkerboard-striped body caught mid-slither
@@ -3003,12 +3027,16 @@
      formation that flies in, settles, and peels off in dives. Same paddle, same
      lives, same capsules - only the thing coming at you changes. */
   var PHASE = { SMASH: 0, SHOOT: 1 };
-  var EN = { ENTER: 0, FORM: 1, DIVE: 2, RETURN: 3 };
+  /* HOLD is the transformation beat: after a rupture a ship sits exactly where
+     its brick stood, the brick dissolving into it, before it lifts to formation. */
+  var EN = { ENTER: 0, FORM: 1, DIVE: 2, RETURN: 3, HOLD: 4 };
   var EN_COLS = 7, EN_W = 20, EN_H = 14, EN_GAP = 10;
   var EN_TOP = 58, EN_ROW_H = 26;
   var EN_PTS = [120, 80, 60, 40];       /* by row: the front rank is the prize */
   var EN_DROP_CHANCE = 0.26;
   var ENTRY_TIME = 1.1, ENTRY_STAGGER = 0.07;
+  var HOLD_TIME = 1.0;                  /* the pause: how long a ship sits on its brick */
+  var MORPH_TIME = 0.42;               /* the brick-to-ship crossfade at the pause's start */
   var DIVE_TIME = 2.4, RETURN_TIME = 0.9;
   var BULLET_SPEED = 540, FIRE_GAP = 0.18, MAX_BULLETS = 8;
   var BOMB_SPEED = 170;
@@ -3017,6 +3045,7 @@
   var SHIP_RATIO = 0.45, SHIP_MIN = 16;
   var INVULN = 1.6;                     /* blink time after a hit */
   var WAVE_BONUS = 250;                 /* + 100 per level, for clearing it */
+  var COUNTDOWN = 10;                   /* seconds of "breakout" before the rupture */
 
   /* ---- leaderboard — a real shared board via /api/scores when it's
      reachable, otherwise the visitor's own localStorage copy (opened as a
@@ -3143,6 +3172,20 @@
   var enemies = [], bullets = [], bombs = [];
   var waveT = 0, diveGap = 0, fireCool = 0, invuln = 0, firing = false;
 
+  /* ---- the countdown & the haunting ----
+     BRICK SMASH? never lets you finish the wall. Ten seconds after the first
+     serve the board ruptures: whatever bricks are left tear loose as the
+     squadron, the screen convulses, and the shooter you didn't ask for takes
+     over. The clock only runs during actual play, so a lost ball or a hidden
+     tab holds it rather than eating your seconds.
+       shake   - screen-shake magnitude in px, decays every frame
+       glitch  - 0..1 slice/RGB-tear intensity, also decaying
+       haunted - latched at the first rupture: the board never sits fully still
+                 again, so the squadron half carries a permanent low tremor. */
+  var count = 0, counting = false;
+  var shake = 0, glitch = 0, haunted = false;
+  var holdT = 0;   /* seconds left of the post-rupture transformation pause */
+
   function newBall(x, y, vx, vy) {
     return { x: x, y: y, vx: vx || 0, vy: vy || 0, stuck: false, off: 0 };
   }
@@ -3173,6 +3216,9 @@
         liveCount++;
       }
     }
+    /* Arm the clock with the wall. It won't tick until you're actually in
+       play, but every wall you meet is on the same ten-second fuse. */
+    count = COUNTDOWN; counting = true;
   }
 
   /* Back to one ball, parked on the paddle and waiting for a serve. */
@@ -3236,13 +3282,14 @@
     speed = BASE_SPEED;
     phase = PHASE.SMASH;
     enemies.length = 0;
+    haunted = false; shake = 0; glitch = 0; holdT = 0;
     clearFx();
     paddleX = (W - pw) / 2;
-    buildLevel();
+    buildLevel();               /* also arms the ten-second countdown */
     resetBalls();
     syncHud();
     state = STATE.IDLE;
-    showMsg('<b>BRICK SMASH</b>' +
+    showMsg('<b>BRICK SMASH?</b>' +
       '<small class="blink">CLICK OR PRESS SPACE TO START</small>');
   }
 
@@ -3375,7 +3422,7 @@
         score += b.s; syncHud();
         reflectBrick(ba, b);
         maybeDrop(b);
-        if (liveCount <= 0) { startWave(); return true; }
+        if (liveCount <= 0) { rupture(); return true; }   /* the rare clean clear still ruptures */
         return false;   /* one brick per step keeps reflection unambiguous */
       }
     }
@@ -3534,6 +3581,16 @@
     if (flash) { flash.t -= dt; if (flash.t <= 0) flash = null; }
   }
 
+  /* The ten-second fuse. Runs only in the wall half and only while you're
+     actually playing; the last three seconds bleed through early as a rising
+     shake, so zero doesn't so much arrive as break in. */
+  function tickCountdown(dt) {
+    if (!counting || phase !== PHASE.SMASH) return;
+    count -= dt;
+    if (count <= 3) shake = Math.max(shake, (3 - count) * 1.1);
+    if (count <= 0) { count = 0; rupture(); }   /* rupture clears `counting` */
+  }
+
   /* ================= the squadron half =================
      Wave 2 of every level. The paddle becomes a ship, the capsules keep
      falling, and the wall's replacement flies in under its own power. */
@@ -3554,20 +3611,49 @@
            y + hh > PADDLE_Y - 8 && y - hh < PADDLE_Y + PH;
   }
 
-  function startWave() {
+  /* The wall's end - the clock finally forcing what BRICK SMASH? was always
+     going to do. The board convulses, every brick still standing tears loose as
+     the squadron's incoming line, and we hand over to the shooter. The rare
+     clean clear comes through the same door, so there's one way out of the
+     wall - it just arrives with an empty seed and the classic corner sweep. */
+  var RUPTURE_LINES = ["THEY WERE THE WALL", "IT WON'T SMASH",
+                       "WRONG DIMENSION", "NO WALL LEFT", "SMASH BACK"];
+  function rupture() {
+    counting = false;
+    haunted = true;
+    shake = 16; glitch = 1;
+    holdT = HOLD_TIME + 0.2;   /* keep the screen charged through the pause */
+    /* Seed the wave from where the bricks still stand - centre for the ship, and
+       the brick's own box and colour so it can dissolve into that ship in place.
+       The formation you're about to fight is visibly the wall itself. */
+    var seed = [];
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      if (b.alive) {
+        seed.push({ x: b.x + b.w / 2, y: b.y + b.h / 2,
+                    bx: b.x, by: b.y, bw: b.w, bh: b.h, bc: b.c });
+      }
+    }
+    bricks.length = 0; liveCount = 0;
+    startWave(seed);
+    flash = { t: 1.9, c: "#ff5c7a",
+              text: RUPTURE_LINES[(Math.random() * RUPTURE_LINES.length) | 0] };
+  }
+
+  function startWave(seed) {
     phase = PHASE.SHOOT;
     /* Capsules from the wall don't survive the switch - half of them mean
        nothing to a gun. The clocks do carry over, so a WIDE earned on the last
        brick arrives as a second cannon. */
     drops.length = 0;
     resetBalls();                 /* the ball parks; this half doesn't use it */
-    buildWave();
+    buildWave(seed);
     invuln = 1.2; fireCool = 0; waveT = 0;
     diveGap = 1.6;
     flash = { t: 1.6, text: "SQUADRON INCOMING", c: "#ffd68a" };
   }
 
-  function buildWave() {
+  function buildWave(seed) {
     enemies.length = 0;
     bullets.length = 0;
     bombs.length = 0;
@@ -3576,22 +3662,45 @@
     var rows = Math.min(2 + Math.ceil(level / 2), 4);
     var span = EN_COLS * EN_W + (EN_COLS - 1) * EN_GAP;
     var x0 = (W - span) / 2 + EN_W / 2;
+    /* A rupture hands us the bricks that were still standing. Shuffle them so a
+       ship draws a brick from anywhere in the wall, not its own column, and the
+       transformation scatters across the whole footprint. */
+    var pool = null, pi = 0;
+    if (seed && seed.length) {
+      pool = seed.slice();
+      for (var s = pool.length - 1; s > 0; s--) {
+        var j = (Math.random() * (s + 1)) | 0, tmp = pool[s]; pool[s] = pool[j]; pool[j] = tmp;
+      }
+    }
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < EN_COLS; c++) {
         var sx = x0 + c * (EN_W + EN_GAP), sy = EN_TOP + r * EN_ROW_H;
-        /* Alternating corners, so the wave arrives as two interleaved streams
-           rather than one queue. */
-        var left = (r + c) % 2 === 0;
-        var start = { x: left ? -30 : W + 30, y: 30 + r * 10 };
-        enemies.push({
-          sx: sx, sy: sy, x: start.x, y: start.y, row: r, st: EN.ENTER,
-          /* negative t = still off-board, waiting its turn to fly in */
-          t: -(r * EN_COLS + c) * ENTRY_STAGGER, dur: ENTRY_TIME, ang: 0, bomb: 0,
-          p: [start,
-              { x: left ? W * 0.30 : W * 0.70, y: H * 0.42 },
-              { x: left ? W * 0.72 : W * 0.28, y: H * 0.12 },
-              { x: sx, y: sy }]
-        });
+        if (pool) {
+          /* Spawn on a brick and HOLD there: the ship sits exactly where the
+             block was while it dissolves into it, then lifts to its slot. The
+             flight path is built later, at lift-off, from wherever it's sitting. */
+          var b = pool[pi++ % pool.length];
+          enemies.push({
+            sx: sx, sy: sy, x: b.x, y: b.y, row: r, st: EN.HOLD,
+            t: 0, hold: HOLD_TIME + Math.random() * 0.3, dur: ENTRY_TIME,
+            ang: 0, bomb: 0, p: null,
+            bx: b.bx, by: b.by, bw: b.bw, bh: b.bh, bc: b.bc
+          });
+        } else {
+          /* Clean clear or the headless jump: the classic corner sweep-in,
+             alternating sides so the wave arrives as two interleaved streams. */
+          var left = (r + c) % 2 === 0;
+          var start = { x: left ? -30 : W + 30, y: 30 + r * 10 };
+          enemies.push({
+            sx: sx, sy: sy, x: start.x, y: start.y, row: r, st: EN.ENTER,
+            /* negative t = still off-board, waiting its turn to fly in */
+            t: -(r * EN_COLS + c) * ENTRY_STAGGER, dur: ENTRY_TIME, ang: 0, bomb: 0,
+            p: [start,
+                { x: left ? W * 0.30 : W * 0.70, y: H * 0.42 },
+                { x: left ? W * 0.72 : W * 0.28, y: H * 0.12 },
+                { x: sx, y: sy }]
+          });
+        }
       }
     }
   }
@@ -3638,6 +3747,19 @@
     var drift = Math.sin(waveT * 0.9) * 12;
     for (var i = enemies.length - 1; i >= 0; i--) {
       var e = enemies[i];
+      if (e.st === EN.HOLD) {
+        /* Sitting on its brick through the pause. When the clock runs out it
+           lifts off from exactly where it's sitting, up into its formation slot. */
+        e.t += dt * tempo;
+        if (e.t >= e.hold) {
+          e.st = EN.ENTER; e.t = 0; e.dur = ENTRY_TIME;
+          e.p = [{ x: e.x, y: e.y },
+                 { x: e.x + (e.sx - e.x) * 0.25, y: e.y - 34 },
+                 { x: e.sx, y: e.sy + 34 },
+                 { x: e.sx, y: e.sy }];
+        }
+        continue;
+      }
       if (e.st === EN.FORM) { e.x = e.sx + drift; e.y = e.sy; e.ang = 0; continue; }
       e.t += dt * tempo;
       if (e.t < 0) continue;                  /* still queued off-board */
@@ -3693,6 +3815,7 @@
       for (var j = enemies.length - 1; j >= 0; j--) {
         var e = enemies[j];
         if (e.t < 0 && e.st === EN.ENTER) continue;   /* not on the board yet */
+        if (e.st === EN.HOLD) continue;               /* untouchable mid-transformation */
         if (Math.abs(b.x - e.x) < EN_W / 2 + 1 && Math.abs(b.y - e.y) < EN_H / 2 + 3) {
           score += enemyPts(e);
           syncHud();
@@ -3747,8 +3870,34 @@
   /* ================= draw ================= */
   function draw() {
     syncOver();
+
+    /* Ambient unease: once the wall has torn, the squadron half never sits
+       still. Kept tiny so it reads as a bad signal, not a tantrum, and topped
+       up each frame here so it survives the decay at the foot of this function. */
+    if (haunted && phase === PHASE.SHOOT && state === STATE.PLAY) {
+      if (holdT > 0) {
+        /* The wall is mid-morph: keep the board charged so the pause reads as a
+           held breath, not a lull, while the bricks become ships. */
+        shake = Math.max(shake, 3);
+        if (Math.random() < 0.22) glitch = Math.max(glitch, 0.5);
+      } else {
+        shake = Math.max(shake, 0.8);
+        if (Math.random() < 0.04) glitch = Math.max(glitch, 0.35);
+      }
+    }
+
+    /* The background is painted full-bleed and still; only the content is
+       translated by the shake, so a solid board never opens a gap at the edge. */
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
+
+    var sx = 0, sy = 0;
+    if (shake > 0.05) {
+      sx = (Math.random() * 2 - 1) * shake;
+      sy = (Math.random() * 2 - 1) * shake;
+    }
+    ctx.save();
+    ctx.translate(sx, sy);
 
     /* The two halves draw the same three layers - field, capsules, you - so
        the board never changes character, only what's on it. */
@@ -3760,7 +3909,87 @@
     else drawShip();
 
     drawFx();
+    drawCountdown();   /* the big ticking number, only while smashing */
     drawFlash();
+    ctx.restore();
+
+    /* The tear goes on last, over the finished (shaken) frame. */
+    if (glitch > 0.02) applyGlitch(glitch);
+
+    /* Both settle back toward calm; the blocks above top them up while they
+       should be running, so a decay this fast only bites once the cause stops. */
+    shake *= 0.86;
+    glitch *= 0.90;
+  }
+
+  /* A cheap between-dimensions tear: a few horizontal bands of the finished
+     frame shoved sideways, then the whole thing ghosted back over itself so the
+     glow doubles like a mistuned signal, and - rarely - a hard invert flash as
+     the other side shows through. No pixel reads: just the canvas drawn onto
+     itself, which the GPU is happy to do. */
+  function applyGlitch(g) {
+    var bands = 2 + (g * 5 | 0), i;
+    for (i = 0; i < bands; i++) {
+      var by = Math.random() * H;
+      var bh = 6 + Math.random() * 26 * g;
+      var dx = (Math.random() * 2 - 1) * 22 * g;
+      ctx.drawImage(cv, 0, by, W, bh, dx, by, W, bh);
+      /* fill the strip the slice slid off of, so the tear reads as a gap */
+      ctx.fillStyle = INK;
+      if (dx > 0) ctx.fillRect(0, by, dx, bh);
+      else if (dx < 0) ctx.fillRect(W + dx, by, -dx, bh);
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";   /* chromatic double-vision */
+    ctx.globalAlpha = 0.28 * g;
+    var off = 3 + 6 * g;
+    ctx.drawImage(cv, -off, 0);
+    ctx.drawImage(cv, off, 0);
+    ctx.restore();
+    if (Math.random() < 0.10 * g) {
+      ctx.save();
+      ctx.globalCompositeOperation = "difference";
+      ctx.globalAlpha = 0.5 * g;
+      ctx.fillStyle = "#eafcff";
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+  }
+
+  /* The clock, dead centre and enormous, ticking the ten seconds you have
+     before BRICK SMASH? answers its own question. It opens calm and cyan and
+     see-through, so you can still play under it; under three seconds it splits
+     into a red/cyan signal, jitters, swells and flickers - the other dimension
+     leaning on the glass. */
+  function drawCountdown() {
+    if (!counting || phase !== PHASE.SMASH || state !== STATE.PLAY) return;
+    var n = Math.max(0, Math.ceil(count));
+    var urgent = count <= 3;
+    var cx = W / 2, cy = H * 0.46;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (urgent) {
+      var size = 150 + (3 - count) * 20;
+      ctx.font = "bold " + size + "px ui-monospace,Consolas,monospace";
+      var j = (3 - count) * 3;
+      var jx = (Math.random() * 2 - 1) * j, jy = (Math.random() * 2 - 1) * j;
+      ctx.globalAlpha = 0.32 + 0.26 * Math.random();   /* frame-flicker */
+      ctx.fillStyle = "rgba(255,60,110,.9)";           /* the split: red ghost */
+      ctx.fillText(n, cx - 4 - jx, cy + jy);
+      ctx.fillStyle = "rgba(80,240,255,.9)";           /* cyan ghost */
+      ctx.fillText(n, cx + 4 + jx, cy - jy);
+      ctx.fillStyle = "rgba(234,252,255,.95)";         /* the number itself */
+      ctx.fillText(n, cx + jx * 0.3, cy + jy * 0.3);
+    } else {
+      ctx.font = "bold 140px ui-monospace,Consolas,monospace";
+      ctx.globalAlpha = 0.34;
+      ctx.shadowColor = PADDLE;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = PADDLE;
+      ctx.fillText(n, cx, cy);
+    }
+    ctx.restore();
   }
 
   function drawWall() {
@@ -3852,8 +4081,31 @@
     for (i = 0; i < enemies.length; i++) {
       var e = enemies[i];
       if (e.t < 0 && e.st === EN.ENTER) continue;   /* still off-board */
-      drawEnemy(e);
+      if (e.st === EN.HOLD) drawHold(e); else drawEnemy(e);
     }
+  }
+
+  /* The transformation itself. For the pause after a rupture a ship sits exactly
+     where its brick stood; over the first fraction of a second the brick dissolves
+     and the ship forms in its place, so it's unmistakable that the wall became the
+     swarm rather than a fresh formation flying in from the wings. */
+  function drawHold(e) {
+    var mp = Math.min(1, e.t / MORPH_TIME);   /* 0 = still a brick, 1 = fully a ship */
+    if (mp < 1) {
+      ctx.save();
+      ctx.globalAlpha = 1 - mp;               /* the brick fading out, bevel and all */
+      ctx.fillStyle = e.bc;
+      ctx.fillRect(e.bx, e.by, e.bw, e.bh);
+      ctx.fillStyle = "rgba(255,255,255,.28)";
+      ctx.fillRect(e.bx, e.by, e.bw, 2);
+      ctx.fillStyle = "rgba(2,16,28,.35)";
+      ctx.fillRect(e.bx, e.by + e.bh - 2, e.bw, 2);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.2 + 0.8 * mp;          /* the ship fading up in its place */
+    drawEnemy(e);
+    ctx.restore();
   }
 
   /* A bug in the wall's own colours: body, swept wings, two lit eyes. Drawn
@@ -3952,6 +4204,8 @@
     movePaddle(dt);
     if (state !== STATE.PLAY) return;
     tickFx(dt);      /* clocks first: a speed change applies to this frame */
+    tickCountdown(dt); /* the fuse - may rupture the wall into the squadron */
+    if (holdT > 0) holdT -= dt;   /* the transformation pause winding down */
     stepDrops(dt);   /* capsules fall in both halves */
     if (phase === PHASE.SMASH) stepBalls(dt);
     else stepWave(dt);
@@ -4131,6 +4385,9 @@
                fx: { wide: fx.wide, narrow: fx.narrow, slow: fx.slow,
                      catch: fx.catch, fast: fx.fast },
                phase: phase, invuln: invuln,
+               count: count, counting: counting, haunted: haunted, shake: shake,
+               holdT: holdT,
+               holding: enemies.filter(function (e) { return e.st === EN.HOLD; }).length,
                enemies: enemies.map(function (e) {
                  return { x: e.x, y: e.y, row: e.row, st: e.st, waiting: e.t < 0 };
                }),

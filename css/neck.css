@@ -1,15 +1,34 @@
 /* =======================================================================
    NECK & THE HEADS :: neck.css
-   Pre-war blues. The opposite of the Frost page in every way that counts:
-   warm where that's cold, paper where that's glass, letterpress where that's
-   chrome. A 1930s race-record handbill and the sleeve it came in.
+   Pre-war blues in a dark, smoky juke joint. Two things at once, the way the
+   Frost page splits Frost from Dirty Whiskey: NECK is the man and the old
+   records — a warm handbill lit by a low amber bulb; THE HEADS are the band
+   that plays those songs loud — the dark stage at the back with the fuzz on it.
+   A 1930s race-record handbill nailed to the wall of a whiskey bar.
 
    All colours live in :root below. Nothing here is loaded from outside the
    site except the four Google fonts in the <head>.
    ======================================================================= */
 
 :root{
-  /* Aged paper, four values from highlight to the deepest fold. */
+  /* THE ROOM — the juke joint itself: smoke, dark wood, one low bulb. The
+     page column and its paper cards sit inside this dark room and read as lit
+     posters; the room only shows in the gaps and behind the dark sections. */
+  --room-1:  #0c0908;   /* the far dark */
+  --room-2:  #17110c;   /* the wall, top-lit */
+  --room-3:  #241811;   /* wood catching the light */
+
+  /* WHISKEY — the light in the room. Amber off a low bulb and a full glass.
+     This is the accent that replaces the Frost page's ice-blue: warm, dim,
+     the colour everything in here is lit by. */
+  --whiskey:     #c9872b;
+  --whiskey-lit: #e8b24a;
+  --whiskey-deep:#7a4e14;
+  --bulb:        rgba(232,178,72,.22);   /* the pool of light from up top */
+  --smoke:       rgba(150,124,92,.10);
+
+  /* Aged paper, four values from highlight to the deepest fold. Unchanged from
+     the daylight version — under the bulb it just reads as a lit poster. */
   --paper-1:  #f3e6cd;   /* lit paper */
   --paper-2:  #e8d3a9;   /* the field */
   --paper-3:  #d8bd8a;   /* shadowed paper */
@@ -48,26 +67,29 @@ html{ scroll-behavior:smooth; }
 body{
   margin:0;
   font-family:var(--serif);
+  /* Default text stays dark INK, because almost all copy lives inside the lit
+     paper cards. Anything that sits directly on the dark room (the footer) is
+     given a light colour explicitly, further down. */
   color:var(--ink);
   line-height:1.7;
-  background-color:var(--paper-2);
-  /* Paper is built entirely from gradients — no image file. A warm highlight,
-     two broad tea-stains, the paper grain (the fine 3px dot field), and a
-     glacier-to-shadow base.
-     PERFORMANCE — this is deliberately NOT background-attachment:fixed, and
-     the grain is a background layer here rather than its own fixed overlay.
-     A fixed background forces the browser to repaint this whole gradient stack
-     on every scroll frame; with the grain's tiny dot tiles on top of it that
-     was enough to stall the compositor and blank the page mid-scroll. Painted
-     normally (scrolling with the page), the grain tiles down the full document
-     for free and scrolling stays on the fast path. */
+  background-color:var(--room-1);
+  /* The room is built entirely from gradients — no image file. A low amber
+     bulb pooling from up top, two soft banks of smoke, a faint amber speckle
+     (bar-light dust), and the dark wall fading top-lit to pitch at the floor.
+     PERFORMANCE — deliberately NOT background-attachment:fixed, and the grain
+     is a background layer here rather than its own fixed overlay. A fixed
+     background forces a repaint of this whole gradient stack every scroll
+     frame; with the grain's tiny dot tiles on top of it that stalled the
+     compositor and blanked the page mid-scroll. Painted normally (scrolling
+     with the page), the grain tiles down the full document for free and
+     scrolling stays on the fast path. */
   background-image:
-    radial-gradient(rgba(36,26,18,.10) .5px, transparent .5px),
-    radial-gradient(rgba(36,26,18,.08) .5px, transparent .5px),
-    radial-gradient(120% 60% at 18% 4%,  rgba(255,248,228,.55) 0%, transparent 55%),
-    radial-gradient(70% 40% at 88% 14%,  rgba(158,120,60,.16) 0%, transparent 60%),
-    radial-gradient(60% 34% at 72% 62%,  rgba(120,86,40,.14) 0%, transparent 60%),
-    linear-gradient(180deg, var(--paper-1) 0%, var(--paper-2) 45%, var(--paper-3) 100%);
+    radial-gradient(rgba(232,178,72,.05) .5px, transparent .5px),
+    radial-gradient(rgba(0,0,0,.22) .5px, transparent .5px),
+    radial-gradient(95% 48% at 50% -8%,  var(--bulb) 0%, transparent 55%),
+    radial-gradient(52% 30% at 14% 30%,  var(--smoke) 0%, transparent 60%),
+    radial-gradient(56% 34% at 86% 66%,  var(--smoke) 0%, transparent 60%),
+    linear-gradient(180deg, var(--room-2) 0%, var(--room-1) 58%, #070505 100%);
   background-size:3px 3px, 4px 4px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   background-position:0 0, 1px 2px, 0 0, 0 0, 0 0, 0 0;
   background-repeat:repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
@@ -86,17 +108,17 @@ a:hover{ color:var(--red-deep); }
    many bots skip hidden fields but happily complete a visible-to-them one. */
 .hp{ position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; opacity:0; pointer-events:none; }
 
-/* ---------- DUST IN THE LIGHT SHAFT ---------- */
-/* The paper grain lives in the body background (see body{} above). This is the
-   only fixed overlay left: a slow drift of dust motes, weather for the room.
-   The layer itself is transparent and paints nothing — only its motes animate,
-   on composited transforms — so it does not cost a scroll repaint the way a
-   fixed *background* would. pointer-events:none, and killed entirely under
-   prefers-reduced-motion (see the block at the very bottom of this file). */
+/* ---------- SMOKE IN THE BULB LIGHT ---------- */
+/* Was dust in a daylight shaft; in the juke joint it reads as cigarette smoke
+   and haze drifting through the low amber bulb. The layer itself is transparent
+   and paints nothing — only its motes animate, on composited transforms — so it
+   does not cost a scroll repaint the way a fixed *background* would.
+   pointer-events:none, and killed entirely under prefers-reduced-motion (see
+   the block at the very bottom of this file). */
 #dust{ position:fixed; inset:0; z-index:3; pointer-events:none; overflow:hidden; }
 .mote{
-  position:absolute; top:-12px; border-radius:50%;
-  background:radial-gradient(circle at 40% 35%, rgba(255,248,224,.95), rgba(210,180,120,.35) 70%, transparent);
+  position:absolute; top:-14px; border-radius:50%; filter:blur(1px);
+  background:radial-gradient(circle at 40% 35%, rgba(230,205,165,.5), rgba(150,124,92,.22) 70%, transparent);
   animation-name:drift; animation-timing-function:linear; animation-iteration-count:1;
 }
 @keyframes drift{
@@ -143,7 +165,12 @@ a:hover{ color:var(--red-deep); }
     repeating-linear-gradient(45deg, rgba(158,43,30,.05) 0 12px, transparent 12px 24px),
     var(--paper-1);
   border:2px solid var(--ink);
-  box-shadow:0 2px 0 var(--ink), 0 3px 14px rgba(58,38,18,.4);
+  /* Seated in the dark room and lit by the bulb: a hard ink edge, a deep drop
+     into the dark, and a wide amber halo so it reads as a poster under a light. */
+  box-shadow:
+    0 2px 0 var(--ink),
+    0 18px 40px rgba(0,0,0,.6),
+    0 0 70px rgba(232,178,72,.14);
 }
 /* The two woodcut hands / decorative bands top and bottom of the bill. */
 .bill__edge{ height:14px; margin:0 auto;
@@ -186,10 +213,24 @@ a:hover{ color:var(--red-deep); }
   font-family:var(--ornament); font-size:clamp(1.1rem,4vw,1.8rem);
   color:var(--red); margin:2px 0 0; letter-spacing:.05em;
 }
+/* The split line: "the records" on one side, "loud" on the other. */
+.bill__split{
+  font-family:var(--type); font-size:clamp(.66rem,2vw,.82rem); letter-spacing:.1em;
+  color:var(--whiskey-deep); margin:10px 0 0; text-transform:uppercase;
+}
 .bill__pitch{
   font-style:italic; color:var(--ink-soft); max-width:44ch; margin:10px auto 0; font-size:1.02rem;
 }
 .bill__buttons{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:22px; }
+
+/* The band logo stamped on the handbill. It's black line-art on cream; multiply
+   drops the cream into the paper and leaves only the ink, so it reads as printed
+   rather than pasted. isolation:isolate keeps the blend inside the bill. */
+.bill{ isolation:isolate; }
+.bill__seal{
+  display:block; width:clamp(96px,20vw,132px); height:auto; margin:24px auto 0;
+  mix-blend-mode:multiply; transform:rotate(-4deg);
+}
 
 /* =======================================================================
    INK BUTTONS
@@ -236,7 +277,12 @@ a:hover{ color:var(--red-deep); }
   position:relative; margin:22px 0; padding:26px 24px 30px;
   background:var(--paper-1);
   border:1.5px solid var(--ink-soft);
-  box-shadow:0 1px 0 rgba(255,248,228,.6), 0 6px 18px rgba(58,38,18,.22);
+  /* A lit page in a dark room: an inner top highlight, a deep drop, and a
+     faint amber halo picked up off the bulb. */
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,228,.6),
+    0 14px 34px rgba(0,0,0,.55),
+    0 0 46px rgba(232,178,72,.06);
 }
 .leaf--dark{
   background:
@@ -244,6 +290,20 @@ a:hover{ color:var(--red-deep); }
     linear-gradient(180deg, var(--sleeve-2), var(--sleeve));
   border-color:#000;
   color:var(--paper-2);
+}
+/* THE STAGE — the dark leaf The Heads play on. Same sleeve-dark as the lineage
+   but lit from the floor by a hot amber footlight and edged in whiskey, so it
+   reads as the loud end of the room rather than the quiet record sleeve. */
+.leaf--stage{
+  background:
+    radial-gradient(120% 80% at 50% 108%, rgba(232,178,72,.16) 0%, transparent 58%),
+    radial-gradient(120% 90% at 50% 0%, rgba(158,43,30,.12) 0%, transparent 55%),
+    linear-gradient(180deg, #1a120c, var(--sleeve));
+  border:1.5px solid var(--whiskey-deep);
+  color:var(--paper-2);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.6),
+    0 0 60px rgba(232,178,72,.10);
 }
 
 .head{
@@ -500,9 +560,9 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 .about{ display:grid; grid-template-columns:minmax(180px,260px) 1fr; gap:28px; align-items:start; }
 .about__plate{ position:relative; text-align:center; }
 .about__img{
-  width:100%; aspect-ratio:4/5; object-fit:cover; display:block;
+  width:100%; aspect-ratio:4/5; object-fit:cover; object-position:50% 42%; display:block;
   border:6px solid var(--paper-1); outline:2px solid var(--ink);
-  box-shadow:0 6px 16px rgba(58,38,18,.4); filter:sepia(.35) contrast(1.02);
+  box-shadow:0 6px 16px rgba(58,38,18,.4); filter:sepia(.18) contrast(1.04) saturate(.96);
 }
 /* Photo not supplied yet: the <img> fails to load, JS reveals the pending
    card and hides the broken frame. */
@@ -518,6 +578,17 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 .about__cap{ font-family:var(--ornament); color:var(--red); margin-top:8px; font-size:1.2rem; letter-spacing:.08em; }
 
 .about__body .lede{ font-family:var(--ornament); font-size:1.4rem; color:var(--ink); margin:0 0 10px; }
+/* His mission statement, quoted straight from neckbarham.com. A pressed-in
+   pull-quote: barn-red rule down the side, shellac-gold opening mark. */
+.creed{
+  position:relative; margin:16px 0; padding:6px 4px 6px 20px;
+  border-left:4px solid var(--red);
+  font-style:italic; font-size:1.06rem; line-height:1.6; color:var(--ink-soft);
+}
+.creed cite{
+  display:block; margin-top:8px; font-style:normal;
+  font-family:var(--type); font-size:.78rem; letter-spacing:.08em; color:var(--red-deep);
+}
 .stamps{ display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; }
 .stamp{
   font-family:var(--type); font-size:.62rem; letter-spacing:.08em; text-align:center; line-height:1.3;
@@ -526,6 +597,97 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 }
 .stamp:nth-child(even){ transform:rotate(2deg); }
 .stamp b{ font-size:.82rem; color:var(--red); }
+
+/* =======================================================================
+   THE HEADS (the band / the stage)
+   The loud half of the split. Everything here lives on the dark .leaf--stage,
+   so its type is light and its accent is whiskey.
+   ======================================================================= */
+.heads{ display:grid; grid-template-columns:1fr minmax(270px,40%); gap:28px; align-items:start; }
+.heads__body p{ color:var(--paper-2); }
+.heads__body b{ color:var(--paper-1); }
+.heads__body a{ color:var(--whiskey-lit); }
+.lede--light{ font-family:var(--ornament); font-size:1.4rem; color:var(--whiskey-lit); margin:0 0 10px; line-height:1.35; }
+
+/* The fuzz demo — a synthesised dirty chord (see js/neck.js). Its own hot amber
+   button so it reads as an amp switch, not a paper stamp. */
+.fuzz{ margin-top:20px; }
+.ink-btn--amp{ --bg:var(--whiskey); --fg:#170f08; --bd:var(--whiskey-deep); box-shadow:3px 3px 0 var(--bd), 0 0 22px rgba(232,178,72,.25); }
+.ink-btn--amp:hover{ background:var(--whiskey-lit); color:#170f08; }
+.ink-btn--amp[aria-pressed="true"]{ --bg:var(--red); --fg:var(--paper-1); --bd:var(--red-deep); box-shadow:3px 3px 0 var(--bd), 0 0 26px rgba(166,47,32,.5); }
+.fuzz__note{ font-style:italic; color:var(--paper-3); margin:10px 0 0; font-size:.92rem; }
+
+/* THE VOICE — the one thing on this stage with nothing on it. A struck panel
+   holding the signal-chain diagram that makes the point visually. */
+.voice{
+  background:rgba(9,7,6,.55); border:1px solid var(--whiskey-deep); border-left:5px solid var(--whiskey);
+  padding:16px 18px; box-shadow:inset 0 0 34px rgba(0,0,0,.45);
+}
+.voice__head{ font-family:var(--type); letter-spacing:.14em; font-size:.8rem; color:var(--whiskey-lit); margin:0 0 12px; }
+.voice__note{ color:var(--paper-2); font-size:.9rem; line-height:1.6; margin:12px 0 0; }
+.voice__note b{ color:var(--paper-1); font-family:var(--type); font-size:.78rem; letter-spacing:.06em; }
+
+/* The signal chain: guitar runs through fuzz + amp and comes out dirty; the
+   voice runs through NOTHING and comes out dirty anyway. */
+.chain{ display:flex; flex-direction:column; gap:12px; }
+.chain__row{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-family:var(--type); font-size:.68rem; letter-spacing:.05em; }
+.chain__from{ color:var(--paper-3); min-width:64px; }
+.chain__row--voice .chain__from{ color:var(--whiskey-lit); }
+.chain__arrow{ color:var(--whiskey); opacity:.8; }
+.chain__box{ padding:5px 9px; border-radius:3px; letter-spacing:.08em; }
+.chain__box--hot{ color:#170f08; background:var(--whiskey-lit); border:1.5px solid var(--whiskey-deep); box-shadow:0 0 12px rgba(232,178,72,.4); }
+.chain__box--none{ color:var(--paper-4); background:transparent; border:1.5px dashed var(--ink-faint); text-decoration:line-through; text-decoration-color:var(--red); }
+.chain__out{ color:var(--red); font-weight:700; letter-spacing:.08em; }
+.chain__row--voice .chain__out{ color:var(--whiskey-lit); }
+
+/* Stage stamps: amber on the dark, the mirror of the paper stamps in WHO'S NECK. */
+.stamps--stage{ justify-content:center; margin-top:26px; }
+.stamp--stage{ color:var(--whiskey-lit); border-color:var(--whiskey); background:rgba(232,178,72,.06); }
+.stamp--stage b{ color:var(--paper-1); }
+
+/* FROM THE FLOOR — real live shots, tacked to the stage wall like photos in a
+   juke joint. Each sits in a dark mount with a whiskey edge; a small tilt and a
+   hover lift so they read as pinned prints, not a stock grid. */
+.floor{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:28px; }
+.floor__shot{
+  margin:0; overflow:hidden; background:#0c0806;
+  border:3px solid #0c0806; outline:1px solid var(--whiskey-deep);
+  box-shadow:0 12px 24px rgba(0,0,0,.6);
+  transition:transform .15s, box-shadow .15s;
+}
+.floor__shot img{ display:block; width:100%; height:210px; object-fit:cover; filter:contrast(1.04) saturate(.97); }
+.floor__shot:nth-child(odd){ transform:rotate(-1.4deg); }
+.floor__shot:nth-child(even){ transform:rotate(1.4deg); }
+.floor__shot:hover{ transform:rotate(0) translateY(-3px); box-shadow:0 16px 30px rgba(0,0,0,.7), 0 0 26px rgba(232,178,72,.14); }
+.floor__cap{ text-align:center; font-family:var(--type); font-size:.78rem; letter-spacing:.12em; color:var(--whiskey-lit); margin:14px 0 0; }
+
+/* =======================================================================
+   THE FEATURED PRESSING (the latest single's Spotify embed)
+   Mirrors the Frost page's pinned player, dressed as a record in a frame.
+   ======================================================================= */
+.press{
+  margin:0 auto 24px; max-width:640px;
+  background:var(--paper-2); border:2px solid var(--ink);
+  box-shadow:0 14px 30px rgba(0,0,0,.55), 0 0 40px rgba(232,178,72,.08);
+}
+.press__bar{
+  display:flex; align-items:center; gap:10px;
+  background:var(--ink); color:var(--paper-1);
+  font-family:var(--type); letter-spacing:.1em; font-size:.78rem; padding:9px 13px;
+}
+.press__dot{ width:9px; height:9px; border-radius:50%; background:var(--red); box-shadow:0 0 8px var(--red); flex:0 0 auto; }
+.press iframe{ display:block; width:100%; border:0; }
+.press__links{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; padding:12px; }
+
+/* A single's streaming links — the same struck-metal look as the social chips,
+   but its own class so the #REPLACE-hiding pass never touches these real ones. */
+.play-link{
+  font-family:var(--type); font-size:.74rem; letter-spacing:.08em; text-decoration:none;
+  color:var(--ink); background:var(--paper-3); border:2px solid var(--ink);
+  padding:6px 11px; box-shadow:2px 2px 0 var(--ink);
+}
+.play-link:hover{ background:var(--gold-lit); color:var(--ink); }
+.side__plays{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:8px; }
 
 /* =======================================================================
    THE DATES
@@ -570,15 +732,22 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 /* =======================================================================
    FOOTER
    ======================================================================= */
+/* The footer sits directly on the dark room, so its ink here is light. */
 .foot{ margin-top:34px; text-align:center; }
-.foot__line{ font-family:var(--type); letter-spacing:.06em; color:var(--ink-soft); margin:6px 0; }
-.foot__small{ font-size:.8rem; color:var(--ink-faint); }
+.foot .rule--fat{ border-top-color:var(--whiskey); border-bottom-color:var(--whiskey); opacity:.8; }
+.foot__line{ font-family:var(--type); letter-spacing:.06em; color:var(--paper-3); margin:6px 0; }
+.foot__small{ font-size:.8rem; color:var(--paper-4); }
+.foot a{ color:var(--whiskey-lit); }
+.foot a:hover{ color:var(--paper-1); }
 
 /* =======================================================================
    RESPONSIVE
    ======================================================================= */
 @media (max-width:720px){
   .victrola{ grid-template-columns:1fr; }
+  .heads{ grid-template-columns:1fr; }
+  .floor{ grid-template-columns:repeat(2,1fr); }
+  .floor__shot img{ height:170px; }
   .about{ grid-template-columns:1fr; }
   .about__plate{ max-width:260px; margin:0 auto; }
   .booking{ grid-template-columns:1fr; }
