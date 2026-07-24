@@ -12,6 +12,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "5179"],
       "port": 5179
+    },
+    {
+      "name": "frost-site-3",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5180"],
+      "port": 5180
     }
   ]
 }

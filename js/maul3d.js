@@ -459,6 +459,14 @@
         cam.dist = Math.max(MIN_DIST, Math.min(MAX_DIST, dist));
       },
       pan: pan,
+      /* The same move in world axes. Grab-and-drag already has its answer in
+         world units - routing it through pan() would only rotate it into the
+         camera's axes and straight back out again. */
+      panWorld: function (dx, dz) {
+        cam.tx += dx;
+        cam.tz += dz;
+        clampTarget();
+      },
       /* Snap to the nearest quarter turn, for a button or a key: a maul is
          built on a square grid and the four corner views are the ones a player
          actually wants to flick between. */
@@ -517,6 +525,22 @@
       var dx=b[0]-a[0], dy=b[1]-a[1], dz=b[2]-a[2];
       var l = Math.hypot(dx,dy,dz) || 1;
       return { o: a, d: [dx/l, dy/l, dz/l] };
+    }
+
+    /* Where a pixel's ray meets the ground plane, in world units. This is the
+       anchor drag-panning holds on to, so it re-derives the camera rather than
+       reading the matrices the last frame left behind: a drag fires several
+       moves between frames, and a move that answers for where the camera was
+       two moves ago pans by its own correction all over again.
+       Null above the horizon - at a low pitch the top of the view is sky, and
+       sky has no point under the finger to hold. */
+    function groundAt(px, py) {
+      var w = canvas.width, h = canvas.height;
+      updateCamera(w, h);
+      var r = unproject((px / w) * 2 - 1, 1 - (py / h) * 2);
+      if (!r || Math.abs(r.d[1]) < 1e-6) return null;
+      var t = -r.o[1] / r.d[1];
+      return t > 0 ? { x: r.o[0] + r.d[0] * t, z: r.o[2] + r.d[2] * t } : null;
     }
 
     /* Height of the solid standing on a cell, in world units, or 0 for open
@@ -1171,6 +1195,7 @@
       camera: camera,
       draw: draw,
       pick: pick,
+      groundAt: groundAt,
       instanceCount: function () { return nInst; },
       effectCount: function () { return nFx; },
       /* Context loss is a real mobile behaviour, not a hypothetical: the

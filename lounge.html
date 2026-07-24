@@ -105,6 +105,10 @@
     flex-direction:column; align-items:center; justify-content:center; gap:10px;
     text-align:center; color:#eafcff; padding:16px; box-sizing:border-box;
     background:rgba(3,10,18,.72);
+    /* Undo the screen's line-height:0 (that one is only there to kill the
+       canvas baseline gap). Inherited, it gives every line here zero height,
+       so the title and the blinking hint pile up on the same pixel row. */
+    line-height:1.4;
   }
   .arcade__msg[hidden]{ display:none; }
   .arcade__msg b{ font-size:1.1rem; letter-spacing:3px; color:#38e6ff;
@@ -380,6 +384,9 @@
     touch-action:none;
   }
   #wm-canvas-3d[hidden], #wm-canvas[hidden]{ display:none; }
+  /* The 3D board's drag moves the camera, so it says so while it's moving.
+     The crosshair stays for the resting state: a tap there still builds. */
+  #wm-canvas-3d.is-panning{ cursor:grabbing; }
   /* An explicit ratio, because this canvas's backing store is rewritten to
      match its measured box every resize. With height:auto the display height
      comes from the width/height ATTRIBUTES, so measuring the box and writing
@@ -6519,18 +6526,28 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
      click the tower you can see rather than the tile it leans over; only then
      fall back to inverting the projection for the bare floor. Same problem the
      room solves for its cabinets, one grid larger. */
+  /* Client point -> the 3D canvas's backing pixels, with the same content-box
+     correction clientPx() makes for the 2D board and for the same reason: the
+     canvas wears a 3px ridge, and measuring through the border box puts every
+     tap a couple of pixels off. */
+  function px3D(cx, cy) {
+    if (!cv3d.clientWidth || !cv3d.clientHeight) return null;
+    var r = cv3d.getBoundingClientRect();
+    var bx = (r.width - cv3d.clientWidth) / 2, by = (r.height - cv3d.clientHeight) / 2;
+    return { x: (cx - r.left - bx) * (cv3d.width / cv3d.clientWidth),
+             y: (cy - r.top - by) * (cv3d.height / cv3d.clientHeight) };
+  }
+  function groundAt3D(cx, cy) {
+    var p = px3D(cx, cy);
+    return p ? gl3d.groundAt(p.x, p.y) : null;
+  }
   function cellAt(ev) {
     /* In 3D the renderer owns the projection, so it owns the inverse too: it
        unprojects the pixel to a ray and walks the grid. Same contract either
        way - a cell index, or -1. */
     if (mode3d && gl3d) {
-      var r3 = cv3d.getBoundingClientRect();
-      if (!cv3d.clientWidth || !cv3d.clientHeight) return -1;
-      var bx3 = (r3.width - cv3d.clientWidth) / 2;
-      var by3 = (r3.height - cv3d.clientHeight) / 2;
-      return gl3d.pick(
-        (ev.clientX - r3.left - bx3) * (cv3d.width / cv3d.clientWidth),
-        (ev.clientY - r3.top - by3) * (cv3d.height / cv3d.clientHeight));
+      var p3 = px3D(ev.clientX, ev.clientY);
+      return p3 ? gl3d.pick(p3.x, p3.y) : -1;
     }
     /* Through the camera, so hit-testing follows the pan and zoom for free -
        the two passes below never learn that the view can move. */
@@ -6617,6 +6634,10 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
          same point along with you - the whole gesture in one equation. */
       pinch = { d: s.d, z: zoom, w: clientToWorld(s.mx, s.my) };
     }
+    /* A second finger says the first one was never a build. In 3D that press
+       is still only pending, so it's dropped rather than refunded - which is
+       the whole reason the wait is worth having. */
+    endTap();
     undoStroke();
     endPaint();
   }
@@ -6649,6 +6670,74 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
      touch gesture owns the camera. */
   var orbitDrag = null;
 
+  /* ---- 3D: a drag moves the view, a tap builds ----
+     On the flat board a drag can only mean one thing, so it paints a wall. In
+     3D there is a second thing it could mean - the camera - and painting had
+     taken the gesture by default. That was the wrong way round: it left the
+     view movable only by the middle button or a second finger, and every
+     attempt to just look around laid a trail of walls that had to be sold
+     back. So in 3D the press picks a side. Travel past a few pixels and it
+     belongs to the camera; release without travelling and it is the build the
+     press looked like.
+     The cost is that a 3D drag no longer paints a line of wall in one stroke.
+     That is a real loss, and it is still the right trade: a wall you place one
+     tap at a time beats a view you cannot move. The 2D board keeps its
+     painting, where nothing competes for the gesture. */
+  var TAP_SLOP = 6;      /* px of travel before a press stops being a tap */
+  var tapPress = null;   /* a 3D press that hasn't picked its side yet */
+  var viewDrag = null;   /* ...once it went to the camera */
+
+  function dragView(ev) {
+    var g = viewDrag.anchor && groundAt3D(ev.clientX, ev.clientY);
+    if (g) {
+      /* Hold the ground the press landed on under the pointer - the board
+         follows your finger exactly, at any pitch or zoom, because it is the
+         same point being solved for rather than a guess at a scale factor.
+         Re-solved every move rather than integrated, so it can't drift. */
+      gl3d.camera.panWorld(viewDrag.anchor.x - g.x, viewDrag.anchor.z - g.z);
+    } else {
+      /* The press or the pointer is on sky, which happens at a low pitch where
+         the top of the view clears the horizon. No ground to hold, so fall
+         back to moving by what a pixel spans at the board's own depth. The
+         vertical divisor is the foreshortening: the flatter the camera, the
+         more ground a pixel of screen height covers. */
+      var st = gl3d.camera.state();
+      var k = 2 * st.dist * Math.tan(0.425) / Math.max(1, cv3d.clientHeight);
+      gl3d.camera.pan(-(ev.clientX - viewDrag.x) * k,
+                      (ev.clientY - viewDrag.y) * k /
+                        Math.max(0.35, Math.sin(st.pitch)));
+    }
+    viewDrag.x = ev.clientX;
+    viewDrag.y = ev.clientY;
+    dirty = true;
+  }
+
+  /* What the press would have done immediately, had it not been waiting to see
+     whether it was a drag. */
+  function tapCell(c) {
+    if (c < 0) return;
+    if (built[c]) {
+      /* Tapping a built tower selects it - the upgrade/sell strip below the
+         screen is where the actions live, so a fat finger can reach them. */
+      sel = (sel === built[c]) ? null : built[c];
+      note = "";
+      dirty = true;
+      return;
+    }
+    sel = null;
+    note = "";
+    lay(c);
+    /* A tap is a stroke of one and it is already finished, so it must not be
+       left on the rollback list for a later pinch to refund. */
+    stroke.length = 0;
+    dirty = true;
+  }
+  function endTap() {
+    tapPress = null;
+    viewDrag = null;
+    if (cv3d) cv3d.classList.remove("is-panning");
+  }
+
   function onDown(ev) {
     var target = ev.currentTarget;
     if (isTouch(ev)) {
@@ -6676,6 +6765,18 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     }
     if (state !== STATE.PLAY) return;
     var c = cellAt(ev);
+    /* In 3D nothing is decided yet - not even a press that missed the board,
+       which is a perfectly good place to start dragging the view from. The
+       cell it landed on is remembered in case the press turns out to be a
+       tap. */
+    if (mode3d && gl3d) {
+      tapPress = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, cell: c };
+      ev.preventDefault();
+      if (target.setPointerCapture) {
+        try { target.setPointerCapture(ev.pointerId); } catch (e) {}
+      }
+      return;
+    }
     if (c < 0) return;
     ev.preventDefault();
     if (built[c]) {
@@ -6715,6 +6816,18 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       dirty = true;
       return;
     }
+    if (tapPress) {
+      if (Math.abs(ev.clientX - tapPress.x) < TAP_SLOP &&
+          Math.abs(ev.clientY - tapPress.y) < TAP_SLOP) return;
+      /* Past the slop, so it's the camera's. The anchor is taken from where
+         the press landed, not from here: the camera hasn't moved yet, so that
+         point is still the one under the pointer. */
+      viewDrag = { x: ev.clientX, y: ev.clientY,
+                   anchor: groundAt3D(tapPress.x, tapPress.y) };
+      tapPress = null;
+      cv3d.classList.add("is-panning");
+    }
+    if (viewDrag) { dragView(ev); return; }
     if (pinch && pinch.drag) {
       var q = clientPx(ev.clientX, ev.clientY);
       camX = pinch.w.x - q.x / (DPR * zoom);
@@ -6737,11 +6850,17 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     dropPtr(ev.pointerId);
     if (pinch && pinch.drag) pinch = null;
     orbitDrag = null;
+    /* Lifted without ever travelling: the press was a tap after all, so pay
+       out the build it was holding. */
+    if (tapPress && tapPress.id === ev.pointerId) tapCell(tapPress.cell);
+    endTap();
     endPaint();
   }
   function onLeave(ev) {
     dropPtr(ev.pointerId);
     orbitDrag = null;
+    /* No build here: a press that left the canvas was never a tap on it. */
+    endTap();
     endPaint();
     hoverCell = -1;
   }
