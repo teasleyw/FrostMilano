@@ -590,6 +590,15 @@
          body separates from it far better than another pale cube did. */
       penBack:  hexToRGB("#22323f"), penBelly: hexToRGB("#eafcff"),
       penWarm:  hexToRGB("#ff9f42"), penEye:   hexToRGB("#0b1720"),
+      /* The boss is carved ice with something burning in it. The body is cold
+         and only the core keeps the warm boss colour, so "that one is the
+         boss" is a shape and a light rather than a tint - which matters
+         because the tint is what stopped working the moment bodies went dark. */
+      golem:    hexToRGB("#6d93aa"), golemDark: hexToRGB("#425e70"),
+      /* The rival's hound keeps the sends' pink. That colour is the only thing
+         telling you a creep came off the other board, so the model darkens it
+         for the back and keeps it bright underneath rather than replacing it. */
+      wolfDark: hexToRGB("#c9506d"),
       ghost:  hexToRGB("#38e6ff"), sel: hexToRGB("#eafcff"),
       hot:    hexToRGB("#eafcff"), frost: hexToRGB("#b8ecff")
     };
@@ -724,9 +733,149 @@
              0.10, 0.17, 0.035, back);
       }
 
+      /* On the crown and the shoulders, not through them: the head runs
+         0.34-0.48, so a plate at mid-height cuts a band across the face. */
       if (slowed) {
-        part(0, 0.43, 0, 0.13, 0.035, 0.15, COL.frost, 0.4);
+        part(0, 0.47, 0, 0.13, 0.035, 0.15, COL.frost, 0.4);
         part(-0.02, 0.32, 0, 0.16, 0.03, 0.20, COL.frost, 0.4);
+      }
+    }
+
+    /* ---- the ice wolf: what the rival sends back ----
+       Deliberately the opposite shape to the penguin rather than a better one.
+       The penguin is tall and occupies a quarter of its tile; this is low and
+       runs the whole length of one. At the size these are actually seen, long
+       versus short is a read that survives when a beak and a pair of eyes do
+       not - and telling a sent creep from a wave creep is the read that
+       decides whether you understand why you are losing lives.
+
+       It keeps the sends' pink, only darker on the back and full strength
+       underneath. Colour is still doing the work here; the silhouette is
+       insurance for when the board is busy or the player is colourblind. */
+    function drawWolf(cr, px, pz, t, base) {
+      var face = creepFacing(cr);
+      var slowed = cr.slowMul < 1;
+      var seed = cr.seed || 0;
+      /* A trot, so the legs go in diagonal pairs. One sine and a phase flip
+         per leg is the whole gait, and it is the difference between a body
+         moving and a body being dragged. */
+      var sp = slowed ? 0.35 : 1;
+      var tr = t * 9 * sp + seed;
+      var bob = Math.abs(Math.sin(tr)) * 0.012 * sp;
+
+      /* The bright pink goes on the MASS, not on trim. Carrying it as accents
+         over a dark coat looked like a brown animal from three tiles away -
+         the lighting floor is 0.62, so a mid tone lands darker than it reads
+         in a swatch, and the one thing this model must never lose is that it
+         came off the rival's board. The dark tone is demoted to legs, ears and
+         tail, where it separates the limbs from the body instead. */
+      var coat = slowed ? mixCol(COL.sent, COL.frost, 0.45) : COL.sent;
+      var dark = slowed ? mixCol(COL.wolfDark, COL.frost, 0.3) : COL.wolfDark;
+
+      /* Creeps carry a little emissive, and it is not decoration - the cube
+         these replaced was drawn at glow 0.45 and that is why it looked pink.
+         The shader's ambient floor is 0.62, so a fully lit side face turns
+         #ff7b9c into roughly [0.62, 0.30, 0.38]: dusty maroon, which is what
+         this model was until the glow came back. Bodies on a dark board need
+         the lift to hold a hue at all; the value below is under the cube's so
+         the form still shades instead of going flat. */
+      function part(f, u, s, lf, lu, ls, col, glow) {
+        modelPart(px, base, pz, face, f, u + bob, s, lf, lu, ls, col,
+                  glow === undefined ? 0.4 : glow);
+      }
+
+      var legs = [[0.16, -0.085, 0], [0.16, 0.085, Math.PI],
+                  [-0.14, -0.085, Math.PI], [-0.14, 0.085, 0]];
+      for (var i = 0; i < 4; i++) {
+        var ph = tr + legs[i][2];
+        var lift = Math.max(0, Math.sin(ph)) * 0.05 * sp;
+        var swing = Math.cos(ph) * 0.035 * sp;
+        modelPart(px, base, pz, face, legs[i][0] + swing, lift, legs[i][1],
+                  0.08, 0.15, 0.075, dark, 0.22);
+      }
+
+      part(0, 0.14, 0, 0.40, 0.15, 0.19, coat);            /* barrel    */
+      part(0.14, 0.15, 0, 0.17, 0.17, 0.22, coat);         /* chest     */
+      part(-0.16, 0.13, 0, 0.16, 0.19, 0.22, coat);        /* haunch    */
+      part(0, 0.145, 0, 0.34, 0.05, 0.14, dark);           /* underside */
+      part(0.25, 0.21, 0, 0.13, 0.11, 0.14, coat);         /* neck      */
+      part(0.34, 0.19, 0, 0.18, 0.13, 0.16, coat);         /* head      */
+      part(0.45, 0.195, 0, 0.11, 0.075, 0.10, dark);       /* snout     */
+      part(0.30, 0.31, -0.052, 0.05, 0.08, 0.04, dark);
+      part(0.30, 0.31, 0.052, 0.05, 0.08, 0.04, dark);
+      part(0.41, 0.255, -0.058, 0.03, 0.03, 0.028, COL.hot, 0.9);
+      part(0.41, 0.255, 0.058, 0.03, 0.03, 0.028, COL.hot, 0.9);
+
+      /* The tail goes first when it is nearly dead - the one part whose loss
+         changes the outline without changing how the thing moves. */
+      if (cr.hp / cr.max >= 0.33) {
+        part(-0.28, 0.22, 0, 0.16, 0.055, 0.055, dark);
+      }
+      if (slowed) {
+        part(-0.02, 0.28, 0, 0.30, 0.035, 0.21, COL.frost, 0.4);
+      }
+    }
+
+    /* ---- the rime golem: the boss, every fifth wave ----
+       Built to be read as mass before it is read as a creature: no neck, a
+       head far too small for the shoulders, and arms hung past the hips. The
+       shoulders are the widest thing on the board, which is the whole trick -
+       at a glance you are told "this is the wave you are about to lose to"
+       without having to find the health bar.
+
+       The core is the only lit part, and it carries the warm boss colour the
+       old cube used. That is on purpose: the boss tint had to survive being
+       moved onto a cold body, so it moved onto a light instead of a surface. */
+    function drawGolem(cr, px, pz, t, base) {
+      var face = creepFacing(cr);
+      var slowed = cr.slowMul < 1;
+      var sp = slowed ? 0.4 : 1;
+      var st = t * 3 * sp + (cr.seed || 0);
+      var rise = Math.abs(Math.sin(st)) * 0.025 * sp;
+
+      var body = slowed ? mixCol(COL.golem, COL.frost, 0.35) : COL.golem;
+      var dark = slowed ? mixCol(COL.golemDark, COL.frost, 0.3) : COL.golemDark;
+
+      function part(f, u, s, lf, lu, ls, col, glow) {
+        modelPart(px, base, pz, face, f, u + rise, s, lf, lu, ls, col, glow);
+      }
+
+      /* Legs stay on the floor like the penguin's, and for the same reason. */
+      for (var i = -1; i <= 1; i += 2) {
+        var lift = Math.max(0, Math.sin(st + (i < 0 ? 0 : Math.PI))) * 0.05 * sp;
+        modelPart(px, base, pz, face, 0, lift, i * 0.13, 0.17, 0.22, 0.17, dark);
+      }
+
+      part(0, 0.20, 0, 0.26, 0.13, 0.36, dark);            /* hips      */
+      part(0, 0.31, 0, 0.28, 0.26, 0.42, body);            /* torso     */
+      part(0, 0.55, 0, 0.30, 0.15, 0.56, body);            /* shoulders */
+      part(0.02, 0.70, 0, 0.17, 0.16, 0.19, body);         /* head      */
+      part(0.10, 0.76, -0.052, 0.03, 0.035, 0.03, COL.boss, 1);
+      part(0.10, 0.76, 0.052, 0.03, 0.035, 0.03, COL.boss, 1);
+
+      /* The core sits proud of the chest so it still shows when the camera is
+         behind the shoulders, and pulses on the step rather than on a clock of
+         its own - a boss that breathes in time with its own walk. */
+      part(0.135, 0.38, 0, 0.09, 0.15, 0.17, COL.boss, 1);
+
+      /* Arms swing against the legs. A golem down to one is the clearest
+         damage read on the board, and it costs two boxes to say it. */
+      var hurt = cr.hp / cr.max < 0.33;
+      for (i = -1; i <= 1; i += 2) {
+        if (hurt && i < 0) continue;
+        var sw = -Math.cos(st + (i < 0 ? 0 : Math.PI)) * 0.045 * sp;
+        part(sw, 0.26, i * 0.31, 0.17, 0.32, 0.17, dark);
+        part(sw, 0.16, i * 0.31, 0.21, 0.13, 0.21, body);
+      }
+
+      /* Rime forms as a pad on each shoulder rather than one slab across them.
+         A slab spanning the full width sits exactly where the head starts and
+         reads as a tray being carried, which is a good way to lose the one
+         proportion - tiny head, huge shoulders - the whole model is built on. */
+      if (slowed) {
+        part(0, 0.67, -0.20, 0.24, 0.05, 0.17, COL.frost, 0.4);
+        part(0, 0.67, 0.20, 0.24, 0.05, 0.17, COL.frost, 0.4);
+        part(-0.03, 0.53, 0, 0.24, 0.04, 0.40, COL.frost, 0.4);
       }
     }
 
@@ -799,21 +948,19 @@
         }
       }
 
-      /* Creeps. The neutral bodies are modelled; bosses and the rival's sends
-         are still the bobbing cube they always were, waiting on their own
-         models, and keep their colours in the meantime so the three kinds of
-         creep stay told apart while the roster is half built. */
+      /* Creeps. Three kinds, three bodies: the wave walks penguins, the rival
+         sends wolves, and every fifth wave is a golem. The kinds were told
+         apart by colour alone before, which stopped being enough the moment a
+         creep could be dark - and colour was already carrying the slow. Shape
+         carries the kind now, and colour is left to say slowed. */
       var creeps = world.getCreeps();
       for (i = 0; i < creeps.length; i++) {
         var cr = creeps[i];
         if (cr.gone) continue;
         var p = world.creepPos(cr);
-        if (!cr.boss && !cr.sent) { drawPenguin(cr, p.x, p.y, t, 0.10); continue; }
-        var size = cr.boss ? 0.52 : 0.34;
-        var hop = Math.abs(Math.sin(t * 7 + (cr.seed || 0))) * (cr.boss ? 0.10 : 0.16);
-        var cc = cr.sent ? COL.sent
-               : (cr.slowMul < 1 ? COL.creepSlow : COL.creep);
-        push(p.x, 0.10 + hop, p.y, size, size, size, cc, 0.45);
+        if (cr.boss) drawGolem(cr, p.x, p.y, t, 0.10);
+        else if (cr.sent) drawWolf(cr, p.x, p.y, t, 0.10);
+        else drawPenguin(cr, p.x, p.y, t, 0.10);
       }
 
       /* The ghost of what you're about to build, and the selection ring. */
