@@ -411,12 +411,16 @@
        field of view a board of N tiles subtends the view at about 1.15N. */
     var FIT = Math.max(COLS, ROWS) * 1.15;
     /* The heading the board is played from, and the one RESET VIEW returns to.
-       180 degrees: the gate at the back of the shot, the creeps walking down
-       toward the drain and the player, the way the Warcraft III mauls are read.
-       PITCH0 is held with it. LOCKED freezes both - orbit, snap and the rotation
-       half of a pinch all become no-ops - so the only camera verbs left are pan
+       90 degrees: the camera sits past the drain looking straight up the lane,
+       so the gate is at the back of the shot and the creeps march head-on down
+       the screen - toward the drain and the player - instead of crossing it.
+       (180, which this used to be, sat the run side-on, walking left to right;
+       the quarter-turn is what makes them come at you, and it drops the drain -
+       the tile you defend - to the near edge under the deck.) PITCH0 is held
+       with it. LOCKED freezes both - orbit, snap and the rotation half of a
+       pinch all become no-ops - so the only camera verbs left are pan
        (edge-scroll or drag) and zoom. */
-    var YAW0 = Math.PI, PITCH0 = 0.95, LOCKED = true;
+    var YAW0 = Math.PI / 2, PITCH0 = 0.95, LOCKED = true;
     var cam = {
       tx: (COLS - 1) / 2, tz: (ROWS - 1) / 2,
       yaw: YAW0, pitch: PITCH0, dist: FIT
