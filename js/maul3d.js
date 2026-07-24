@@ -24,6 +24,8 @@
 (function (global) {
   "use strict";
 
+  var TAU = Math.PI * 2;
+
   /* ---------------- mat4 ----------------
      Column-major, the order WebGL wants, so these go straight into
      uniformMatrix4fv with no transpose. */
@@ -121,6 +123,74 @@
     "}"
   ].join("\n");
 
+  /* ---------------- the effects shader ----------------
+     Shots, hits and snow are light rather than matter. They have to glow
+     through the maze instead of hiding behind it, stack where they overlap,
+     and be gone a fifth of a second later - none of which the opaque cube
+     above does, and all of which it would be wrong to teach it.
+
+     So: a second primitive, and only one. A camera-facing quad stretched
+     between two world points. Hand it two different points and it is a beam;
+     hand it the same point twice and it collapses to a round sprite, because
+     the shader gives a zero-length segment a length of one sprite-height
+     along the camera's own up axis. A bolt, its muzzle flash, an ember off a
+     kill, a segment of a shockwave and a snowflake are then the same instance
+     with different endpoints - which is the cube trick again, and it means the
+     entire effects layer is one more draw call on top of the board's one. */
+  var FX_VERT = [
+    "attribute vec2 aQuad;",             /* x: -0.5..0.5 across, y: 0..1 along */
+    "attribute vec3 iA;",
+    "attribute vec3 iB;",
+    "attribute vec3 iColor;",
+    "attribute float iSize;",
+    "attribute float iAlpha;",
+    "uniform mat4 uViewProj;",
+    "uniform vec3 uEye;",
+    "uniform vec3 uCamUp;",
+    "uniform vec3 uCamRight;",
+    "varying vec3 vColor;",
+    "varying float vAlpha;",
+    "varying vec2 vQuad;",
+    "varying float vPoint;",
+    "void main() {",
+    "  vec3 seg = iB - iA;",
+    "  float isPt = step(length(seg), 1e-4);",
+    "  vec3 a = mix(iA, iA - uCamUp * iSize * 0.5, isPt);",
+    "  vec3 b = mix(iB, iA + uCamUp * iSize * 0.5, isPt);",
+    "  vec3 axis = normalize(mix(seg, uCamUp, isPt));",
+    "  vec3 side = cross(axis, uEye - mix(a, b, 0.5));",
+    "  float sl = length(side);",
+    /* A bolt fired straight down the camera's own axis has no well-defined
+       sideways. Any perpendicular will do - on screen it is a dot either way. */
+    "  side = sl > 1e-4 ? side / sl : uCamRight;",
+    "  vColor = iColor; vAlpha = iAlpha; vQuad = aQuad; vPoint = isPt;",
+    "  vec3 world = mix(a, b, aQuad.y) + side * (aQuad.x * iSize);",
+    "  gl_Position = uViewProj * vec4(world, 1.0);",
+    "}"
+  ].join("\n");
+
+  var FX_FRAG = [
+    "precision mediump float;",
+    "varying vec3 vColor;",
+    "varying float vAlpha;",
+    "varying vec2 vQuad;",
+    "varying float vPoint;",
+    "void main() {",
+    "  float u = vQuad.x * 2.0;",
+    "  float v = vQuad.y * 2.0 - 1.0;",
+    /* A beam falls off across its width and holds along its length; a sprite
+       falls off in every direction. Same quad, one mix. Squaring the falloff
+       is what stops a quad looking like a quad - a linear edge reads as the
+       polygon it is, a squared one reads as glare. */
+    "  float f = 1.0 - mix(abs(u), min(1.0, length(vec2(u, v))), vPoint);",
+    "  f *= f;",
+    /* Straight additive, intensity carried in the colour: overlapping effects
+       pile up into something brighter rather than the last one drawn winning,
+       which is how a cluster of kills should read. */
+    "  gl_FragColor = vec4(vColor * (f * vAlpha), 1.0);",
+    "}"
+  ].join("\n");
+
   function compile(gl, type, src) {
     var s = gl.createShader(type);
     gl.shaderSource(s, src);
@@ -150,6 +220,16 @@
     return { pos: new Float32Array(p), norm: new Float32Array(n), count: p.length / 3 };
   }
 
+  /* Two triangles in the parameter space the effects shader expects: across
+     the ribbon in x, along it in y. It never becomes a world-space quad here -
+     the vertex shader builds that per instance from the camera. */
+  function quadGeometry() {
+    return new Float32Array([
+      -0.5, 0,  0.5, 0,  0.5, 1,
+      -0.5, 0,  0.5, 1, -0.5, 1
+    ]);
+  }
+
   function hexToRGB(hex) {
     return [parseInt(hex.slice(1, 3), 16) / 255,
             parseInt(hex.slice(3, 5), 16) / 255,
@@ -172,15 +252,18 @@
 
     var COLS = world.cols, ROWS = world.rows;
 
-    var prog = gl.createProgram();
-    gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      throw new Error("maul3d link: " + gl.getProgramInfoLog(prog));
+    function link(vs, fs) {
+      var p = gl.createProgram();
+      gl.attachShader(p, compile(gl, gl.VERTEX_SHADER, vs));
+      gl.attachShader(p, compile(gl, gl.FRAGMENT_SHADER, fs));
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+        throw new Error("maul3d link: " + gl.getProgramInfoLog(p));
+      }
+      return p;
     }
-    gl.useProgram(prog);
 
+    var prog = link(VERT, FRAG);
     var A = {
       pos: gl.getAttribLocation(prog, "aPos"),
       norm: gl.getAttribLocation(prog, "aNormal"),
@@ -193,6 +276,40 @@
       viewProj: gl.getUniformLocation(prog, "uViewProj"),
       light: gl.getUniformLocation(prog, "uLight")
     };
+
+    var fxProg = link(FX_VERT, FX_FRAG);
+    var FA = {
+      quad: gl.getAttribLocation(fxProg, "aQuad"),
+      a: gl.getAttribLocation(fxProg, "iA"),
+      b: gl.getAttribLocation(fxProg, "iB"),
+      color: gl.getAttribLocation(fxProg, "iColor"),
+      size: gl.getAttribLocation(fxProg, "iSize"),
+      alpha: gl.getAttribLocation(fxProg, "iAlpha")
+    };
+    var FU = {
+      viewProj: gl.getUniformLocation(fxProg, "uViewProj"),
+      eye: gl.getUniformLocation(fxProg, "uEye"),
+      camUp: gl.getUniformLocation(fxProg, "uCamUp"),
+      camRight: gl.getUniformLocation(fxProg, "uCamRight")
+    };
+
+    /* Attribute enable state is global in WebGL 1 - there are no vertex array
+       objects here - and it outlives the program that set it. With two passes
+       the second can inherit an array the first left enabled at an index it
+       reads for something else, which on a strict driver is a dropped draw
+       rather than a visual glitch. So each pass names its whole set and the
+       rest are turned off. */
+    var ATTRIBS = [];
+    [A, FA].forEach(function (set) {
+      Object.keys(set).forEach(function (k) {
+        if (set[k] >= 0 && ATTRIBS.indexOf(set[k]) < 0) ATTRIBS.push(set[k]);
+      });
+    });
+    function onlyAttribs(active) {
+      for (var i = 0; i < ATTRIBS.length; i++) {
+        if (active.indexOf(ATTRIBS[i]) < 0) gl.disableVertexAttribArray(ATTRIBS[i]);
+      }
+    }
 
     var cube = cubeGeometry();
     var bufPos = gl.createBuffer();
@@ -222,6 +339,57 @@
       inst[i+6]=c[0]; inst[i+7]=c[1]; inst[i+8]=c[2];
       inst[i+9]=glow || 0;
       nInst++;
+    }
+
+    /* The effects buffer, same growable arrangement. It is refilled from
+       scratch every frame like the board's, and for the same reason: the
+       simulation already holds the live shots and hits, so the renderer
+       keeping its own copy could only ever be a way to disagree with it. */
+    var quad = quadGeometry();
+    var bufQuad = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufQuad);
+    gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+
+    var FX_STRIDE = 11;              /* a3 + b3 + colour3 + size1 + alpha1 */
+    var fxCap = 2048;
+    var fxInst = new Float32Array(fxCap * FX_STRIDE);
+    var bufFx = gl.createBuffer();
+    var nFx = 0;
+
+    function fxSeg(ax, ay, az, bx, by, bz, size, c, alpha) {
+      if (alpha <= 0.002 || size <= 0) return;
+      if (nFx >= fxCap) {
+        /* A long boss wave can put a lot of embers in the air at once. Grow
+           rather than drop: a burst that thins out under load looks like a
+           bug in the game, not a budget in the renderer. */
+        fxCap *= 2;
+        var bigger = new Float32Array(fxCap * FX_STRIDE);
+        bigger.set(fxInst);
+        fxInst = bigger;
+      }
+      var i = nFx * FX_STRIDE;
+      fxInst[i]=ax; fxInst[i+1]=ay; fxInst[i+2]=az;
+      fxInst[i+3]=bx; fxInst[i+4]=by; fxInst[i+5]=bz;
+      fxInst[i+6]=c[0]; fxInst[i+7]=c[1]; fxInst[i+8]=c[2];
+      fxInst[i+9]=size; fxInst[i+10]=alpha;
+      nFx++;
+    }
+    /* A sprite is a segment that goes nowhere. */
+    function fxPoint(x, y, z, size, c, alpha) {
+      fxSeg(x, y, z, x, y, z, size, c, alpha);
+    }
+    /* A ring lying flat on the board, drawn as tangent dashes rather than a
+       closed band: the gaps keep it reading as a ring from a low camera, where
+       a solid one foreshortens into a smear, and they cost less. */
+    var RING_SEGS = 24;
+    function fxRing(cx, cz, y, r, size, c, alpha) {
+      var step = TAU / RING_SEGS;
+      for (var s = 0; s < RING_SEGS; s++) {
+        var a0 = s * step, a1 = a0 + step * 0.6;
+        fxSeg(cx + Math.cos(a0) * r, y, cz + Math.sin(a0) * r,
+              cx + Math.cos(a1) * r, y, cz + Math.sin(a1) * r,
+              size, c, alpha);
+      }
     }
 
     /* ---------------- camera ----------------
@@ -359,6 +527,9 @@
       if (!t) return 0;
       return towerHeight(t);
     }
+    /* Where a creep's middle is, and so where a shot should land and a kill
+       should burst. Creeps stand on 0.10 and are a third of a tile through. */
+    var CREEP_Y = 0.28;
     function towerHeight(t) {
       /* The 2D renderer's `h` is in screen pixels; here a tile is 1 unit, so
          the same silhouettes are expressed as a fraction of a tile. */
@@ -413,11 +584,150 @@
       plinth: hexToRGB("#1d4a63"),
       creep:  hexToRGB("#eafcff"), creepSlow: hexToRGB("#8ad9ff"),
       boss:   hexToRGB("#ffd68a"), sent: hexToRGB("#ff7b9c"),
-      ghost:  hexToRGB("#38e6ff"), sel: hexToRGB("#eafcff")
+      /* The penguin's own four, and the first two colours on the board that
+         aren't cold. Its back is dark on purpose: creeps only ever walk the
+         road, which is the brightest surface the renderer draws, so a dark
+         body separates from it far better than another pale cube did. */
+      penBack:  hexToRGB("#22323f"), penBelly: hexToRGB("#eafcff"),
+      penWarm:  hexToRGB("#ff9f42"), penEye:   hexToRGB("#0b1720"),
+      ghost:  hexToRGB("#38e6ff"), sel: hexToRGB("#eafcff"),
+      hot:    hexToRGB("#eafcff"), frost: hexToRGB("#b8ecff")
     };
     var towerCol = {};
     function towerColour(hex) {
       return towerCol[hex] || (towerCol[hex] = hexToRGB(hex));
+    }
+
+    /* ---------------- snow ----------------
+       The site's one recurring motif, and here it earns its keep twice: the
+       flat board's flakes are screen-space because a 2D camera has no depth to
+       give them, and these are world-space because a 3D one does. Falling
+       through the board rather than over it is the cheapest parallax cue the
+       renderer has, and parallax is the thing that tells you the camera moved.
+
+       The column follows the camera target and is sized off the view distance,
+       so panning to a corner or zooming out never leaves you looking at bare
+       sky. Positions are unit fractions, scaled at draw time. */
+    var FLAKES = [];
+    (function () {
+      for (var i = 0; i < 110; i++) {
+        FLAKES.push({ x: Math.random(), z: Math.random(), y: Math.random(),
+                      r: 0.55 + Math.random() * 0.85,
+                      v: 0.30 + Math.random() * 0.55,
+                      drift: Math.random() * TAU });
+      }
+    })();
+
+    /* ---------------- creep models ----------------
+       The renderer has one primitive, an axis-aligned box, and no per-instance
+       rotation. That reads as a limit on what a creep can be and is really a
+       decision about where the detail goes: a creep is thirty-odd pixels on a
+       phone, so silhouette and stance are the entire vocabulary and a rotation
+       matrix would buy nothing you could see at that size.
+
+       What the grid does buy is exact facing for free. Creeps step cell to
+       cell in cardinal directions only, so "turn to face the way you are
+       walking" is a swap of the x and z extents rather than a matrix - and a
+       body whose feet stride the direction it is actually travelling reads as
+       a creature far more strongly than any amount of modelled detail.
+
+       So a model is authored once, walking forward along +f, and these four
+       tables map that onto whichever heading the creep took. */
+    var FWD_X = [1, 0, -1, 0], FWD_Z = [0, 1, 0, -1];
+    var RGT_X = [0, -1, 0, 1], RGT_Z = [1, 0, -1, 0];
+
+    /* Last known heading per creep. The simulation gives a creep the same cell
+       for `cell` and `next` at spawn and again at the instant it arrives, and
+       a body that snapped to due-east on those frames would twitch its way
+       across the board - so a heading is remembered rather than recomputed
+       from nothing. Kept out here in a WeakMap because this file does not
+       write to game objects, and entries die with the creeps they key. */
+    var faceMem = new WeakMap();
+    function creepFacing(cr) {
+      var a = cr.cell, b = cr.next;
+      if (a === b) return faceMem.get(cr) || 1;
+      var f = (b % COLS) > (a % COLS) ? 0
+            : (b % COLS) < (a % COLS) ? 2
+            : b > a ? 1 : 3;
+      faceMem.set(cr, f);
+      return f;
+    }
+
+    /* One box of a model. (f, u, s) is its base corner in the creep's own
+       space - f forward along the walk, u up from the creep's feet, s to the
+       side - and (lf, lu, ls) its extents on those same axes. The facing swap
+       is the whole trick: forward is world x on two headings and world z on
+       the other two, so both the offset and the extents follow the same table
+       and a model never has to know which way it is pointing. */
+    function modelPart(cx, cy, cz, face, f, u, s, lf, lu, ls, col, glow) {
+      var fx = FWD_X[face], rx = RGT_X[face];
+      push(cx + f * fx + s * rx, cy + u, cz + f * FWD_Z[face] + s * RGT_Z[face],
+           fx ? lf : ls, lu, fx ? ls : lf, col, glow);
+    }
+
+    function mixCol(a, b, k) {
+      return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k,
+              a[2] + (b[2] - a[2]) * k];
+    }
+
+    /* ---- the penguin: waves 1-3, and the board's trash tier ----
+       A waddle is a weight shift, and a weight shift happens to be exactly
+       what a renderer without rotation can express: the body slides out over
+       the planted foot while the other one lifts clear. A real penguin also
+       rolls about its long axis, which is a rotation and so is not available -
+       but at this size the lateral shift alone carries it, and the alternating
+       feet sell the rest. */
+    function drawPenguin(cr, px, pz, t, base) {
+      var face = creepFacing(cr);
+      var slowed = cr.slowMul < 1;
+      /* Slow is a frost tower's whole job, so it has to be legible at a
+         glance. On the pale creeps that was a blue tint; on a body that is
+         already dark a tint does nothing, so here it is rime on the shoulders
+         and a waddle that drops to a third - which is the better signal
+         anyway, and the one the rest of the roster will inherit. */
+      var wad = Math.sin(t * 6.5 + (cr.seed || 0)) * (slowed ? 0.3 : 1);
+      var lean = wad * 0.035, rise = Math.abs(wad) * 0.018;
+
+      var back = slowed ? mixCol(COL.penBack, COL.frost, 0.28) : COL.penBack;
+      var belly = slowed ? mixCol(COL.penBelly, COL.frost, 0.5) : COL.penBelly;
+
+      function part(f, u, s, lf, lu, ls, col, glow) {
+        modelPart(px, base, pz, face, f, u + rise, s + lean, lf, lu, ls, col, glow);
+      }
+
+      /* Feet stay on the floor - they are the one part the lean and rise must
+         not carry, or the whole bird skates. */
+      for (var i = -1; i <= 1; i += 2) {
+        var lift = Math.max(0, -i * wad) * 0.03;
+        modelPart(px, base, pz, face, 0.05, lift, i * 0.055,
+                  0.12, 0.03, 0.07, COL.penWarm);
+      }
+
+      part(-0.11, 0.03, 0, 0.10, 0.05, 0.11, back);          /* tail   */
+      part(0, 0.03, 0, 0.21, 0.21, 0.25, back);              /* body   */
+      part(0, 0.24, 0, 0.19, 0.10, 0.22, back);              /* chest  */
+      part(0.075, 0.05, 0, 0.06, 0.20, 0.15, belly);         /* belly  */
+      part(0.012, 0.34, 0, 0.17, 0.14, 0.18, back);          /* head   */
+      part(0.078, 0.35, 0, 0.035, 0.08, 0.11, belly);        /* face   */
+      part(0.115, 0.375, 0, 0.075, 0.04, 0.055, COL.penWarm); /* beak  */
+      part(0.075, 0.425, -0.048, 0.03, 0.028, 0.028, COL.penEye);
+      part(0.075, 0.425, 0.048, 0.03, 0.028, 0.028, COL.penEye);
+
+      /* Flippers swing against the lean, which is the only counter-motion in
+         the model and does most of the work of making it look alive. A badly
+         hurt penguin is down to one: cheap, and it means a creep's health is
+         readable from its shape as well as from the bar above it. */
+      var hurt = cr.hp / cr.max < 0.33;
+      for (i = -1; i <= 1; i += 2) {
+        if (hurt && i < 0) continue;
+        part(-0.005, 0.10 + Math.max(0, i * wad) * 0.02, i * 0.128,
+             0.10, 0.17, 0.035, back);
+      }
+
+      if (slowed) {
+        part(0, 0.43, 0, 0.13, 0.035, 0.15, COL.frost, 0.4);
+        part(-0.02, 0.32, 0, 0.16, 0.03, 0.20, COL.frost, 0.4);
+      }
     }
 
     function draw(t) {
@@ -489,17 +799,19 @@
         }
       }
 
-      /* Creeps. Small cubes that bob: the walk cycle costs one sine and is
-         what stops a wave looking like it is sliding along a rail. */
+      /* Creeps. The neutral bodies are modelled; bosses and the rival's sends
+         are still the bobbing cube they always were, waiting on their own
+         models, and keep their colours in the meantime so the three kinds of
+         creep stay told apart while the roster is half built. */
       var creeps = world.getCreeps();
       for (i = 0; i < creeps.length; i++) {
         var cr = creeps[i];
         if (cr.gone) continue;
         var p = world.creepPos(cr);
+        if (!cr.boss && !cr.sent) { drawPenguin(cr, p.x, p.y, t, 0.10); continue; }
         var size = cr.boss ? 0.52 : 0.34;
         var hop = Math.abs(Math.sin(t * 7 + (cr.seed || 0))) * (cr.boss ? 0.10 : 0.16);
         var cc = cr.sent ? COL.sent
-               : cr.boss ? COL.boss
                : (cr.slowMul < 1 ? COL.creepSlow : COL.creep);
         push(p.x, 0.10 + hop, p.y, size, size, size, cc, 0.45);
       }
@@ -518,7 +830,113 @@
         push(st.sel.x, 0, st.sel.y, 1.06, 0.05, 1.06, COL.sel, 0.9);
       }
 
+      /* ---- effects ----
+         Emitted here, drawn in the second pass below. Everything is read from
+         the same beam and puff lists the flat board paints, so a shot that
+         happened is a shot both views show. */
+      nFx = 0;
+
+      /* Shots. Wide and soft under narrow and white, which is the pair of
+         strokes the flat board uses and for the same reason: one stroke reads
+         as wire, two read as light. */
+      var beams = world.getBeams();
+      for (i = 0; i < beams.length; i++) {
+        var b = beams[i];
+        var ba = Math.max(0, Math.min(1, b.t / 0.14));
+        /* The muzzle is the top of the tower that fired, looked up rather than
+           carried on the beam: a tower can be sold while its last shot is
+           still in the air, and the shot should still leave from where it
+           stood rather than from the floor. */
+        var mt = world.towerAt(b.x1, b.y1);
+        var my = mt ? 0.16 + towerHeight(mt) : 0.55;
+        var beamCol = towerColour(b.c);
+        /* b.w is a 2D line width in pixels; here a tile is one unit. */
+        var bw = b.w * 0.055;
+        fxSeg(b.x1, my, b.y1, b.x2, CREEP_Y, b.y2, bw * 3.4, beamCol, ba * 0.45);
+        fxSeg(b.x1, my, b.y1, b.x2, CREEP_Y, b.y2, bw, COL.hot, ba * 0.95);
+        fxPoint(b.x1, my, b.y1, 0.30 + bw * 2.5, beamCol, ba * 0.85);
+        fxPoint(b.x2, CREEP_Y, b.y2, 0.26, COL.hot, ba * 0.7);
+      }
+
+      /* Hits. A splash leaves a shockwave, a kill leaves embers. */
+      var puffs = world.getPuffs();
+      for (i = 0; i < puffs.length; i++) {
+        var pf = puffs[i];
+        if (pf.splash) {
+          /* Opening as it fades, at the radius the splash actually reached:
+             what you see is what was hit, which is the only way to learn what
+             a splash tower is worth. */
+          var sa = Math.max(0, pf.t / 0.3);
+          fxRing(pf.x, pf.y, 0.14, pf.splash * (1.35 - sa * 0.55),
+                 0.075, COL.frost, sa * 0.85);
+          fxPoint(pf.x, 0.22, pf.y, 0.9 * sa, COL.frost, sa * sa * 0.5);
+        } else {
+          var ka = Math.max(0, pf.t / 0.35), age = 1 - ka;
+          var boss = !!pf.boss;
+          var kc = boss ? COL.boss : COL.hot;
+          /* Directions are hashed off the position, which is fixed for the
+             puff's whole life: a burst that reseeds itself every frame is a
+             burst that flickers instead of flying. */
+          var seed = (Math.sin(pf.x * 12.9898 + pf.y * 78.233) * 43758.5453) % 1;
+          var n = boss ? 9 : 6;
+          for (var k = 0; k < n; k++) {
+            var ang = seed * TAU + k * (TAU / n);
+            var reach = boss ? 1.05 : 0.65;
+            var d0 = age * reach, d1 = d0 + 0.22;
+            /* Thrown up and out, and falling back: an arc costs one sine and
+               is the difference between debris and a flat expanding ring. */
+            var arc = Math.sin(Math.min(1, age) * Math.PI) *
+                      (0.30 + (k % 3) * 0.14) * (boss ? 1.5 : 1);
+            fxSeg(pf.x + Math.cos(ang) * d0, CREEP_Y + arc, pf.y + Math.sin(ang) * d0,
+                  pf.x + Math.cos(ang) * d1, CREEP_Y + arc * 1.1, pf.y + Math.sin(ang) * d1,
+                  boss ? 0.075 : 0.05, kc, ka * 0.95);
+          }
+          fxPoint(pf.x, CREEP_Y, pf.y, (boss ? 1.3 : 0.8) * ka, kc, ka * ka);
+        }
+      }
+
+      /* Range preview. The flat board draws this as an ellipse on the floor;
+         with a free camera it has to be an actual circle in the world, or it
+         stops meaning "this far" the moment you turn. */
+      if (st.range) {
+        fxRing(st.range.x, st.range.y, 0.11, st.range.r,
+               0.055, towerColour(st.range.c), 0.6);
+      }
+
+      /* Both ends of the run. The flat board pools light on these so they are
+         findable without a label, and a player who has just spun the camera
+         needs that more, not less. Counter-phase so they read as two things. */
+      var gate = world.gate, drain = world.drain;
+      if (gate) {
+        fxRing(gate.x, gate.y, 0.10, 0.60 + Math.sin(t * 2.2) * 0.07,
+               0.065, COL.sent, 0.55);
+      }
+      if (drain) {
+        fxRing(drain.x, drain.y, 0.10, 0.60 - Math.sin(t * 2.2) * 0.07,
+               0.075, COL.boss, 0.7);
+      }
+
+      /* Snow. Last only for reading order - an additive pass that does not
+         write depth has no painter's order to get wrong, which is most of why
+         effects are worth separating from the board in the first place. */
+      var span = Math.max(9, cam.dist * 0.95), ceil = span * 0.6;
+      /* Sized off the view distance so a flake holds its size on screen rather
+         than dissolving as you pull back. */
+      var flakeS = cam.dist * 0.0032;
+      for (i = 0; i < FLAKES.length; i++) {
+        var f = FLAKES[i];
+        /* Driven by the clock rather than by dt, so a paused cabinet holds its
+           snow still and a resumed one does not teleport it. */
+        var fy = ceil - ((f.y * ceil + t * f.v * 2.4) % ceil);
+        fxPoint(cam.tx + (f.x - 0.5) * span + Math.sin(t * 0.5 + f.drift) * 0.4,
+                fy,
+                cam.tz + (f.z - 0.5) * span,
+                f.r * flakeS, COL.hot, 0.10 + f.r * 0.10);
+      }
+
       /* One upload, one draw call - the whole board. */
+      gl.useProgram(prog);
+      onlyAttribs([A.pos, A.norm, A.off, A.scale, A.color, A.glow]);
       gl.bindBuffer(gl.ARRAY_BUFFER, bufInst);
       gl.bufferData(gl.ARRAY_BUFFER, inst.subarray(0, nInst * STRIDE), gl.DYNAMIC_DRAW);
       var S = 4 * STRIDE;
@@ -546,9 +964,59 @@
 
       gl.uniformMatrix4fv(U.viewProj, false, viewProj);
       gl.uniform3f(U.light, 0.48, 0.78, 0.40);
-      gl.uniform3f(U.fog, 0.03, 0.13, 0.20);
-      gl.uniform1f(U.fogNear, 20);
       ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, cube.count, nInst);
+
+      /* ---- the effects pass ----
+         Additive and depth-read-only. Reading depth is what keeps a bolt fired
+         on the far side of the maze behind the maze; not WRITING it is what
+         lets the flash, the bolt and the embers of the same shot all show
+         instead of the nearest one blanking the rest. Culling is off because a
+         camera-facing quad flips its winding as the camera swings past it. */
+      if (nFx) {
+        gl.useProgram(fxProg);
+        onlyAttribs([FA.quad, FA.a, FA.b, FA.color, FA.size, FA.alpha]);
+        gl.depthMask(false);
+        gl.disable(gl.CULL_FACE);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufFx);
+        gl.bufferData(gl.ARRAY_BUFFER, fxInst.subarray(0, nFx * FX_STRIDE), gl.DYNAMIC_DRAW);
+        var FS = 4 * FX_STRIDE;
+        gl.enableVertexAttribArray(FA.a);
+        gl.vertexAttribPointer(FA.a, 3, gl.FLOAT, false, FS, 0);
+        ext.vertexAttribDivisorANGLE(FA.a, 1);
+        gl.enableVertexAttribArray(FA.b);
+        gl.vertexAttribPointer(FA.b, 3, gl.FLOAT, false, FS, 12);
+        ext.vertexAttribDivisorANGLE(FA.b, 1);
+        gl.enableVertexAttribArray(FA.color);
+        gl.vertexAttribPointer(FA.color, 3, gl.FLOAT, false, FS, 24);
+        ext.vertexAttribDivisorANGLE(FA.color, 1);
+        gl.enableVertexAttribArray(FA.size);
+        gl.vertexAttribPointer(FA.size, 1, gl.FLOAT, false, FS, 36);
+        ext.vertexAttribDivisorANGLE(FA.size, 1);
+        gl.enableVertexAttribArray(FA.alpha);
+        gl.vertexAttribPointer(FA.alpha, 1, gl.FLOAT, false, FS, 40);
+        ext.vertexAttribDivisorANGLE(FA.alpha, 1);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufQuad);
+        gl.enableVertexAttribArray(FA.quad);
+        gl.vertexAttribPointer(FA.quad, 2, gl.FLOAT, false, 0, 0);
+        ext.vertexAttribDivisorANGLE(FA.quad, 0);
+
+        gl.uniformMatrix4fv(FU.viewProj, false, viewProj);
+        gl.uniform3f(FU.eye, eye[0], eye[1], eye[2]);
+        /* The camera's own axes, read straight out of the view matrix's
+           rotation rows - the shader needs them to face a sprite at the
+           viewer and to break the tie on a beam pointing down the eye ray. */
+        gl.uniform3f(FU.camRight, view[0], view[4], view[8]);
+        gl.uniform3f(FU.camUp, view[1], view[5], view[9]);
+        ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, nFx);
+
+        gl.disable(gl.BLEND);
+        gl.depthMask(true);
+        gl.enable(gl.CULL_FACE);
+      }
     }
 
     return {
@@ -557,6 +1025,7 @@
       draw: draw,
       pick: pick,
       instanceCount: function () { return nInst; },
+      effectCount: function () { return nFx; },
       /* Context loss is a real mobile behaviour, not a hypothetical: the
          system reclaims GL contexts on backgrounding. The caller watches for
          this and falls back to the 2D cabinet rather than showing a dead

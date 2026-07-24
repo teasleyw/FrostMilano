@@ -5440,24 +5440,39 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   function world3d() {
     return {
       cols: COLS, rows: ROWS,
+      gate: SPAWN, drain: DRAIN,
       isRock: function (x, y) { return !!rock[idx(x, y)]; },
       towerAt: function (x, y) { return built[idx(x, y)] || null; },
       getBuilt: function () { return built; },
       getCreeps: function () { return creeps || []; },
       getRoute: function () { return route || []; },
+      /* The same two effect lists the flat board paints, handed over raw. They
+         are already the record of what just happened - a shot leaves a beam, a
+         kill leaves a puff - so a second renderer needs no second bookkeeping,
+         and the two views can never disagree about what fired at what. */
+      getBeams: function () { return beams || []; },
+      getPuffs: function () { return puffs || []; },
       creepPos: function (cr) { return { x: creepFX(cr), y: creepFY(cr) }; },
       getUI: function () {
-        /* The ghost follows exactly the rule the 2D board uses, so the two
-           views disagree about nothing: shown only where a placement would
-           actually be allowed. */
-        var g = -1;
-        if (hoverCell >= 0 && state === STATE.PLAY && !built[hoverCell]) {
+        /* The ghost and the range ring follow exactly the rules the 2D board
+           uses, so the two views disagree about nothing: the ghost is shown
+           only where a placement would actually be allowed, and the ring reads
+           the built tower's range when there is one and the held tower's when
+           there isn't. */
+        var g = -1, ring = null;
+        if (hoverCell >= 0 && state === STATE.PLAY) {
           var hx = hoverCell % COLS, hy = (hoverCell / COLS) | 0;
-          if (buildable(hx, hy) && gold >= TOWERS[pick].cost && !creepHolds(hoverCell)) {
-            g = hoverCell;
+          var t = built[hoverCell];
+          if (t) {
+            ring = { x: hx, y: hy, r: lvlRange(t), c: t.def.c };
+          } else if (buildable(hx, hy)) {
+            var def = TOWERS[pick];
+            var ok = gold >= def.cost && !creepHolds(hoverCell);
+            ring = { x: hx, y: hy, r: def.range, c: ok ? def.c : DANGER };
+            if (ok) g = hoverCell;
           }
         }
-        return { ghost: g, sel: sel || null };
+        return { ghost: g, sel: sel || null, range: ring };
       }
     };
   }
@@ -6934,7 +6949,8 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       if (!gl3d) return { on: mode3d, ok: false, dead: gl3dDead };
       var st = gl3d.camera.state();
       return { on: mode3d, ok: true, dead: gl3dDead,
-               instances: gl3d.instanceCount(), lost: gl3d.lost(),
+               instances: gl3d.instanceCount(), effects: gl3d.effectCount(),
+               lost: gl3d.lost(),
                yaw: st.yaw, pitch: st.pitch, dist: st.dist,
                tx: st.tx, tz: st.tz,
                bw: cv3d.width, bh: cv3d.height };
