@@ -408,9 +408,17 @@
        opens correctly framed instead of needing the constants retuned. At this
        field of view a board of N tiles subtends the view at about 1.15N. */
     var FIT = Math.max(COLS, ROWS) * 1.15;
+    /* The view the board opens on, and the one RESET VIEW returns to. Half a
+       turn round from the old default so the gate (top of the board) sits at
+       the front of the shot and the creeps walk down toward the drain and the
+       player, the way the Warcraft III mauls are read - not away from them.
+       Still a corner view, not an edge-on one; it's the old 45 deg plus 180,
+       so the framing that was tuned there is kept, just seen from the far
+       corner. Every other angle is still a TURN or a two-finger orbit away. */
+    var YAW0 = Math.PI * 1.25;
     var cam = {
       tx: (COLS - 1) / 2, tz: (ROWS - 1) / 2,
-      yaw: Math.PI * 0.25, pitch: 0.95, dist: FIT
+      yaw: YAW0, pitch: 0.95, dist: FIT
     };
     var MIN_PITCH = 0.30, MAX_PITCH = 1.45;
     /* The zoom-out clamp is deliberately far: a phone held portrait has to pull
@@ -537,7 +545,7 @@
       },
       reset: function () {
         cam.tx = (COLS - 1) / 2; cam.tz = (ROWS - 1) / 2;
-        cam.yaw = Math.PI * 0.25; cam.pitch = 0.95;
+        cam.yaw = YAW0; cam.pitch = 0.95;
         cam.dist = clampDist(fitDist(lastAspect));
       },
       state: function () {
@@ -764,6 +772,13 @@
       return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k,
               a[2] + (b[2] - a[2]) * k];
     }
+    /* Push a colour toward white by f. A muzzle flash whitens the firing part
+       of a tower the same way it whitens a creep - it is mixCol against a
+       hardcoded white, and it leaves the colour untouched when nothing fired. */
+    function whiten(c, f) {
+      return f > 0 ? [c[0] + (1 - c[0]) * f, c[1] + (1 - c[1]) * f,
+                      c[2] + (1 - c[2]) * f] : c;
+    }
 
     /* ---- the penguin: waves 1-3, and the board's trash tier ----
        A waddle is a weight shift, and a weight shift happens to be exactly
@@ -965,6 +980,120 @@
       }
     }
 
+    /* ---------------- tower models ----------------
+       The other half of the "cubes into things" work the creeps started. A
+       tower never moves and never faces, so unlike a creep there is no facing
+       to solve - every box goes straight to world space with the tile centre
+       as its origin. What is left is pure silhouette, and the flat cabinet
+       already fixed each tower's: RIME a low broad wall you own by the dozen,
+       SHARD a narrow spire tipped with a crystal, BLIZZARD a squat drum under a
+       turning ring, NOVA an orb riding a pedestal. Level shows in the shape - a
+       taller crystal, more rime, a bigger orb - and a shot whitens the firing
+       part rather than the whole block, the same rule the creeps' rime follows.
+
+       There is no per-instance rotation here either, which the BLIZZARD needs
+       and cannot have: a box cannot spin. So its ring is READ as turning from
+       shard boxes orbiting the drum on a circle - positions are free, only the
+       box's own orientation is not - which at phone size is the same picture. */
+    var TBASE = 0.16;                 /* top of the plinth: where a body starts */
+    function tbox(px, pz, dx, y, dz, wx, hy, wz, col, glow) {
+      push(px + dx, y, pz + dz, wx, hy, wz, col, glow || 0);
+    }
+
+    /* RIME - the wall. It has to stay quiet, because you own eighty of them and
+       the guns have to read over the top: a broad block with two rough ice caps
+       whose heights the seed splits left and right, so a run of them reads as a
+       craggy rampart instead of a row of identical cubes. Upgrades pile ice
+       crust on the lid, the same tell the flat board uses. */
+    function drawRime(tw, px, pz, s, body, f) {
+      var cap = whiten(mixCol(body, COL.frost, 0.18), f * 0.6);
+      tbox(px, pz, 0, TBASE, 0, s * 0.86, 0.26, s * 0.86, body);
+      var lean = Math.sin(tw.seed), y = TBASE + 0.26;
+      tbox(px, pz, -s * 0.22, y, 0, s * 0.40, 0.12 + Math.max(0, lean) * 0.06, s * 0.80, cap);
+      tbox(px, pz,  s * 0.22, y, 0, s * 0.40, 0.12 + Math.max(0, -lean) * 0.06, s * 0.80, cap);
+      if (tw.lvl > 1) {
+        var crust = whiten(COL.frost, f * 0.5);
+        tbox(px, pz, -s * 0.12, y + 0.12, s * 0.10, 0.18, 0.06 + (tw.lvl - 2) * 0.05, 0.16, crust, 0.35);
+        if (tw.lvl > 2) tbox(px, pz, s * 0.16, y + 0.14, -s * 0.12, 0.14, 0.10, 0.13, crust, 0.35);
+      }
+    }
+
+    /* SHARD - a narrow spire that steps inward and is tipped by a crystal. The
+       crystal IS the tower and it grows taller each upgrade, exactly as the
+       crystal point does on the flat board; it carries the only emissive on the
+       piece, so a "shard" reads as lit ice rather than painted ice. */
+    function drawShard(tw, px, pz, s, body, f) {
+      var shaft = mixCol(body, COL.plinth, 0.25), y = TBASE;
+      tbox(px, pz, 0, y, 0, s * 0.68, 0.30, s * 0.68, shaft); y += 0.30;
+      tbox(px, pz, 0, y, 0, s * 0.48, 0.18, s * 0.48, shaft); y += 0.18;
+      var grow = 0.14 + (tw.lvl - 1) * 0.10;
+      var cc = whiten(mixCol(body, COL.hot, 0.3), f * 0.8), cg = 0.45 + f * 0.5;
+      tbox(px, pz, 0, y, 0, s * 0.42, 0.08, s * 0.42, cc, cg * 0.7); y += 0.08;
+      tbox(px, pz, 0, y, 0, s * 0.26, grow, s * 0.26, cc, cg);      y += grow;
+      tbox(px, pz, 0, y, 0, s * 0.11, 0.09, s * 0.11, cc, cg);
+    }
+
+    /* BLIZZARD - a squat drum with a ring of ice shards turning around it. The
+       turning is the signature and is faked from orbiting boxes (see above). A
+       core pulses on a slow clock; a shot brightens the ring and the core. The
+       ring gains a shard per level, which reads as the tower spinning up. */
+    function drawBlizzard(tw, px, pz, s, body, f, t) {
+      var drum = mixCol(body, COL.plinth, 0.2);
+      var rim = whiten(mixCol(body, COL.frost, 0.3), f * 0.5);
+      tbox(px, pz, 0, TBASE, 0, s * 0.86, 0.22, s * 0.86, drum);
+      tbox(px, pz, 0, TBASE + 0.22, 0, s * 0.70, 0.14, s * 0.70, rim);
+      var pulse = 0.5 + 0.3 * Math.sin(t * 3 + tw.seed);
+      tbox(px, pz, 0, TBASE + 0.36, 0, s * 0.24, 0.10, s * 0.24,
+           whiten(COL.frost, f), Math.min(1, pulse + f));
+      var n = 4 + (tw.lvl - 1), r = s * 0.52, a = t * 1.5 + tw.seed, ry = TBASE + 0.20;
+      var shard = whiten(mixCol(body, COL.frost, 0.45), f * 0.7);
+      for (var k = 0; k < n; k++) {
+        var ang = a + k * (TAU / n);
+        tbox(px, pz, Math.cos(ang) * r, ry, Math.sin(ang) * r,
+             0.12, 0.16, 0.12, shard, 0.3 + f * 0.4);
+      }
+    }
+
+    /* NOVA - the premium tower, and it should look it: a tapering pedestal that
+       flares into a cup, and an orb riding in the air above it with a real gap.
+       The gap is the whole silhouette, the same "orb above the tower" the flat
+       board draws. The orb is the brightest solid on the board, bobs on its own
+       clock, grows and brightens with level, and flares white on a shot; gold
+       pips ring the cup as it levels, the money-spent language the HUD uses. */
+    function drawNova(tw, px, pz, s, body, f, t) {
+      var stone = mixCol(body, COL.plinth, 0.35), y = TBASE;
+      tbox(px, pz, 0, y, 0, s * 0.80, 0.20, s * 0.80, stone); y += 0.20;
+      tbox(px, pz, 0, y, 0, s * 0.42, 0.22, s * 0.42, stone); y += 0.22;
+      tbox(px, pz, 0, y, 0, s * 0.66, 0.12, s * 0.66, stone); y += 0.12;
+      if (tw.lvl > 1) {
+        for (var p = 0; p < tw.lvl - 1; p++) {
+          tbox(px, pz, (p - (tw.lvl - 2) / 2) * 0.14, y - 0.02, s * 0.30,
+               0.05, 0.06, 0.05, COL.boss, 0.8);
+        }
+      }
+      var orbR = 0.11 + (tw.lvl - 1) * 0.02;
+      var oy = y + 0.10 + orbR + Math.sin(t * 2 + tw.seed) * 0.03;   /* clear gap */
+      var oc = whiten(body, f * 0.85), og = Math.min(1, 0.8 + f * 0.2);
+      tbox(px, pz, 0, oy - orbR, 0, orbR * 2, orbR * 2, orbR * 2, oc, og);
+      tbox(px, pz, 0, oy - orbR * 0.6, 0, orbR * 2.5, orbR * 1.2, orbR * 2.5, oc, og);
+    }
+
+    /* The plinth is common to all four - the grounding block both renderers use
+       so a tall spire never looks balanced on a point - then the body dispatches
+       on kind. `t` drives the two animated towers; the other two ignore it. */
+    function drawTower(tw, ox, oz, t) {
+      var px = tw.x + ox, pz = tw.y + oz, s = tw.def.s;
+      var f = tw.flash > 0 ? Math.min(1, tw.flash / 0.14) : 0;
+      var body = towerColour(tw.def.c);
+      push(px, 0, pz, s * 0.98, 0.16, s * 0.98, COL.plinth);
+      switch (tw.def.k) {
+        case "shard":    drawShard(tw, px, pz, s, body, f); break;
+        case "blizzard": drawBlizzard(tw, px, pz, s, body, f, t); break;
+        case "nova":     drawNova(tw, px, pz, s, body, f, t); break;
+        default:         drawRime(tw, px, pz, s, body, f); break;
+      }
+    }
+
     /* =================================================================
        emitSolids / emitFx : one board's worth of instances into the shared
        buffers, shifted by (ox, oz) tiles in the world. The primary board is
@@ -1009,19 +1138,7 @@
 
       var built = W.getBuilt();
       for (i = 0; i < built.length; i++) {
-        var tw = built[i];
-        if (!tw) continue;
-        var th = towerHeight(tw), s = tw.def.s;
-        push(tw.x + ox, 0, tw.y + oz, s * 0.98, 0.16, s * 0.98, COL.plinth);
-        var bc = towerColour(tw.def.c);
-        if (tw.flash > 0) {
-          var f = Math.min(1, tw.flash / 0.14);
-          bc = [bc[0] + (1 - bc[0]) * f, bc[1] + (1 - bc[1]) * f, bc[2] + (1 - bc[2]) * f];
-        }
-        push(tw.x + ox, 0.16, tw.y + oz, s * 0.82, th, s * 0.82, bc);
-        if (tw.lvl > 1) {
-          push(tw.x + ox, 0.16 + th, tw.y + oz, s * 0.5, 0.10 * (tw.lvl - 1), s * 0.5, COL.sel);
-        }
+        if (built[i]) drawTower(built[i], ox, oz, t);
       }
 
       var creeps = W.getCreeps();

@@ -1,0 +1,613 @@
+/* =======================================================================
+   NECK & THE HEADS :: neck.css
+   Pre-war blues. The opposite of the Frost page in every way that counts:
+   warm where that's cold, paper where that's glass, letterpress where that's
+   chrome. A 1930s race-record handbill and the sleeve it came in.
+
+   All colours live in :root below. Nothing here is loaded from outside the
+   site except the four Google fonts in the <head>.
+   ======================================================================= */
+
+:root{
+  /* Aged paper, four values from highlight to the deepest fold. */
+  --paper-1:  #f3e6cd;   /* lit paper */
+  --paper-2:  #e8d3a9;   /* the field */
+  --paper-3:  #d8bd8a;   /* shadowed paper */
+  --paper-4:  #c8a86e;   /* deep crease */
+
+  /* Ink. Never pure black — a letterpress laid ink that browned with age. */
+  --ink:      #241a12;
+  --ink-soft: #4a3626;
+  --ink-faint:#6f5638;
+
+  /* The two accents a race-record label actually used: a barn red and a
+     shellac gold. Used the way the originals used them — sparingly, loud. */
+  --red:      #9e2b1e;
+  --red-deep: #6f1c14;
+  --gold:     #b0791f;
+  --gold-lit: #d9a842;
+
+  /* The dark leaf (THE LINEAGE) is the inside of the sleeve: not black, a
+     very dark oxblood so the paper still reads warm through it. */
+  --sleeve:   #1c1310;
+  --sleeve-2: #2a1c16;
+  --shellac:  #120c09;   /* the disc itself */
+
+  --line:     #b79a68;
+
+  --ornament: "Rye", "Georgia", serif;                 /* woodtype display  */
+  --poster:   "Ultra", "Georgia", serif;               /* fat slab, the name */
+  --type:     "Special Elite", "Courier New", monospace;/* struck typewriter */
+  --serif:    "Libre Baskerville", Georgia, "Times New Roman", serif; /* body */
+}
+
+*{ box-sizing:border-box; }
+
+html{ scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  font-family:var(--serif);
+  color:var(--ink);
+  line-height:1.7;
+  background-color:var(--paper-2);
+  /* Paper is built entirely from gradients — no image file. A warm highlight,
+     two broad tea-stains, the paper grain (the fine 3px dot field), and a
+     glacier-to-shadow base.
+     PERFORMANCE — this is deliberately NOT background-attachment:fixed, and
+     the grain is a background layer here rather than its own fixed overlay.
+     A fixed background forces the browser to repaint this whole gradient stack
+     on every scroll frame; with the grain's tiny dot tiles on top of it that
+     was enough to stall the compositor and blank the page mid-scroll. Painted
+     normally (scrolling with the page), the grain tiles down the full document
+     for free and scrolling stays on the fast path. */
+  background-image:
+    radial-gradient(rgba(36,26,18,.10) .5px, transparent .5px),
+    radial-gradient(rgba(36,26,18,.08) .5px, transparent .5px),
+    radial-gradient(120% 60% at 18% 4%,  rgba(255,248,228,.55) 0%, transparent 55%),
+    radial-gradient(70% 40% at 88% 14%,  rgba(158,120,60,.16) 0%, transparent 60%),
+    radial-gradient(60% 34% at 72% 62%,  rgba(120,86,40,.14) 0%, transparent 60%),
+    linear-gradient(180deg, var(--paper-1) 0%, var(--paper-2) 45%, var(--paper-3) 100%);
+  background-size:3px 3px, 4px 4px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-position:0 0, 1px 2px, 0 0, 0 0, 0 0, 0 0;
+  background-repeat:repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+a{ color:var(--red); text-underline-offset:2px; }
+a:hover{ color:var(--red-deep); }
+
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+
+/* Honeypot — same trick as the Frost page: real people never see it, and a
+   bot that fills it flags itself. Off-screen rather than display:none because
+   many bots skip hidden fields but happily complete a visible-to-them one. */
+.hp{ position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; opacity:0; pointer-events:none; }
+
+/* ---------- DUST IN THE LIGHT SHAFT ---------- */
+/* The paper grain lives in the body background (see body{} above). This is the
+   only fixed overlay left: a slow drift of dust motes, weather for the room.
+   The layer itself is transparent and paints nothing — only its motes animate,
+   on composited transforms — so it does not cost a scroll repaint the way a
+   fixed *background* would. pointer-events:none, and killed entirely under
+   prefers-reduced-motion (see the block at the very bottom of this file). */
+#dust{ position:fixed; inset:0; z-index:3; pointer-events:none; overflow:hidden; }
+.mote{
+  position:absolute; top:-12px; border-radius:50%;
+  background:radial-gradient(circle at 40% 35%, rgba(255,248,224,.95), rgba(210,180,120,.35) 70%, transparent);
+  animation-name:drift; animation-timing-function:linear; animation-iteration-count:1;
+}
+@keyframes drift{
+  0%{ transform:translateY(-12px) translateX(0); opacity:0; }
+  12%{ opacity:.8; }
+  88%{ opacity:.6; }
+  100%{ transform:translateY(102vh) translateX(28px); opacity:0; }
+}
+
+/* ---------- NOTICE STRIP (the ticker) ---------- */
+.notice{
+  position:relative; z-index:4;
+  background:var(--ink); color:var(--paper-1);
+  border-bottom:3px double var(--gold);
+  font-family:var(--type); letter-spacing:.14em; font-size:.82rem;
+  overflow:hidden; white-space:nowrap;
+}
+.notice__track{
+  display:inline-block; padding:7px 0;
+  will-change:transform; animation:crawl 34s linear infinite;
+}
+@keyframes crawl{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+/* ---------- SHEET (the page column) ---------- */
+.sheet{
+  position:relative; z-index:4;
+  max-width:1000px; margin:0 auto; padding:0 18px 60px;
+}
+
+/* ---------- RULES ---------- */
+.rule{ border:0; border-top:1px solid var(--ink-soft); margin:16px auto; width:100%; opacity:.6; }
+.rule--fat{
+  border:0; height:6px; opacity:1;
+  border-top:2px solid var(--ink); border-bottom:2px solid var(--ink);
+  background:transparent; margin:14px auto;
+}
+
+/* =======================================================================
+   THE HANDBILL (hero)
+   ======================================================================= */
+.bill{
+  position:relative; margin-top:26px; padding:30px 26px 34px; text-align:center;
+  background:
+    repeating-linear-gradient(45deg, rgba(158,43,30,.05) 0 12px, transparent 12px 24px),
+    var(--paper-1);
+  border:2px solid var(--ink);
+  box-shadow:0 2px 0 var(--ink), 0 3px 14px rgba(58,38,18,.4);
+}
+/* The two woodcut hands / decorative bands top and bottom of the bill. */
+.bill__edge{ height:14px; margin:0 auto;
+  background:repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px);
+  opacity:.85; }
+.bill__edge--top{ margin-bottom:16px; }
+.bill__edge--bottom{ margin-top:22px; }
+
+.bill__eyebrow{
+  font-family:var(--type); letter-spacing:.2em; font-size:.8rem;
+  color:var(--red-deep); margin:0 0 4px; text-transform:uppercase;
+}
+
+/* The name. Three weights stacked the way a jobbing printer would set it to
+   fill the plate: small word, script connector, then the big slab. */
+.wordmark{ margin:6px 0; line-height:.9; }
+.wordmark__small{
+  display:block; font-family:var(--ornament); color:var(--ink);
+  font-size:clamp(2rem,7vw,3.4rem); letter-spacing:.04em;
+}
+.wordmark__amp{
+  display:block; font-family:var(--serif); font-style:italic; font-weight:700;
+  color:var(--red); font-size:clamp(1rem,3vw,1.5rem); letter-spacing:.08em; margin:2px 0;
+}
+.wordmark__big{
+  display:block; font-family:var(--poster); color:var(--ink);
+  font-size:clamp(3.2rem,15vw,7.5rem); letter-spacing:.01em;
+  /* Letterpress bite: a hair of red offset behind, and an inner light so each
+     glyph looks pressed into the paper rather than printed on top. */
+  text-shadow:
+    2px 2px 0 rgba(158,43,30,.28),
+    -1px -1px 0 rgba(255,248,228,.5);
+}
+
+.bill__sub{
+  font-family:var(--type); letter-spacing:.16em; font-size:clamp(.75rem,2.2vw,1rem);
+  margin:10px 0 2px; color:var(--ink-soft);
+}
+.bill__where{
+  font-family:var(--ornament); font-size:clamp(1.1rem,4vw,1.8rem);
+  color:var(--red); margin:2px 0 0; letter-spacing:.05em;
+}
+.bill__pitch{
+  font-style:italic; color:var(--ink-soft); max-width:44ch; margin:10px auto 0; font-size:1.02rem;
+}
+.bill__buttons{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:22px; }
+
+/* =======================================================================
+   INK BUTTONS
+   A pressed-metal stamp: paper-coloured plate, hard ink border, a shove
+   down on click. The red variant is the label's spot colour.
+   ======================================================================= */
+.ink-btn{
+  --bg:var(--paper-1); --fg:var(--ink); --bd:var(--ink);
+  display:inline-block; cursor:pointer;
+  font-family:var(--type); letter-spacing:.1em; text-transform:uppercase;
+  font-size:1rem; text-decoration:none;
+  color:var(--fg); background:var(--bg);
+  border:2px solid var(--bd); padding:11px 20px;
+  box-shadow:3px 3px 0 var(--bd); transition:transform .05s, box-shadow .05s, background .15s;
+}
+.ink-btn:hover{ background:var(--paper-2); color:var(--fg); }
+.ink-btn:active{ transform:translate(3px,3px); box-shadow:0 0 0 var(--bd); }
+.ink-btn:focus-visible{ outline:3px dashed var(--gold); outline-offset:3px; }
+.ink-btn--red{ --bg:var(--red); --fg:var(--paper-1); --bd:var(--red-deep); }
+.ink-btn--red:hover{ background:var(--red-deep); color:var(--paper-1); }
+.ink-btn--sm{ font-size:.8rem; padding:7px 13px; box-shadow:2px 2px 0 var(--bd); }
+.ink-btn--sm:active{ transform:translate(2px,2px); }
+
+/* =======================================================================
+   NAV TABS
+   Filing-cabinet tabs pinned under the handbill.
+   ======================================================================= */
+.tabs{
+  display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
+  margin:22px 0 8px; padding:0 4px;
+}
+.tab{
+  font-family:var(--type); font-size:.82rem; letter-spacing:.08em; text-decoration:none;
+  color:var(--ink); background:var(--paper-3);
+  padding:8px 14px 10px; border:2px solid var(--ink); border-bottom:none;
+  border-radius:8px 8px 0 0; box-shadow:inset 0 3px 0 rgba(255,248,228,.4);
+}
+.tab:hover{ background:var(--gold-lit); color:var(--ink); }
+
+/* =======================================================================
+   LEAF (a section = a page in the folio)
+   ======================================================================= */
+.leaf{
+  position:relative; margin:22px 0; padding:26px 24px 30px;
+  background:var(--paper-1);
+  border:1.5px solid var(--ink-soft);
+  box-shadow:0 1px 0 rgba(255,248,228,.6), 0 6px 18px rgba(58,38,18,.22);
+}
+.leaf--dark{
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(158,43,30,.10) 0%, transparent 55%),
+    linear-gradient(180deg, var(--sleeve-2), var(--sleeve));
+  border-color:#000;
+  color:var(--paper-2);
+}
+
+.head{
+  text-align:center; margin:2px 0 6px;
+  font-family:var(--poster); font-size:clamp(1.6rem,5vw,2.6rem);
+  letter-spacing:.02em; color:var(--ink);
+}
+.head span{
+  display:inline-block; padding:0 16px; position:relative;
+}
+/* The ruled line through a section head, broken by the words. */
+.head::before,.head::after{
+  content:""; display:block; height:3px; background:var(--ink);
+  position:absolute; top:50%; width:calc(50% - 8ch);
+}
+.head::before{ left:0; } .head::after{ right:0; }
+.head--light{ color:var(--gold-lit); }
+.head--light::before,.head--light::after{ background:var(--gold); }
+
+.dek{
+  text-align:center; max-width:60ch; margin:0 auto 18px;
+  font-style:italic; color:var(--ink-soft);
+}
+.dek--light{ color:var(--paper-3); }
+.dek--tight{ margin-bottom:10px; }
+
+.fineprint{ font-family:var(--type); font-size:.78rem; color:var(--ink-faint); line-height:1.5; }
+.leaf--dark .fineprint{ color:var(--paper-4); }
+code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; border-radius:3px; }
+.leaf--dark code{ background:rgba(255,248,228,.12); color:var(--paper-1); }
+
+.minihead{
+  font-family:var(--ornament); font-size:1.15rem; color:var(--red);
+  margin:20px 0 6px; letter-spacing:.03em;
+}
+
+/* =======================================================================
+   THE VICTROLA
+   ======================================================================= */
+.victrola{ display:grid; grid-template-columns:minmax(220px,320px) 1fr; gap:26px; align-items:center; }
+.victrola__deck{ display:flex; justify-content:center; }
+
+/* The turntable. .platter is the box, .platter__disc the black shellac record
+   that JS sets spinning by adding the .spinning class. */
+.platter{ position:relative; width:min(300px,80vw); aspect-ratio:1; }
+.platter__disc{
+  position:absolute; inset:0; border-radius:50%;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.045) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 42% 38%, #3a2c22 0%, var(--shellac) 32%, #000 100%);
+  box-shadow:0 10px 24px rgba(0,0,0,.5), inset 0 0 40px rgba(0,0,0,.8);
+  border:1px solid #000;
+}
+.platter__label{
+  position:absolute; inset:30%; border-radius:50%;
+  background:radial-gradient(circle at 45% 40%, var(--gold-lit), var(--gold) 60%, #8a5c14 100%);
+  color:var(--ink); border:1px solid #6f4a12;
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  text-align:center; padding:16% 8%; box-shadow:inset 0 0 10px rgba(0,0,0,.35);
+}
+/* Text clusters at the top and bottom, leaving a clear band across the middle
+   for the spindle hole — the way a real record label reserves its centre, so
+   the hole never lands on a letter. */
+.platter__label-cluster{ display:flex; flex-direction:column; align-items:center; }
+.platter__label-top{ font-family:var(--type); font-size:.5rem; letter-spacing:.14em; }
+.platter__label-mid{ font-family:var(--ornament); font-size:.82rem; line-height:1; }
+.platter__label-bot{ font-family:var(--type); font-size:.42rem; letter-spacing:.1em; opacity:.8; }
+.platter__hole{ position:absolute; top:50%; left:50%; width:4.5%; height:4.5%; border-radius:50%; background:#120c09; box-shadow:0 0 0 1.5px rgba(255,248,224,.35), inset 0 0 2px #000; transform:translate(-50%,-50%); }
+.platter__disc.spinning{ animation:spin78 .77s linear infinite; }  /* ~78rpm feel */
+@keyframes spin78{ to{ transform:rotate(360deg); } }
+
+/* The tonearm, hinged top-right. Swings onto the record when it plays. */
+.platter__arm{
+  position:absolute; top:-6%; right:-4%; width:52%; height:10%;
+  transform-origin:92% 50%; transform:rotate(-22deg);
+  transition:transform .6s cubic-bezier(.5,-0.2,.3,1.2);
+}
+.platter__arm i{
+  position:absolute; right:0; top:20%; width:100%; height:22%;
+  background:linear-gradient(180deg,#cbb48a,#7d6338); border:1px solid #4a3826; border-radius:3px;
+}
+.platter__arm::after{ /* headshell */
+  content:""; position:absolute; left:-2%; top:6%; width:16%; height:52%;
+  background:#3a2c22; border:1px solid #000; border-radius:2px;
+}
+.platter.playing .platter__arm{ transform:rotate(4deg); }
+
+.victrola__panel{ align-self:center; }
+.victrola__note{ font-style:italic; color:var(--ink-soft); margin:12px 0; }
+
+/* =======================================================================
+   THE SIDES (the band's own records)
+   ======================================================================= */
+.sides{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:22px; }
+.side{
+  background:var(--paper-2); border:1.5px solid var(--ink-soft);
+  padding:18px 16px 16px; text-align:center;
+  box-shadow:0 4px 12px rgba(58,38,18,.22);
+}
+.side__disc{
+  position:relative; width:150px; height:150px; margin:0 auto 14px; border-radius:50%;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 42% 38%, #3a2c22 0%, var(--shellac) 34%, #000 100%);
+  box-shadow:0 6px 14px rgba(0,0,0,.45), inset 0 0 24px rgba(0,0,0,.75);
+  transition:transform .3s;
+}
+.side:hover .side__disc{ transform:rotate(8deg); }
+.side__label{
+  position:absolute; inset:26%; border-radius:50%;
+  background:radial-gradient(circle at 45% 40%, #efe0bf, #d9c39a 65%, #b89e6f 100%);
+  border:1px solid #7d6338; color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px;
+}
+.side__num{ font-family:var(--poster); font-size:1.2rem; line-height:1; }
+.side__title{ font-family:var(--type); font-size:.62rem; letter-spacing:.06em; margin:2px 0; }
+.side__credit{ font-family:var(--type); font-size:.42rem; letter-spacing:.08em; opacity:.75; }
+.side__hole{ position:absolute; top:50%; left:50%; width:8%; height:8%; border-radius:50%; background:#120c09; box-shadow:0 0 0 1px rgba(0,0,0,.4); transform:translate(-50%,-50%); }
+.side__cat{ display:block; font-family:var(--type); font-size:.72rem; color:var(--ink-faint); letter-spacing:.06em; }
+.side__play{ display:none; margin:8px auto 0; }
+.side__pending{
+  display:block; margin-top:8px; font-family:var(--type); font-size:.72rem;
+  letter-spacing:.12em; color:var(--gold); border:1px dashed var(--gold); padding:4px 8px;
+}
+/* A side with a real URL flips from "AWAITING PRESSING" to a PLAY button. JS
+   adds .side--live once it verifies the data-url isn't the placeholder. */
+.side--live .side__pending{ display:none; }
+.side--live .side__play{ display:inline-block; }
+
+/* =======================================================================
+   THE LINEAGE (flip cards, styled as 78s in their sleeves)
+   ======================================================================= */
+.lineage{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:26px; margin-bottom:22px; }
+
+/* The flip mechanism: .disc is the stage (perspective), .disc__inner rotates,
+   the two faces sit back-to-back. Flipping is driven by a class JS toggles,
+   NOT by :hover — a hover flip is a trap on touch and unreachable by keyboard.
+   Under reduced motion the rotate becomes an instant swap (bottom of file). */
+.disc{ perspective:1400px; }
+.disc__inner{
+  position:relative; transform-style:preserve-3d;
+  transition:transform .7s cubic-bezier(.4,.1,.2,1);
+  min-height:420px;
+}
+.disc.flipped .disc__inner{ transform:rotateY(180deg); }
+.disc__face{
+  position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  display:flex; flex-direction:column; align-items:center;
+  border:1.5px solid #000; padding:20px 18px;
+  background:linear-gradient(180deg,#241a14,#140d0a);
+}
+.disc__face--front{ justify-content:space-between; }
+.disc__face--back{ transform:rotateY(180deg); background:var(--paper-1); border-color:var(--ink); overflow:auto; align-items:stretch; }
+
+/* Front: a big black 78 with a printed label. The printed matter is stacked
+   (flex-direction:column) and width-capped so it stays inside the paper
+   centre rather than spilling onto the black — the paper ::before is grown to
+   ~72% so a two-line name and the imprint lines all fit within the circle. */
+.disc__label{
+  position:relative; width:190px; height:190px; border-radius:50%;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 42% 38%, #3a2c22 0%, var(--shellac) 30%, #000 100%);
+  box-shadow:0 8px 18px rgba(0,0,0,.6), inset 0 0 30px rgba(0,0,0,.85);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; margin-top:6px;
+}
+.disc__label::before{ /* the paper centre */
+  content:""; position:absolute; inset:14%; border-radius:50%;
+  background:radial-gradient(circle at 45% 40%, #e9d7ac, #cdb684 70%, #a98f5f 100%);
+  border:1px solid #7d6338;
+}
+.disc__label--red::before{
+  background:radial-gradient(circle at 45% 40%, #c94336, var(--red) 60%, var(--red-deep) 100%);
+}
+/* Every line sits above the paper and is capped to a chord that stays inside
+   the circle, so nothing reaches the black. */
+.disc__label > *{ position:relative; z-index:1; text-align:center; max-width:118px; }
+.disc__label-top{ font-family:var(--type); font-size:.46rem; letter-spacing:.08em; color:var(--ink); }
+.disc__label--red .disc__label-top{ color:var(--paper-1); }
+.disc__name{ font-family:var(--poster); font-size:.92rem; line-height:1; color:var(--ink); margin:3px 0; }
+.disc__label--red .disc__name{ color:var(--paper-1); }
+.disc__years{ font-family:var(--type); font-size:.54rem; color:var(--ink-soft); display:block; }
+.disc__label--red .disc__years{ color:#f0d9c0; }
+.disc__place{ font-family:var(--type); font-size:.46rem; letter-spacing:.05em; color:var(--ink-faint); display:block; }
+.disc__label--red .disc__place{ color:#e8c9b8; }
+.disc__hole{ position:absolute; top:50%; left:50%; width:5%; height:5%; border-radius:50%; background:#120c09; transform:translate(-50%,-50%); z-index:2; }
+
+.disc__tag{
+  font-family:var(--ornament); color:var(--gold-lit); font-size:1rem;
+  text-align:center; margin:14px 0 12px; letter-spacing:.03em;
+}
+.disc__flip{ align-self:center; }
+
+/* Back: the liner notes. */
+.disc__backhead{
+  font-family:var(--poster); font-size:1.15rem; color:var(--red-deep);
+  text-align:center; margin:0 0 10px; letter-spacing:.02em;
+}
+.facts{ margin:0 0 12px; font-size:.86rem; }
+.facts dt{
+  font-family:var(--type); font-size:.68rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--red); margin-top:8px;
+}
+.facts dd{ margin:1px 0 0; color:var(--ink-soft); }
+.facts i{ color:var(--ink); }
+.notes{
+  font-style:italic; color:var(--ink); font-size:.88rem; line-height:1.6;
+  border-top:1px dashed var(--ink-faint); padding-top:10px; margin:10px 0 12px;
+}
+.notes b{ font-style:normal; font-family:var(--type); font-size:.72rem; letter-spacing:.08em; color:var(--red-deep); }
+
+.thread{
+  max-width:70ch; margin:6px auto 0; text-align:center; font-size:.94rem;
+  color:var(--paper-2); line-height:1.8;
+}
+.thread b{ font-family:var(--type); color:var(--gold-lit); letter-spacing:.08em; }
+
+/* =======================================================================
+   THE CARD CATALOG (timeline)
+   ======================================================================= */
+.rail{ position:relative; padding:20px 0 8px; }
+.rail__line{ position:absolute; left:0; right:0; top:38px; height:3px; background:var(--ink); opacity:.5; }
+.rail__years{
+  display:flex; gap:10px; overflow-x:auto; padding:6px 2px 14px; scroll-snap-type:x proximity;
+}
+.year{
+  flex:0 0 auto; scroll-snap-align:center; cursor:pointer;
+  font-family:var(--type); font-size:.9rem; letter-spacing:.04em;
+  background:var(--paper-2); color:var(--ink); border:2px solid var(--ink);
+  padding:8px 12px; box-shadow:2px 2px 0 var(--ink); position:relative;
+}
+.year::before{ /* the tick down to the rail line */
+  content:""; position:absolute; left:50%; top:-14px; width:2px; height:12px; background:var(--ink); transform:translateX(-50%);
+}
+.year:hover{ background:var(--gold-lit); }
+.year.on{ background:var(--red); color:var(--paper-1); border-color:var(--red-deep); }
+.year:focus-visible{ outline:3px dashed var(--gold); outline-offset:2px; }
+
+.drawer{ margin-top:16px; min-height:96px; }
+.card{
+  background:var(--paper-2); border:1.5px solid var(--ink-soft);
+  border-left:6px solid var(--red); padding:14px 18px;
+  box-shadow:0 4px 12px rgba(58,38,18,.2); animation:pull .35s ease;
+}
+@keyframes pull{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+.card__year{ font-family:var(--poster); font-size:1.6rem; color:var(--red-deep); line-height:1; }
+.card__head{ font-family:var(--ornament); font-size:1.15rem; color:var(--ink); margin:2px 0 6px; }
+.card__body{ color:var(--ink-soft); margin:0; }
+
+/* =======================================================================
+   WHO'S NECK
+   ======================================================================= */
+.about{ display:grid; grid-template-columns:minmax(180px,260px) 1fr; gap:28px; align-items:start; }
+.about__plate{ position:relative; text-align:center; }
+.about__img{
+  width:100%; aspect-ratio:4/5; object-fit:cover; display:block;
+  border:6px solid var(--paper-1); outline:2px solid var(--ink);
+  box-shadow:0 6px 16px rgba(58,38,18,.4); filter:sepia(.35) contrast(1.02);
+}
+/* Photo not supplied yet: the <img> fails to load, JS reveals the pending
+   card and hides the broken frame. */
+.about__pending{
+  aspect-ratio:4/5; display:none; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; text-align:center; background:var(--paper-3); border:2px dashed var(--ink-faint);
+  color:var(--ink-soft); font-family:var(--type);
+}
+.about__pending b{ font-size:1rem; letter-spacing:.12em; color:var(--red); }
+.about__pending span{ font-size:.78rem; }
+.about.no-photo .about__img{ display:none; }
+.about.no-photo .about__pending{ display:flex; }
+.about__cap{ font-family:var(--ornament); color:var(--red); margin-top:8px; font-size:1.2rem; letter-spacing:.08em; }
+
+.about__body .lede{ font-family:var(--ornament); font-size:1.4rem; color:var(--ink); margin:0 0 10px; }
+.stamps{ display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; }
+.stamp{
+  font-family:var(--type); font-size:.62rem; letter-spacing:.08em; text-align:center; line-height:1.3;
+  color:var(--red-deep); border:2px solid var(--red-deep); padding:8px 10px;
+  transform:rotate(-3deg); background:rgba(158,43,30,.05);
+}
+.stamp:nth-child(even){ transform:rotate(2deg); }
+.stamp b{ font-size:.82rem; color:var(--red); }
+
+/* =======================================================================
+   THE DATES
+   ======================================================================= */
+.dates-wrap{ overflow-x:auto; }
+.dates{ width:100%; border-collapse:collapse; }
+.dates th{
+  font-family:var(--type); font-size:.8rem; letter-spacing:.12em; text-align:left;
+  color:var(--paper-1); background:var(--ink); padding:10px 12px;
+}
+.dates td{ padding:12px; border-bottom:1px solid var(--line); vertical-align:top; }
+.dates tbody tr:hover{ background:rgba(158,43,30,.05); }
+.dates__with{ font-family:var(--type); font-size:.72rem; color:var(--red); letter-spacing:.06em; }
+.dates__empty td{ text-align:center; font-family:var(--type); color:var(--ink-faint); letter-spacing:.08em; }
+
+/* =======================================================================
+   BOOKING
+   ======================================================================= */
+.booking{ display:grid; grid-template-columns:1fr 1fr; gap:30px; }
+.booking__mail{ font-family:var(--ornament); font-size:1.3rem; }
+.booking__mail a{ color:var(--red-deep); }
+
+.links{ display:flex; flex-wrap:wrap; gap:10px; margin:4px 0 6px; }
+.chip{
+  font-family:var(--type); font-size:.78rem; letter-spacing:.1em; text-decoration:none;
+  color:var(--ink); background:var(--paper-3); border:2px solid var(--ink);
+  padding:6px 12px; box-shadow:2px 2px 0 var(--ink);
+}
+.chip:hover{ background:var(--gold-lit); color:var(--ink); }
+/* A chip still holding #REPLACE is hidden by JS (.chip--dead), same policy as
+   the Frost page: a dead social link reads worse than a missing one. */
+.chip--dead{ display:none; }
+
+.subscribe{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.subscribe input[type=email]{
+  flex:1 1 200px; font-family:var(--type); font-size:.95rem; color:var(--ink);
+  background:var(--paper-1); border:2px solid var(--ink); padding:10px 12px;
+}
+.subscribe input[type=email]:focus-visible{ outline:3px dashed var(--gold); outline-offset:2px; }
+.form-msg{ flex-basis:100%; margin:4px 0 0; font-family:var(--type); font-size:.82rem; color:var(--red-deep); min-height:1em; }
+
+/* =======================================================================
+   FOOTER
+   ======================================================================= */
+.foot{ margin-top:34px; text-align:center; }
+.foot__line{ font-family:var(--type); letter-spacing:.06em; color:var(--ink-soft); margin:6px 0; }
+.foot__small{ font-size:.8rem; color:var(--ink-faint); }
+
+/* =======================================================================
+   RESPONSIVE
+   ======================================================================= */
+@media (max-width:720px){
+  .victrola{ grid-template-columns:1fr; }
+  .about{ grid-template-columns:1fr; }
+  .about__plate{ max-width:260px; margin:0 auto; }
+  .booking{ grid-template-columns:1fr; }
+  .head::before,.head::after{ width:calc(50% - 6ch); }
+  /* Table → cards, the same pattern the Frost tour table uses. */
+  .dates thead{ display:none; }
+  .dates, .dates tbody, .dates tr, .dates td{ display:block; width:100%; }
+  .dates tr{ margin-bottom:14px; border:1.5px solid var(--ink-soft); background:var(--paper-2); }
+  .dates td{ border:none; padding:8px 12px; }
+  .dates td::before{
+    content:attr(data-label) ": "; font-family:var(--type); font-size:.7rem;
+    letter-spacing:.08em; color:var(--red); text-transform:uppercase;
+  }
+  .dates__empty td::before{ content:""; }
+}
+
+/* =======================================================================
+   REDUCED MOTION
+   Kill every animation and the perspective flip; the flip becomes a swap,
+   the record stops spinning, dust and the crawl stop dead.
+   ======================================================================= */
+@media (prefers-reduced-motion: reduce){
+  .notice__track{ animation:none; }
+  .platter__disc.spinning{ animation:none; }
+  .mote{ animation:none; }
+  #dust{ display:none; }
+  .card{ animation:none; }
+  .disc__inner{ transition:none; }
+  .side:hover .side__disc{ transform:none; }
+  .side__disc, .platter__arm{ transition:none; }
+  html{ scroll-behavior:auto; }
+}

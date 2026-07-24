@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  =======================================================================
+   NECK AND THE HEADS :: PRE-WAR BLUES :: AUSTIN, TEXAS
+   A room in the Frost Milano network. Its own paper, its own ink.
+  =======================================================================
+   HOW TO MAKE THIS YOURS (quick edits — search this file for each):
+
+   - "#REPLACE"        every link/slot still waiting on a real URL. A slot
+                       with #REPLACE renders as a blank record label on
+                       purpose, the same way the Frost video vault shows
+                       NO SIGNAL. Fill one in and it lights up by itself.
+   - "booking@"        the booking email. One address, three places.
+   - THE DATES table   add a row per show.
+   - THE SIDES         three blank labels — point them at real recordings.
+   - "NECK'S NOTES"    written in his voice from the documented history,
+                       NOT dictated by him. He should read and rewrite
+                       every one of them before this goes out.
+   - THE LINEAGE       the three artist cards. Facts here are documented;
+                       if he disagrees with a date, his call wins — half
+                       of pre-war scholarship is an argument about dates.
+   - images/neck-*.jpg photos are not in yet. Each frame shows a "PLATE
+                       PENDING" card until a file exists.
+  =======================================================================
+-->
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NECK &amp; THE HEADS :: Pre-War Blues :: Austin, Texas</title>
+<meta name="description" content="Neck and the Heads — pre-war blues out of Austin, Texas. Delta and Texas country blues played the old way, with the history that comes with it: Blind Lemon Jefferson, Charley Patton, Howlin' Wolf. Shows, sides, and booking." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Ultra&family=Special+Elite&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/neck.css" />
+<!-- A 78 seen face-on: shellac, paper label, spindle hole. Drawn rather than
+     an emoji so it still reads at 16px in a tab strip. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231a1410'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%233a2f24' stroke-width='1'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23c0872e'/%3E%3Ccircle cx='16' cy='16' r='1.4' fill='%231a1410'/%3E%3C/svg%3E" />
+</head>
+
+<body>
+  <!-- ================= DUST ================= -->
+  <!-- The counterpart to the snow on the Frost page: this room's weather is
+       dust in a light shaft. Purely decorative, and JS skips it entirely
+       when the visitor asks for reduced motion. (The paper grain is a
+       background layer on <body>, not an overlay — see the note in neck.css.) -->
+  <div id="dust" aria-hidden="true"></div>
+
+  <!-- ================= NOTICE STRIP ================= -->
+  <div class="notice" aria-hidden="true">
+    <div class="notice__track">
+      ☞ NECK &amp; THE HEADS ☜ &nbsp;·&nbsp; PRE-WAR BLUES, PLAYED THE OLD WAY &nbsp;·&nbsp; DELTA &amp; TEXAS &nbsp;·&nbsp; NOTHING AFTER 1942 &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp;
+      ☞ NECK &amp; THE HEADS ☜ &nbsp;·&nbsp; PRE-WAR BLUES, PLAYED THE OLD WAY &nbsp;·&nbsp; DELTA &amp; TEXAS &nbsp;·&nbsp; NOTHING AFTER 1942 &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp;
+    </div>
+  </div>
+
+  <div class="sheet">
+
+    <!-- ---------- THE HANDBILL ---------- -->
+    <header class="bill" id="top">
+      <div class="bill__edge bill__edge--top" aria-hidden="true"></div>
+
+      <p class="bill__eyebrow">☞ &nbsp;POSITIVELY THE ORIGINAL ARTICLE&nbsp; ☜</p>
+      <hr class="rule rule--fat" />
+
+      <h1 class="wordmark">
+        <span class="wordmark__small">NECK</span>
+        <span class="wordmark__amp">&amp; THE</span>
+        <span class="wordmark__big">HEADS</span>
+      </h1>
+
+      <hr class="rule rule--fat" />
+      <p class="bill__sub">COUNTRY BLUES &nbsp;·&nbsp; DELTA &amp; TEXAS &nbsp;·&nbsp; 1920&ndash;1942</p>
+      <p class="bill__where">AUSTIN, TEXAS</p>
+
+      <hr class="rule" />
+      <p class="bill__pitch">
+        No pedals. No overdrive. No song written after the shellac ran out.
+        <br />Just what a man could carry to a corner and play loud enough to be paid.
+      </p>
+
+      <div class="bill__buttons">
+        <a class="ink-btn" href="#lineage">☞ THE LINEAGE</a>
+        <a class="ink-btn" href="#victrola">☞ DROP THE NEEDLE</a>
+        <a class="ink-btn ink-btn--red" href="#booking">☞ BOOK THE BAND</a>
+      </div>
+
+      <div class="bill__edge bill__edge--bottom" aria-hidden="true"></div>
+    </header>
+
+    <!-- ---------- NAV ---------- -->
+    <nav class="tabs">
+      <a class="tab" href="#top">HOME</a>
+      <a class="tab" href="#victrola">THE VICTROLA</a>
+      <a class="tab" href="#sides">THE SIDES</a>
+      <a class="tab" href="#lineage">THE LINEAGE</a>
+      <a class="tab" href="#catalog">THE CATALOG</a>
+      <a class="tab" href="#about">WHO'S NECK</a>
+      <a class="tab" href="#dates">DATES</a>
+      <a class="tab" href="#booking">BOOKING</a>
+    </nav>
+
+    <!-- ================= THE VICTROLA ================= -->
+    <!-- The room's one piece of furniture that does something. The crackle is
+         synthesised in js/neck.js — there is no audio file behind it, and it
+         only ever starts on a click. Never on load. -->
+    <section class="leaf" id="victrola">
+      <h2 class="head"><span>THE VICTROLA</span></h2>
+      <p class="dek">Every one of these records was cut into wax, pressed in shellac, and
+        played on a spring you had to wind. It never sounded clean. That was never the point.</p>
+
+      <div class="victrola">
+        <div class="victrola__deck">
+          <div class="platter" id="platter">
+            <div class="platter__disc">
+              <div class="platter__label">
+                <span class="platter__label-cluster">
+                  <span class="platter__label-top">SURFACE NOISE</span>
+                  <span class="platter__label-mid">78 R.P.M.</span>
+                </span>
+                <span class="platter__label-bot">SHELLAC · GRAFTON, WIS.</span>
+                <i class="platter__hole" aria-hidden="true"></i>
+              </div>
+            </div>
+            <div class="platter__arm" aria-hidden="true"><i></i></div>
+          </div>
+        </div>
+
+        <div class="victrola__panel">
+          <button class="ink-btn ink-btn--red" type="button" id="crackle" aria-pressed="false">
+            ☞ START THE RECORD
+          </button>
+          <p class="victrola__note" id="crackle-note">
+            No music file, no download &mdash; the hiss is generated in your browser,
+            the way a worn 78 sounds with nothing in the groove.
+          </p>
+          <p class="fineprint">
+            <b>Why it hisses:</b> Paramount, who pressed most of what's on this page,
+            was a side business of a Wisconsin chair company. They mixed their shellac
+            cheap and pressed it thin. That sandstorm behind Charley Patton isn't age
+            &mdash; a lot of it was there the day the record was new.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= THE SIDES ================= -->
+    <!--
+      HOW TO FILL THIS IN: each label is one recording. Put a real URL in the
+      href (Bandcamp, YouTube, Spotify, a raw .mp3 — anything) and swap the
+      title/credit text. A label still holding #REPLACE stays blank on
+      purpose: an unpressed label reads as "not yet", where a dead link
+      reads as "broken". Add a fourth by copying one <article> whole.
+    -->
+    <section class="leaf" id="sides">
+      <h2 class="head"><span>THE SIDES</span></h2>
+      <p class="dek">What the band has committed to tape. Blank labels are pressings that haven't happened yet.</p>
+
+      <div class="sides">
+        <article class="side" data-url="#REPLACE">
+          <div class="side__disc">
+            <div class="side__label">
+              <span class="side__num">A</span>
+              <b class="side__title">UNPRESSED</b>
+              <span class="side__credit">NECK &amp; THE HEADS</span>
+              <i class="side__hole" aria-hidden="true"></i>
+            </div>
+          </div>
+          <div class="side__plate">
+            <span class="side__cat">CAT. No. 001-A</span>
+            <a class="side__play" href="#REPLACE" target="_blank" rel="noopener">☞ PLAY</a>
+            <span class="side__pending">AWAITING PRESSING</span>
+          </div>
+        </article>
+
+        <article class="side" data-url="#REPLACE">
+          <div class="side__disc">
+            <div class="side__label">
+              <span class="side__num">B</span>
+              <b class="side__title">UNPRESSED</b>
+              <span class="side__credit">NECK &amp; THE HEADS</span>
+              <i class="side__hole" aria-hidden="true"></i>
+            </div>
+          </div>
+          <div class="side__plate">
+            <span class="side__cat">CAT. No. 001-B</span>
+            <a class="side__play" href="#REPLACE" target="_blank" rel="noopener">☞ PLAY</a>
+            <span class="side__pending">AWAITING PRESSING</span>
+          </div>
+        </article>
+
+        <article class="side" data-url="#REPLACE">
+          <div class="side__disc">
+            <div class="side__label">
+              <span class="side__num">C</span>
+              <b class="side__title">UNPRESSED</b>
+              <span class="side__credit">NECK &amp; THE HEADS</span>
+              <i class="side__hole" aria-hidden="true"></i>
+            </div>
+          </div>
+          <div class="side__plate">
+            <span class="side__cat">CAT. No. 002-A</span>
+            <a class="side__play" href="#REPLACE" target="_blank" rel="noopener">☞ PLAY</a>
+            <span class="side__pending">AWAITING PRESSING</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ================= THE LINEAGE ================= -->
+    <!--
+      The centrepiece. Three men, one thread, and the thread is real: Patton
+      taught Wolf in person at Dockery, and Wolf carried it to Chicago, where
+      it turned into everything after. Every date and claim below is from the
+      documented record — where scholarship disagrees, the card says so
+      instead of picking a side.
+
+      NECK'S NOTES are drafted in his voice from that same record. He has not
+      dictated them. Get his pass before this is public.
+    -->
+    <section class="leaf leaf--dark" id="lineage">
+      <h2 class="head head--light"><span>THE LINEAGE</span></h2>
+      <p class="dek dek--light">Three men. One rope. Turn a card over for the notes.</p>
+
+      <div class="lineage">
+
+        <!-- ---- BLIND LEMON JEFFERSON ---- -->
+        <article class="disc" id="disc-lemon">
+          <div class="disc__inner">
+
+            <div class="disc__face disc__face--front">
+              <div class="disc__label">
+                <span class="disc__label-top">PARAMOUNT · CHICAGO</span>
+                <b class="disc__name">BLIND LEMON<br />JEFFERSON</b>
+                <span class="disc__years">c. 1893 &ndash; 1929</span>
+                <span class="disc__place">COUTCHMAN, TEXAS</span>
+                <i class="disc__hole" aria-hidden="true"></i>
+              </div>
+              <p class="disc__tag">THE TEXAS END OF THE ROPE</p>
+              <button class="ink-btn ink-btn--sm disc__flip" type="button" aria-expanded="false" aria-controls="notes-lemon">
+                ☞ TURN IT OVER
+              </button>
+            </div>
+
+            <div class="disc__face disc__face--back" id="notes-lemon">
+              <h3 class="disc__backhead">BLIND LEMON JEFFERSON</h3>
+              <dl class="facts">
+                <dt>Born</dt><dd>About 1893, Coutchman, Freestone County, Texas. Blind from the start.</dd>
+                <dt>Worked</dt><dd>Street corners in Deep Ellum, Dallas &mdash; for a while alongside a young Huddie Ledbetter, later known as Lead Belly.</dd>
+                <dt>Recorded</dt><dd>Paramount, from 1926. Close to a hundred sides in four years, more than almost anyone of his generation.</dd>
+                <dt>Sides</dt><dd><i>Got the Blues</i> · <i>Black Snake Moan</i> · <i>Match Box Blues</i> · <i>See That My Grave Is Kept Clean</i></dd>
+                <dt>Died</dt><dd>Chicago, December 1929. The story is a heart attack in the snow; nobody agrees on the details. Buried at Wortham, Texas.</dd>
+              </dl>
+              <p class="notes"><b>NECK'S NOTES:</b> He is the reason a man alone with a guitar
+                got recorded at all. Before Lemon sold, the labels wanted a woman out front and a
+                band behind her. He proved one voice and six strings could move records, and every
+                scout in the South went looking for the next one. Listen to the time: he stretches
+                a bar because the line isn't finished. That isn't sloppy playing &mdash; that's
+                a singer who never had to fit a drummer.</p>
+              <button class="ink-btn ink-btn--sm disc__flip" type="button">☜ BACK</button>
+            </div>
+
+          </div>
+        </article>
+
+        <!-- ---- CHARLEY PATTON ---- -->
+        <article class="disc" id="disc-patton">
+          <div class="disc__inner">
+
+            <div class="disc__face disc__face--front">
+              <div class="disc__label disc__label--red">
+                <span class="disc__label-top">PARAMOUNT · GRAFTON</span>
+                <b class="disc__name">CHARLEY<br />PATTON</b>
+                <span class="disc__years">c. 1891 &ndash; 1934</span>
+                <span class="disc__place">DOCKERY FARMS, MISS.</span>
+                <i class="disc__hole" aria-hidden="true"></i>
+              </div>
+              <p class="disc__tag">THE FATHER OF THE DELTA BLUES</p>
+              <button class="ink-btn ink-btn--sm disc__flip" type="button" aria-expanded="false" aria-controls="notes-patton">
+                ☞ TURN IT OVER
+              </button>
+            </div>
+
+            <div class="disc__face disc__face--back" id="notes-patton">
+              <h3 class="disc__backhead">CHARLEY PATTON</h3>
+              <dl class="facts">
+                <dt>Born</dt><dd>About 1891, near Bolton, Mississippi. The family moved to Dockery Farms while he was a boy, and Dockery became the school.</dd>
+                <dt>Taught</dt><dd>Willie Brown, Tommy Johnson, Son House, Chester Burnett &mdash; who became Howlin' Wolf. Robert Johnson grew up downstream of all of it.</dd>
+                <dt>Recorded</dt><dd>First session June 1929, Richmond, Indiana, for Paramount. Some sides went out anonymously as "The Masked Marvel" &mdash; the label made a contest of guessing him.</dd>
+                <dt>Sides</dt><dd><i>Pony Blues</i> · <i>Down the Dirt Road Blues</i> · <i>A Spoonful Blues</i> · <i>High Water Everywhere</i>, cut about the 1927 flood</dd>
+                <dt>Died</dt><dd>28 April 1934, Indianola, Mississippi, of a bad heart, two months after his last session. Buried at Holly Ridge.</dd>
+              </dl>
+              <p class="notes"><b>NECK'S NOTES:</b> The showman. Played the guitar behind his head
+                and between his knees eighty years before anybody made a career of it, and beat on
+                the body while he did it because he was one man doing the job of a rhythm section.
+                That hoarse shout of his goes straight into Wolf and out the other side into rock
+                and roll. If you only ever learn one thing off these records, learn that the
+                <i>guitar is a drum</i> first.</p>
+              <button class="ink-btn ink-btn--sm disc__flip" type="button">☜ BACK</button>
+            </div>
+
+          </div>
+        </article>
+
+        <!-- ---- HOWLIN' WOLF ---- -->
+        <article class="disc" id="disc-wolf">
+          <div class="disc__inner">
+
+            <div class="disc__face disc__face--front">
+              <div class="disc__label">
+                <span class="disc__label-top">WHITE STATION · MISS.</span>
+                <b class="disc__name">HOWLIN'<br />WOLF</b>
+                <span class="disc__years">1910 &ndash; 1976</span>
+                <span class="disc__place">CHESTER A. BURNETT</span>
+                <i class="disc__hole" aria-hidden="true"></i>
+              </div>
+              <p class="disc__tag">PATTON'S STUDENT, IN PERSON</p>
+              <button class="ink-btn ink-btn--sm disc__flip" type="button" aria-expanded="false" aria-controls="notes-wolf">
+                ☞ TURN IT OVER
+              </button>
+            </div>
+
+            <div class="disc__face disc__face--back" id="notes-wolf">
+              <h3 class="disc__backhead">HOWLIN' WOLF</h3>
+              <dl class="facts">
+                <dt>Born</dt><dd>Chester Arthur Burnett, 10 June 1910, White Station, near West Point, Mississippi. Named after a president. Grew to six foot three.</dd>
+                <dt>Learned</dt><dd>Guitar from Charley Patton at Dockery around 1930 &mdash; he could still play Patton's pieces note for note decades later. Harmonica from Rice Miller, the second Sonny Boy Williamson, who was family by marriage.</dd>
+                <dt>The howl</dt><dd>By his own account he was trying to yodel like Jimmie Rodgers, couldn't get it, and what came out instead was the howl.</dd>
+                <dt>Recorded</dt><dd>Memphis, 1951, for Sam Phillips &mdash; <i>Moanin' at Midnight</i> and <i>How Many More Years</i>. Two labels fought over the tapes. Chicago from 1952, and Chess after that.</dd>
+                <dt>Why he's here</dt><dd>He is the living wire. A man who learned at Dockery in 1930 was still on a stage in the seventies, so the pre-war Delta never actually ended &mdash; it moved.</dd>
+              </dl>
+              <p class="notes"><b>NECK'S NOTES:</b> People file Wolf under Chicago and stop there.
+                Wrong end of the story. He was twenty years old standing in front of Charley Patton,
+                and he carried that man's repertoire north in his hands. When you hear that band
+                stomp on one chord and refuse to move &mdash; that's Dockery, plugged in.</p>
+              <button class="ink-btn ink-btn--sm disc__flip" type="button">☜ BACK</button>
+            </div>
+
+          </div>
+        </article>
+
+      </div>
+
+      <p class="thread">
+        <b>THE ROPE:</b> Lemon proves the solo bluesman sells (1926) &rarr; the scouts comb the
+        South &rarr; Patton is found and recorded (1929) &rarr; Patton teaches Burnett at Dockery
+        &rarr; Burnett becomes Wolf and takes it to Chicago (1952) &rarr; everything you have ever
+        heard on a radio.
+      </p>
+    </section>
+
+    <!-- ================= THE CARD CATALOG ================= -->
+    <!-- The timeline. Buttons rather than links so the arrow keys can walk it;
+         the drawer below is aria-live so a screen reader hears each card. -->
+    <section class="leaf" id="catalog">
+      <h2 class="head"><span>THE CARD CATALOG</span></h2>
+      <p class="dek">Pull a year. Everything on this page happened between the first blues in print
+        and the day the record industry stopped.</p>
+
+      <div class="rail" role="group" aria-label="Timeline of the pre-war blues era">
+        <div class="rail__line" aria-hidden="true"></div>
+        <div class="rail__years" id="rail"></div>
+      </div>
+
+      <div class="drawer" id="drawer" aria-live="polite">
+        <!-- filled by js/neck.js -->
+      </div>
+    </section>
+
+    <!-- ================= WHO'S NECK ================= -->
+    <section class="leaf" id="about">
+      <h2 class="head"><span>WHO'S NECK</span></h2>
+
+      <div class="about">
+        <div class="about__plate">
+          <!-- Drop a photo at images/neck.jpg and this frame fills itself.
+               Until then it shows a "PLATE PENDING" card rather than a
+               broken-image icon. -->
+          <img class="about__img" id="neck-photo" src="images/neck.jpg" alt="Neck, of Neck and the Heads" />
+          <div class="about__pending" id="neck-pending">
+            <b>PLATE PENDING</b>
+            <span>drop a photo at<br /><code>images/neck.jpg</code></span>
+          </div>
+          <p class="about__cap">☞ NECK ☜</p>
+        </div>
+
+        <div class="about__body">
+          <!-- PLACEHOLDER BIO. Written to be true of the band as described and
+               nothing more — no invented hometown, no invented years played.
+               Neck should rewrite this in his own words. -->
+          <p class="lede">Neck plays pre-war blues. Only pre-war blues.</p>
+          <p>Not blues-rock, not a shuffle with a blues name on it, and nothing written after
+            the shellac ran out in 1942. The Delta and the Texas country blues, played on the
+            instruments those records were made on, at the tempos those men actually took.</p>
+          <p>The other half of it is what he knows. Ask him about a side and you get the label,
+            the session, the town, who else was in the room, and which of the three surviving
+            copies the reissue was mastered from. He has the kind of knowledge that usually
+            comes with a university office attached, except he'd rather play it than footnote it.</p>
+          <p><b>NECK &amp; THE HEADS</b> is that repertoire with a band behind it.</p>
+
+          <div class="stamps">
+            <span class="stamp">STRICTLY<br /><b>PRE-1942</b></span>
+            <span class="stamp">DELTA &amp;<br /><b>TEXAS</b></span>
+            <span class="stamp">AUSTIN<br /><b>TEXAS</b></span>
+            <span class="stamp">NO<br /><b>PEDALS</b></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= THE DATES ================= -->
+    <section class="leaf" id="dates">
+      <h2 class="head"><span>THE DATES</span></h2>
+      <p class="dek">Where to stand in front of it.</p>
+
+      <div class="dates-wrap">
+        <table class="dates">
+          <thead>
+            <tr><th>DATE</th><th>TOWN</th><th>HALL</th><th></th></tr>
+          </thead>
+          <tbody>
+            <!-- ADD A SHOW: copy a row. The empty row below is what an
+                 unbooked calendar looks like on purpose — delete it once
+                 there is a real date to put here. -->
+            <tr class="dates__empty">
+              <td colspan="4">☞ NO DATES POSTED. Ask and one gets booked. ☜</td>
+            </tr>
+            <!--
+            <tr>
+              <td data-label="Date">AUG 00</td>
+              <td data-label="Town">Austin, TX</td>
+              <td data-label="Hall">The Venue<br /><span class="dates__with">w/ SOMEBODY</span></td>
+              <td><a class="ink-btn ink-btn--sm" href="#REPLACE" target="_blank" rel="noopener">INFO</a></td>
+            </tr>
+            -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= BOOKING ================= -->
+    <section class="leaf" id="booking">
+      <h2 class="head"><span>BOOKING</span></h2>
+
+      <div class="booking">
+        <div class="booking__col">
+          <h3 class="minihead">☞ FOR HIRE</h3>
+          <p>Halls, porches, back rooms, festivals, and anywhere with a chair and a wall socket
+            that nobody's plugging into anyway.</p>
+          <!-- REPLACE booking@ with his real address (three places on this page). -->
+          <p class="booking__mail">
+            <a href="mailto:booking@example.com?subject=NECK%20AND%20THE%20HEADS%20-%20BOOKING">booking@example.com</a>
+          </p>
+          <p class="fineprint">Swap this for Neck's real address &mdash; search this file for <code>booking@</code>.</p>
+
+          <h3 class="minihead">☞ ELSEWHERE</h3>
+          <!-- Same rule as the Frost page: only real accounts go here. A badge
+               still holding #REPLACE hides itself instead of shipping a dead
+               link. Fill the href in and it appears. -->
+          <div class="links">
+            <a class="chip" href="#REPLACE" target="_blank" rel="noopener">INSTAGRAM</a>
+            <a class="chip" href="#REPLACE" target="_blank" rel="noopener">BANDCAMP</a>
+            <a class="chip" href="#REPLACE" target="_blank" rel="noopener">YOUTUBE</a>
+            <a class="chip" href="#REPLACE" target="_blank" rel="noopener">SPOTIFY</a>
+          </div>
+          <p class="fineprint" id="links-pending">No accounts wired up yet &mdash; put real URLs on the
+            chips in this section and each one appears.</p>
+        </div>
+
+        <div class="booking__col">
+          <h3 class="minihead">☞ THE MAILING LIST</h3>
+          <p class="dek dek--tight">Paper letters, if he had his way. Email as a compromise.</p>
+          <!-- Posts to the same /api/subscribe the Frost page uses, tagged with
+               list:"neck" so the two sign-ups can be told apart in KV. The
+               endpoint ignores unknown fields today, so this degrades to a
+               plain subscribe until it is taught to read the tag. -->
+          <form class="subscribe" id="neck-signup">
+            <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <label class="sr-only" for="neck-email">Email</label>
+            <input id="neck-email" type="email" required placeholder="your@email.com" />
+            <button class="ink-btn ink-btn--red" type="submit">☞ SIGN ON</button>
+            <p class="form-msg" id="neck-signup-msg" role="status"></p>
+          </form>
+
+          <h3 class="minihead">☞ THE STANDING OFFER</h3>
+          <p>Bring him a 78 he hasn't heard and he will tell you what it is, who cut it, and
+            roughly what you overpaid for it.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="foot">
+      <hr class="rule rule--fat" />
+      <p class="foot__line">NECK &amp; THE HEADS &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp; <span id="year">2026</span></p>
+      <p class="foot__line foot__small">
+        A room in the <a href="index.html">FROST MILANO</a> network &nbsp;·&nbsp;
+        <a href="index.html">&larr; back out to the ice</a>
+      </p>
+      <p class="foot__line foot__small">
+        All historical dates on this page are documented, and half of them are still argued about. ☞
+      </p>
+      <p class="foot__line foot__small"><a href="#top">☝ back to the top ☝</a></p>
+    </footer>
+
+  </div><!-- /.sheet -->
+
+  <script src="js/neck.js"></script>
+</body>
+</html>

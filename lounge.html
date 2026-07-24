@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>FROST LOUNGE :: prototype</title>
 <style>
@@ -755,6 +755,46 @@
   .arcade__rotate span{ font-size:2rem; }
   @media (orientation:portrait){
     .arcade.is-immersive:not(.is-3d) .arcade__rotate{ display:flex; }
+
+    /* ---- 3D board, played upright ----
+       The immersive overlays were laid out for a landscape phone; stacked into
+       a 375px-wide portrait they pile onto each other - the palette runs off
+       both edges, the rival panel lands on the HUD, and the camera row sits on
+       the deck. Re-flow them into a clean vertical stack for the one
+       orientation the 3D camera actually lets you play upright in. */
+
+    /* The palette is pinned to a single line in immersive, and on a phone that
+       line is wider than the screen, so the tower chips hang off both edges.
+       Let it wrap, and give the deck a real width to wrap inside - max-content
+       would just re-grow to the one long line. */
+    .arcade.is-immersive.is-3d .maul__deck{
+      width:calc(100% - 12px); max-width:none;
+    }
+    .arcade.is-immersive.is-3d .maul__row{ flex-wrap:wrap; }
+
+    /* The rival panel can't share the top row with the HUD across 375px, so it
+       drops beneath it; stacked, each gets the width it needs. */
+    .arcade.is-immersive.is-3d .arcade__scores{
+      top:calc(46px + env(safe-area-inset-top));
+      right:calc(8px + env(safe-area-inset-right));
+    }
+    /* The selected-tower strip shares that second row on the left, so it's
+       held to the width beside the rival panel rather than running under it.
+       border-box so the cap counts the padding - otherwise the strip lands
+       ~20px wider than asked and clips the panel's edge. */
+    .arcade.is-immersive.is-3d .maul__sel{
+      box-sizing:border-box; max-width:calc(100% - 196px);
+    }
+
+    /* The camera row rides just clear of the deck instead of overlapping it.
+       The deck is at most three rows here - the wave clock, then the four-tower
+       palette wrapped two-up on the narrowest phones (~117px tall) - so this
+       clearance holds it with a small margin; on wider phones the palette fits
+       fewer rows and the row simply floats a little higher. */
+    .arcade.is-immersive.is-3d .maul__cam{
+      left:50%; right:auto; transform:translateX(-50%);
+      bottom:calc(8px + env(safe-area-inset-bottom) + 128px);
+    }
   }
   @media (prefers-reduced-motion:reduce){
     .arcade__rotate span{ animation:none; }
@@ -978,8 +1018,13 @@
           </div>
           <div class="maul__row" id="wm-towers" role="group"
                aria-label="Tower to build"></div>
-          <div class="maul__sel" id="wm-sel"></div>
         </div>
+        <!-- The selected-tower strip lives outside the deck on purpose. In
+             immersive it floats to the top-left under the HUD (see its rule),
+             which only lands there if its containing block is the cabinet, not
+             the deck - a child of the absolutely-positioned deck would park
+             relative to that instead, down at the bottom over the palette. -->
+        <div class="maul__sel" id="wm-sel"></div>
         <p class="arcade__hint">tap or drag the grid to build &middot; 1-4 picks a
           tower &middot; tap a tower to upgrade or sell &middot; SPACE calls the
           next wave &middot; ESC to exit &middot; <b>FULLSCREEN</b> for the whole

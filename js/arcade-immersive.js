@@ -23,6 +23,45 @@
     return document.fullscreenElement || document.webkitFullscreenElement || null;
   }
 
+  /* ================= zoom lock =================
+     The reading pages are meant to pinch-zoom - a bio, a tour date, a set of
+     liner notes all earn it - so the viewport tag site-wide leaves zoom open.
+     A game is the opposite: the board is already handed the whole viewport, so
+     there is nothing to zoom into, and the canvas runs touch-action:none to
+     read paddles and towers raw. That combination is the trap the player hits -
+     pinch in once (or arrive already zoomed from the page before), and a
+     pinch-OUT over the board does nothing, leaving the game stuck magnified
+     with no way back.
+
+     Opening a cabinet snaps the page back to 1:1 and holds it there; closing
+     hands zoom back. The state lives at module scope so the three cabinets
+     share one lock and a stray double-enter can't strand the saved viewport. */
+  var zoomLocks = 0, savedViewport = null;
+  function viewportMeta() { return document.querySelector('meta[name="viewport"]'); }
+  function blockGesture(e) { e.preventDefault(); }
+  function lockZoom() {
+    if (zoomLocks++ > 0) return;
+    var vp = viewportMeta();
+    if (!vp) return;
+    savedViewport = vp.getAttribute("content");
+    /* Dropping maximum-scale below the live zoom is what actually snaps iOS
+       Safari back to 1:1; user-scalable holds it on browsers that honour the
+       tag, and the gesture guard covers iOS, which ignores it and would let a
+       two-finger pinch back in mid-game otherwise. */
+    vp.setAttribute("content",
+      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover");
+    document.addEventListener("gesturestart", blockGesture, { passive: false });
+    document.addEventListener("gesturechange", blockGesture, { passive: false });
+  }
+  function unlockZoom() {
+    if (zoomLocks === 0 || --zoomLocks > 0) return;
+    document.removeEventListener("gesturestart", blockGesture);
+    document.removeEventListener("gesturechange", blockGesture);
+    var vp = viewportMeta();
+    if (vp && savedViewport != null) vp.setAttribute("content", savedViewport);
+    savedViewport = null;
+  }
+
   /* opts:
        onResize  - called after the viewport changes and after enter/leave, so
                    the caller can re-measure and redraw.
@@ -134,6 +173,10 @@
       enter: function () {
         bind();
         setState(true);
+        /* Synchronous and first, while the opening click is still the live
+           gesture: rewriting the viewport tag here is what resets a carried-in
+           zoom, and iOS only honours viewport changes made inside a gesture. */
+        lockZoom();
         acquireWake();
         /* Fullscreen needs a live user gesture. Opening a cabinet is a click,
            so the usual path has one; a programmatic open (a check, a deep
@@ -151,6 +194,7 @@
         exitFS();
         unlockOrientation();
         releaseWake();
+        unlockZoom();
         setState(false);
       },
       toggle: function () { if (on) api.leave(); else api.enter(); }

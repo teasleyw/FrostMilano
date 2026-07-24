@@ -5,9 +5,12 @@ Icy Y2K / late-90s GeoCities aesthetic, but responsive and readable.
 
 ```
 Website/
-├─ index.html      ← all the page content
-├─ css/style.css   ← all the styling (colors, layout, effects)
+├─ index.html      ← Frost Milano — the home page
+├─ neck.html       ← Neck & the Heads — a second artist "region" (see below)
+├─ css/style.css   ← Frost's styling (colors, layout, effects)
+├─ css/neck.css    ← Neck's styling — a separate pre-war-blues world
 ├─ js/main.js      ← snow, video vault, visitor counter, guestbook, signup form
+├─ js/neck.js      ← Neck's dust, record crackle, flip cards, timeline, form
 ├─ video/          ← drop your Instagram clips here (see video/README.txt)
 ├─ _headers        ← browser caching rules for Cloudflare Pages
 └─ README.md       ← you are here
@@ -200,6 +203,50 @@ Each upgrades twice (×1.8 damage a step) and sells back at 70% of what went
 into it. Scoring: `4 + wave` per kill (×6 on bosses), `40 × wave` per wave
 survived, `40` per life left at the end, and `2500` for outlasting the rival.
 
+## 🎸 The network — Neck & the Heads (`neck.html`)
+
+The site is becoming a small **network of Austin-artist rooms**, each its own
+page in its own style. The first neighbour is **Neck & the Heads**, a pre-war
+blues act — `neck.html`, with `css/neck.css` and `js/neck.js`. It shares
+nothing visual with the Frost page on purpose: aged-paper letterpress and
+shellac instead of ice and chrome. The two link to each other from the footer
+(Frost's footer has a **THE NETWORK** line; Neck's footer has *back out to the
+ice*). Add the next artist by copying this trio and dropping a matching link in
+each footer.
+
+**Self-contained and no build step**, same as the rest of the site. Two nice
+tricks worth knowing:
+
+- **The Victrola** hiss is *generated in the browser* with the Web Audio API on
+  a click — there is no audio file, and nothing touches the speakers until the
+  visitor presses the button.
+- **The paper grain** is a background layer on `<body>`, deliberately *not* a
+  fixed overlay and *not* `background-attachment: fixed`. A fixed, full-viewport
+  texture (especially with a blend mode) makes the browser repaint the whole
+  page every scroll frame and can blank it mid-scroll — the comment in
+  `css/neck.css` spells this out so it isn't reintroduced.
+
+**What's still a placeholder** (open `neck.html` and search):
+
+| Search for | What it is |
+|---|---|
+| `booking@` | The booking email — one address, three spots. Swap in Neck's real one. |
+| `#REPLACE` on a `.side` | The three record labels under **THE SIDES**. Put a real URL (Bandcamp/YouTube/mp3…) in `data-url` + the `href`, and that label flips from "AWAITING PRESSING" to a **PLAY** button by itself. |
+| `#REPLACE` on a `.chip` | The socials under **BOOKING**. A chip still holding `#REPLACE` hides itself (same "no dead links" rule as Frost); fill the `href` and it appears. |
+| `images/neck.jpg` | The **WHO'S NECK** photo. Until a file exists the frame shows a "PLATE PENDING" card instead of a broken image. |
+| The `THE DATES` table | One "NO DATES POSTED" row is in as the empty state; a commented-out template row shows the shape to copy. |
+| **NECK'S NOTES** + the bio | Written *in his voice from the documented history*, not dictated by him. He should read and rewrite every one before it's public. |
+
+**The history is real.** THE LINEAGE (Blind Lemon Jefferson → Charley Patton →
+Howlin' Wolf) and THE CARD CATALOG timeline are built from the documented
+record; where scholarship argues a date, the copy says "about" rather than
+picking a side. If Neck disagrees with a date, his call wins — half of pre-war
+blues scholarship is an argument about dates.
+
+**The mailing list** posts to the same `/api/subscribe` as Frost's Ice List but
+tags itself `list:"neck"`, so `subscribe.js` files it under `sub:neck:<email>`
+and the two lists stay separate (Frost's, with no tag, is still `sub:<email>`).
+
 ## 📬 The forms + counter (real, via Cloudflare KV)
 
 The **Ice List signup**, the **guestbook**, the **visitor counter**, and the
@@ -212,7 +259,7 @@ behaviour, so the site never looks broken.
 | Endpoint | What it does |
 |---|---|
 | `functions/api/visits.js` | Shared hit counter. POST bumps it, GET reads it; the page counts once per session. |
-| `functions/api/subscribe.js` | Stores each Ice List email in KV as `sub:<email>` (duplicates collapse). |
+| `functions/api/subscribe.js` | Stores each signup in KV (duplicates collapse). No list tag → `sub:<email>` (Frost's Ice List); `list:"neck"` → `sub:neck:<email>`. One endpoint, one list per room. |
 | `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 60s-per-IP cooldown). |
 | `functions/api/scores.js` | Shared high-score boards for the lounge's three arcade cabinets. `GET ?game=bricksmash\|snake\|wintermaul` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
 
