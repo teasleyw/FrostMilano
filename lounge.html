@@ -179,17 +179,22 @@
     letter-spacing:.5px;
   }
   .arcade__note b{ color:#6bb8dd; }
-  /* Reuse the .back button's look for the exit control. */
-  .arcade__exit{
+  /* Reuse the .back button's look for the exit control, and for the OK that
+     submits a set of initials. They look identical and are deliberately two
+     classes: immersive hides the cabinet's chrome, EXIT TO LOUNGE included,
+     and OK must not go with it - it is the only way to post a high score that
+     isn't a keypress, and it appears at the one moment immersive is still on. */
+  .arcade__exit, .arcade__ok{
     align-self:center; font:inherit; font-size:.78rem; letter-spacing:1px;
     color:#eafcff; padding:7px 16px; border-radius:6px; cursor:pointer;
     background:linear-gradient(180deg,#155a82,#0a3350);
     border:2px outset #4bb4d8; text-shadow:0 1px 0 #02101c;
     transition:filter .12s ease, transform .08s ease;
   }
-  .arcade__exit:hover{ filter:brightness(1.25); color:#fff; transform:translateY(-1px); }
-  .arcade__exit:active{ border-style:inset; transform:translateY(1px); }
-  .arcade__exit:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .arcade__exit:hover, .arcade__ok:hover{ filter:brightness(1.25); color:#fff; transform:translateY(-1px); }
+  .arcade__exit:active, .arcade__ok:active{ border-style:inset; transform:translateY(1px); }
+  .arcade__exit:focus-visible,
+  .arcade__ok:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
 
   /* ================= THE DECKS (step sequencer) =================
      Reuses the .arcade backdrop, cabinet, marquee and exit chrome so it reads
@@ -289,7 +294,7 @@
     .decks__cell{ height:30px; }
     .decks__gridwrap{ -webkit-overflow-scrolling:touch; }
     /* Bigger, thumb-friendly transport and exit controls. */
-    .decks__btn, .arcade__exit{ padding:10px 16px; font-size:.8rem; }
+    .decks__btn, .arcade__exit, .arcade__ok{ padding:10px 16px; font-size:.8rem; }
   }
 
   /* ================= WARDROBE (make your own guest) =================
@@ -571,7 +576,9 @@
     background:#02101c; box-shadow:none; overflow:hidden;
     position:relative;
   }
-  /* The chrome that only makes sense around a cabinet. */
+  /* The chrome that only makes sense around a cabinet. Note this reaches every
+     .arcade__exit inside the cabinet, which is why the initials form's OK
+     carries .arcade__ok instead - see that rule for the whole story. */
   .arcade.is-immersive .arcade__marquee,
   .arcade.is-immersive .arcade__hint,
   .arcade.is-immersive .arcade__exit,
@@ -3134,7 +3141,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
         '<form class="arcade__enter" id="bs-enter">' +
         '<input id="bs-initials" maxlength="3" autocomplete="off" ' +
         'aria-label="Your initials" placeholder="AAA">' +
-        '<button type="submit" class="arcade__exit">OK</button></form>');
+        '<button type="submit" class="arcade__ok">OK</button></form>');
       var form = document.getElementById("bs-enter");
       var inp = document.getElementById("bs-initials");
       if (inp) inp.focus();
@@ -4170,7 +4177,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
         '<form class="arcade__enter" id="sn-enter">' +
         '<input id="sn-initials" maxlength="3" autocomplete="off" ' +
         'aria-label="Your initials" placeholder="AAA">' +
-        '<button type="submit" class="arcade__exit">OK</button></form>');
+        '<button type="submit" class="arcade__ok">OK</button></form>');
       var form = document.getElementById("sn-enter");
       var inp = document.getElementById("sn-initials");
       if (inp) inp.focus();
@@ -6470,7 +6477,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
         '<form class="arcade__enter" id="wm-enter">' +
         '<input id="wm-initials" maxlength="3" autocomplete="off" ' +
         'aria-label="Your initials" placeholder="AAA">' +
-        '<button type="submit" class="arcade__exit">OK</button></form>');
+        '<button type="submit" class="arcade__ok">OK</button></form>');
       var form = document.getElementById("wm-enter");
       var inp = document.getElementById("wm-initials");
       if (inp) inp.focus();
