@@ -157,8 +157,8 @@ the shot that's actually hard), plus `250 + 100 × level` for clearing a squadro
 
 ## ❄ Winter Maul (the third cabinet)
 
-A maze tower defence in the vein of the Warcraft III "maul" maps, on the wall
-between the decks and Brick Smash. Its whole script is one block in
+A maze tower defence in the vein of the Warcraft III "maul" maps, at the back of
+the arcade row beside Brick Smash. Its whole script is one block in
 `lounge.html`; it's drawn in the room's own isometric projection at half tile
 size, so the board looks like it belongs to the lounge.
 
@@ -202,6 +202,29 @@ Everything worth tuning is in the `---- towers ----`, `---- sends ----` and
 Each upgrades twice (×1.8 damage a step) and sells back at 70% of what went
 into it. Scoring: `4 + wave` per kill (×6 on bosses), `40 × wave` per wave
 survived, `40` per life left at the end, and `2500` for outlasting the rival.
+
+## 🪩 Frost Pinball (the fourth cabinet)
+
+The one machine you look *down* into rather than at — a low table at the front of
+the arcade row with a lit backglass. Its whole script is one block in
+`lounge.html`, and it's a real physics table: a ball under gravity, two flippers
+that hand the ball their own swing speed, three pop bumpers, two slingshots and
+three snowflake rollovers. The whole model is sub-stepped so the ball can never
+tunnel a flipper, and **every line you see on the table is a segment it actually
+collides with**.
+
+- **Launch** by holding SPACE (or tapping) — the plunger charges, then fires the
+  ball up the lane. The lane divider is a **one-way gate**: the ball drops into
+  play through it once, up top, but a ball coming down the right side can never
+  cross back into the lane — it funnels to the right flipper instead, which is
+  what stops the table soft-locking. A ball that does come to rest in the lane is
+  auto-served again as a backstop.
+- **Flippers** are the screen's left/right halves (or `←`/`→`, `A`/`L`).
+- **Nudge** with `↑`/`W` to save a drain — but shove too hard and the table
+  **TILTS**, killing the flippers for the rest of that ball.
+- Light all three snowflakes and the **bonus multiplier** climbs `×1 → ×5`;
+  bumpers pay `100`, slingshots `25`, a completed set `1000`, all times the
+  multiplier. Three balls, then the board.
 
 ## 🎸 The network — Neck & the Heads (`neck.html`)
 
@@ -261,7 +284,7 @@ behaviour, so the site never looks broken.
 | `functions/api/visits.js` | Shared hit counter. POST bumps it, GET reads it; the page counts once per session. |
 | `functions/api/subscribe.js` | Stores each signup in KV (duplicates collapse). No list tag → `sub:<email>` (Frost's Ice List); `list:"neck"` → `sub:neck:<email>`. One endpoint, one list per room. |
 | `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 60s-per-IP cooldown). |
-| `functions/api/scores.js` | Shared high-score boards for the lounge's three arcade cabinets. `GET ?game=bricksmash\|snake\|wintermaul` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
+| `functions/api/scores.js` | Shared high-score boards for the lounge's four arcade cabinets. `GET ?game=bricksmash\|snake\|wintermaul\|pinball` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
 
 ### One-time setup: bind the KV namespace
 The Functions look for a binding named **`FrostMilanoKV`** (a **`FROST_KV`**
@@ -285,8 +308,8 @@ return 503 and the site uses the local fallback.
   `sub:` prefix, or from a terminal:
   `wrangler kv key list --namespace-id ee9fcf13dac5479787cc42f9089246e6 --prefix "sub:"`
 - **Guestbook:** it renders on the site; the raw JSON is the `guestbook` key.
-- **High scores:** the raw JSON lives under `scores:bricksmash`, `scores:snake`
-  and `scores:wintermaul`.
+- **High scores:** the raw JSON lives under `scores:bricksmash`, `scores:snake`,
+  `scores:wintermaul` and `scores:pinball`.
 
 ### Want signups emailed to you instead?
 KV storage is the no-extra-service option. To also get an email on each signup,

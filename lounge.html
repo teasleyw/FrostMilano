@@ -138,6 +138,16 @@
     /* Own the touch: swipe-to-steer must never scroll or zoom the page. */
     touch-action:none;
   }
+  /* Pinball is a smooth game like Brick Smash (round bumpers, a lit ball), so it
+     turns the file-wide pixelated rendering off and sizes to its stage. */
+  #pb-canvas{
+    image-rendering:auto;
+    width:100%; height:auto; display:block;
+    border:3px ridge #6bb8dd; border-radius:6px;
+    background:#05131f;
+    /* Own every gesture: two-thumb flippers must never scroll or zoom the page. */
+    touch-action:none;
+  }
   /* Faint CRT scanlines, echoing the video-vault TVs on the main site. */
   .arcade__screen::after{
     content:""; position:absolute; inset:0; pointer-events:none;
@@ -661,7 +671,8 @@
      number of classes - a class-only override here loses and the board comes
      out stretched to the viewport. */
   .arcade.is-immersive #bs-canvas,
-  .arcade.is-immersive #sn-canvas{
+  .arcade.is-immersive #sn-canvas,
+  .arcade.is-immersive #pb-canvas{
     max-width:100%; max-height:100%; width:auto; height:auto;
     border:0; border-radius:0; touch-action:none;
   }
@@ -696,6 +707,11 @@
      sidebar and becomes the thing you are reading. Scrolls rather than growing
      past the viewport - Brick Smash's aside also carries the capsule legend. */
   .arcade.is-immersive.is-over .arcade__scores{ width:200px; }
+  /* Pinball's table fills the whole viewport - its plunger lane and the ball
+     run right up the edge - so unlike Brick Smash it can't afford a legend
+     floating over the play. Keep the aside out until the run is over (when the
+     board is what you're reading anyway); windowed mode still shows it side-on. */
+  #pinball.arcade.is-immersive:not(.is-over) .arcade__scores{ display:none; }
   .arcade.is-immersive .arcade__scores{
     position:absolute; z-index:3; flex:none; min-width:0; width:150px;
     max-height:calc(100% - 96px); overflow-y:auto;
@@ -1040,6 +1056,51 @@
   </div>
 </div>
 
+<!-- ================= PINBALL ================= -->
+<div id="pinball" class="arcade" role="dialog" aria-modal="true"
+     aria-label="Frost Pinball" aria-hidden="true">
+  <div class="arcade__cab">
+    <div class="arcade__marquee">&#10052; FROST PINBALL &#10052;</div>
+    <div class="arcade__body">
+      <div class="arcade__stage">
+        <div class="arcade__hud">
+          <span>SCORE <b id="pb-score">0</b></span>
+          <span>BALL <b id="pb-ball">1</b></span>
+          <span>BONUS <b id="pb-mult">&times;1</b></span>
+        </div>
+        <div class="arcade__screen">
+          <canvas id="pb-canvas" width="340" height="460"></canvas>
+          <div class="arcade__msg" id="pb-msg"></div>
+        </div>
+        <p class="arcade__hint">&#9664;&#9654; / A &amp; L / tap the screen's left &amp; right to flip &middot; hold SPACE, release to launch &middot; &#9650; / W to nudge (don't TILT) &middot; ESC to exit</p>
+      </div>
+      <aside class="arcade__scores">
+        <div class="arcade__hi">
+          <h3>&#127942; HIGH SCORES</h3>
+          <ol id="pb-board"></ol>
+        </div>
+        <div class="arcade__legend">
+          <h3>&#10052; THE TABLE</h3>
+          <ul class="arcade__pu">
+            <li><i class="pu-w">&#9679;</i> pop bumpers &mdash; 100 each</li>
+            <li><i class="pu-s">&#9679;</i> slingshots &mdash; 25 each</li>
+            <li><i class="pu-l">&#10052;</i> light all three snowflakes</li>
+            <li><i class="pu-c">&times;</i> &hellip; and the bonus climbs, x1&rarr;x5</li>
+          </ul>
+          <p class="arcade__note">three balls. A drain you can't flip away is a
+            ball gone - <b>nudge</b> to save it, but shove too hard and the table
+            <b>TILTS</b> and kills the flippers.</p>
+        </div>
+      </aside>
+    </div>
+    <div class="arcade__foot">
+      <button type="button" class="arcade__exit" id="pb-exit">&#10005; EXIT TO LOUNGE</button>
+      <button type="button" class="arcade__full" id="pb-full"
+              aria-pressed="false">&#9974; FULLSCREEN</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================= THE DECKS (step sequencer) ================= -->
 <div id="decks" class="arcade" role="dialog" aria-modal="true"
      aria-label="The Decks step sequencer" aria-hidden="true">
@@ -1331,17 +1392,23 @@
   var BLOCKED = {};
   function block(x, y) { BLOCKED[x + "," + y] = true; }
   var SPEAKER = [8, 0], BENCH = [[1, 7], [2, 7]];
-  /* The interactive fixtures. Two arcade cabinets - one on the back-left wall,
-     one further along the back-right - and the DECKS, a DJ console higher up
-     the back-left wall that guests build a loop on rather than beat a game.
-     Clicking a fixture opens it; all are blocked so guests route around them
-     and can't stand inside the machines. */
-  var ARCADE = [0, 4];
-  var SNAKE = [6, 0];
-  var MAUL = [0, 2];
-  var DECKS = [0, 1];
+  /* The interactive fixtures, grouped so the room reads at a glance. THE ARCADE
+     runs along the back-left wall (all facing SE): WINTER MAUL, BRICK SMASH,
+     PINBALL and SNAKE, a four-machine row you'd find in one corner of any real
+     arcade. THE SOUND SYSTEM lines the back-right wall by the corner (facing
+     SW): the DECKS console, the boombox and the speaker stack, so the noise-
+     makers stand together. Clicking a fixture opens it; all are blocked so
+     guests route around them and can't stand inside the machines. */
+  var MAUL = [0, 1];
+  var ARCADE = [0, 2];
+  var SNAKE = [0, 3];
+  /* PINBALL rides the front of the row on purpose: it's a low table, not an
+     upright, so it stands nearest the room where no taller cabinet can hide its
+     playfield. */
+  var PINBALL = [0, 4];
+  var DECKS = [6, 0];
   /* The wardrobe: the one fixture you dress at rather than play. Stands further
-     down the back-left wall, below the arcade cabinet. Clicking it opens the
+     down the back-left wall, below the arcade row. Clicking it opens the
      make-your-own-guest panel; its mirror reflects whatever you last chose. */
   var WARDROBE = [0, 6];
 
@@ -1427,6 +1494,7 @@
       block(ARCADE[0], ARCADE[1]);
       block(SNAKE[0], SNAKE[1]);
       block(MAUL[0], MAUL[1]);
+      block(PINBALL[0], PINBALL[1]);
       block(DECKS[0], DECKS[1]);
       block(BOOMBOX[0], BOOMBOX[1]);
       block(WARDROBE[0], WARDROBE[1]);
@@ -1866,11 +1934,11 @@
      Brick Smash's row colours. */
   function snakeCab(hovered) {
     var tx = SNAKE[0], ty = SNAKE[1];
-    /* Stands against the back-right wall, so its screen goes on the SW face -
-       the one that looks into the room. The body's shading swaps to match:
-       the lit tone belongs on whichever side is turned toward us. */
+    /* Now stands in the arcade row on the back-left wall, so its screen goes on
+       the SE face like BRICK SMASH and WINTER MAUL either side of it - the face
+       that looks into the room - and its body takes the same SE shading. */
     drawBox(tx, ty, CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
-            css(shade(rgb(HEX.deep2), 0.92)), css(shade(rgb(HEX.O), 1.35)));
+            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.92)));
 
     /* Phase-shifted from the Brick Smash cabinet so the two screens breathe
        out of sync, and tinted gold instead of cyan so the pair reads as two
@@ -1878,19 +1946,19 @@
     var glow = 0.6 + 0.4 * Math.sin(cabPulse + 1.6) * 0.5 + (hovered ? 0.35 : 0);
     glow = Math.max(0, Math.min(1, glow));
 
-    /* Same shell as Brick Smash, mirrored onto the SW face and gold-signed. */
-    cabShell(SNAKE, "SW", rgb(HEX.deep2), rgb(HEX.gold), glow);
+    /* Same shell as Brick Smash, on the SE face and gold-signed. */
+    cabShell(SNAKE, "SE", rgb(HEX.deep2), rgb(HEX.gold), glow);
 
     var segC = [HEX.bright, HEX.light];
     var segs = [[0.10, 0.20], [0.24, 0.20], [0.38, 0.20], [0.38, 0.42], [0.38, 0.64]];
     segs.forEach(function (s, i) {
-      cabScreen(SNAKE, "SW", s[0], s[0] + 0.13, s[1], s[1] + 0.18,
+      cabScreen(SNAKE, "SE", s[0], s[0] + 0.13, s[1], s[1] + 0.18,
                 css(shade(rgb(segC[i % 2]), 0.55 + glow * 0.6)));
     });
     /* head, brighter than the body */
-    cabScreen(SNAKE, "SW", 0.50, 0.63, 0.64, 0.82, css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
+    cabScreen(SNAKE, "SE", 0.50, 0.63, 0.64, 0.82, css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
     /* the snowflake it's chasing */
-    cabScreen(SNAKE, "SW", 0.74, 0.83, 0.64, 0.82, css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
+    cabScreen(SNAKE, "SE", 0.74, 0.83, 0.64, 0.82, css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
 
     if (hovered) cabinetLabel(SNAKE, "▶ SNAKE");
   }
@@ -1924,6 +1992,97 @@
     if (hovered) cabinetLabel(MAUL, "▶ WINTER MAUL");
   }
 
+  /* ================= pinball =================
+     The arcade's fourth machine, and the only one you look DOWN into rather than
+     straight at: a low body carries a flat playfield - bumpers, a pair of
+     flippers and a loose ball, the same "frozen game in progress" the uprights
+     freeze on their screens, only top-down - with a lit backglass standing at
+     the wall behind it. Rose-signed, the one warm marquee in a row of ice, so a
+     glance never mistakes it for a fourth upright. Stands in the row facing SE. */
+  var PIN_BODY = 16;     /* body height: where the playfield surface sits */
+  var PIN_BACK = 15;     /* how far the backbox rises above the surface */
+  var PIN_ROSE = "#ff5aa0";
+  function pinballCab(hovered) {
+    var tx = PINBALL[0], ty = PINBALL[1], c = centre(tx, ty);
+    var glow = 0.6 + 0.4 * Math.sin(cabPulse + 4.7) * 0.5 + (hovered ? 0.35 : 0);
+    glow = Math.max(0, Math.min(1, glow));
+
+    /* the cabinet body, SE-shaded like the uprights it stands beside */
+    drawBox(tx, ty, PIN_BODY, css(shade(rgb(HEX.deep2), 1.05)),
+            css(shade(rgb(HEX.O), 1.3)), css(shade(rgb(HEX.deep2), 0.85)));
+
+    /* A point on the flat playfield (the body's top face). p runs 0..1 back
+       (the backbox) to front (the lip nearest the player); q runs 0..1 across,
+       right rail to left rail; z lifts a marker off the glass. Mapped straight
+       onto the tile's own top diamond, so nothing drifts off the body. */
+    function pin(p, q, z) {
+      var ax = p - 0.5, aq = q - 0.5;
+      return { x: c.x + ax * (TW / 2) - aq * (TW / 2),
+               y: (c.y - PIN_BODY - (z || 0)) + ax * (TH / 2) + aq * (TH / 2) };
+    }
+    function pinPoly(pts, fill) {
+      ctx.beginPath();
+      for (var i = 0; i < pts.length; i++) {
+        var g = pin(pts[i][0], pts[i][1], pts[i][2] || 0);
+        if (i) ctx.lineTo(g.x, g.y); else ctx.moveTo(g.x, g.y);
+      }
+      ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+    }
+    /* A round fixture lies down as a squashed iso ellipse, the same way the
+       decks' platters do. */
+    function pinDot(p, q, r, fill, z) {
+      var g = pin(p, q, z || 0);
+      ctx.beginPath(); ctx.ellipse(g.x, g.y, r, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = fill; ctx.fill();
+    }
+
+    /* playfield: a dark glass inset inside a steel rail, with a faint centre
+       lane so it reads as a table you look down into, not a closed lid */
+    pinPoly([[0.08, 0.08], [0.08, 0.92], [0.97, 0.92], [0.97, 0.08]],
+            css(shade(rgb(HEX.f4), 1.0)));
+    pinPoly([[0.13, 0.12], [0.13, 0.88], [0.95, 0.88], [0.95, 0.12]], "#06161f");
+    pinPoly([[0.22, 0.485], [0.9, 0.485], [0.9, 0.515], [0.22, 0.515]],
+            css(shade(rgb(HEX.O), 1.5)));
+
+    /* two pop bumpers up top, lit on the idle pulse so the table reads as
+       powered on - gold and cyan, each with a bright centre cap, set apart so
+       neither muddies the other */
+    [[0.29, 0.34, HEX.gold], [0.35, 0.67, HEX.bright]].forEach(function (b) {
+      pinDot(b[0], b[1], 4.4, css(shade(rgb(b[2]), 0.3)));
+      pinDot(b[0], b[1], 3.0, css(shade(rgb(b[2]), 0.55 + glow * 0.6)));
+      pinDot(b[0], b[1], 1.2, css(shade(rgb(HEX.light), 0.9)));
+    });
+
+    /* the loose ball, caught mid-play between the bumpers and the flippers */
+    pinDot(0.5, 0.44, 2.4, css(shade(rgb(HEX.light), 0.98)), 1.5);
+
+    /* the flippers: two rose bats forming a V, tips apart across the drain at
+       the front lip. Butt caps and a real gap keep them from fusing into one
+       blob at this size. */
+    ctx.strokeStyle = css(shade(rgb(PIN_ROSE), 0.72 + glow * 0.35));
+    ctx.lineWidth = 2.4; ctx.lineCap = "butt";
+    [[[0.71, 0.30], [0.86, 0.44]], [[0.71, 0.70], [0.86, 0.56]]].forEach(function (f) {
+      var a = pin(f[0][0], f[0][1], 1.5), b = pin(f[1][0], f[1][1], 1.5);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    });
+
+    /* backbox: a small lit backglass standing at the wall end. A box, not a
+       card - a shaded top plus the front glass you read - so it has volume, and
+       kept narrow and short enough that it never reads as a fourth upright. */
+    var qL = 0.22, qR = 0.78, p0 = 0.02, p1 = 0.15;
+    pinPoly([[p0, qL, PIN_BACK], [p0, qR, PIN_BACK], [p1, qR, PIN_BACK], [p1, qL, PIN_BACK]],
+            css(shade(rgb(HEX.deep2), 1.0)));
+    pinPoly([[p1, qL, 0], [p1, qR, 0], [p1, qR, PIN_BACK], [p1, qL, PIN_BACK]],
+            css(shade(rgb(HEX.deep2), 0.72)));
+    pinPoly([[p1, qL + 0.05, 2], [p1, qR - 0.05, 2], [p1, qR - 0.05, PIN_BACK - 2], [p1, qL + 0.05, PIN_BACK - 2]],
+            css(shade(rgb(PIN_ROSE), 0.58 + glow * 0.42)));
+    /* a cyan sign band across the lit glass, so it has "art" at 20px */
+    pinPoly([[p1, qL + 0.05, PIN_BACK - 4.5], [p1, qR - 0.05, PIN_BACK - 4.5], [p1, qR - 0.05, PIN_BACK - 7.5], [p1, qL + 0.05, PIN_BACK - 7.5]],
+            css(shade(rgb(HEX.bright), 0.65 + glow * 0.4)));
+
+    if (hovered) cabinetLabelAt(PINBALL, PIN_BODY + PIN_BACK, "▶ PINBALL");
+  }
+
   /* ================= the decks =================
      The room's centrepiece, and the one fixture you build with rather than
      beat: a pair of turntables over a mixer, against the back-left wall. Its
@@ -1935,11 +2094,13 @@
   var DECK_H = 30;
   function decksCab(hovered) {
     var tx = DECKS[0], ty = DECKS[1], c = centre(tx, ty);
-    /* Faces SE like the arcade cabinet, so the mixer panel turns to the room. */
+    /* Stands on the back-right wall beside the boombox and speaker, so the mixer
+       panel turns to the room on the SW face and the lit body tone moves to that
+       side - the same way SNAKE used to sit before it joined the arcade row. */
     drawBox(tx, ty, DECK_H, css(shade(rgb(HEX.deep2), 1.15)),
-            css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.95)));
+            css(shade(rgb(HEX.deep2), 0.95)), css(shade(rgb(HEX.O), 1.35)));
     var q = function (u0, u1, v0, v1, fill) {
-      cabQuad(DECKS, u0, u1, v0, v1, fill, "SE", DECK_H);
+      cabQuad(DECKS, u0, u1, v0, v1, fill, "SW", DECK_H);
     };
 
     var ms = window.FrostDecks && window.FrostDecks.miniState
@@ -2041,6 +2202,13 @@
   function inArcade(p) { return inCabinet(p, ARCADE); }
   function inSnake(p) { return inCabinet(p, SNAKE); }
   function inMaul(p) { return inCabinet(p, MAUL); }
+  /* Pinball is low and juts its lip a touch toward the player, so it gets its
+     own box - the backglass reach up top, a little slack at the front. */
+  function inPinball(p) {
+    var c = centre(PINBALL[0], PINBALL[1]);
+    return p.x >= c.x - TW / 2 - 6 && p.x <= c.x + TW / 2 + 6 &&
+           p.y >= c.y - TH / 2 - (PIN_BODY + PIN_BACK) && p.y <= c.y + TH / 2 + 4;
+  }
   /* The decks are shorter than the game cabinets, so they get their own box
      rather than borrowing inCabinet's CAB_H reach. */
   function inDecks(p) {
@@ -2067,7 +2235,7 @@
      missing the machine says NO TAPE rather than failing silently - the same
      idea as the "NO SIGNAL" TVs on the main site, so the room never looks broken
      while the files are still being added. */
-  var BOOMBOX = [8, 2];
+  var BOOMBOX = [7, 0];
   var BOOM_H = 15;
   /* blocked in buildBlocked() with the rest of the lounge furniture */
 
@@ -2565,6 +2733,7 @@
   var arcadeHover = false;
   var snakeHover = false;
   var maulHover = false;
+  var pinballHover = false;
   var decksHover = false;
   var boomHover = false;
   var wardrobeHover = false;
@@ -2647,6 +2816,8 @@
                  f: function () { snakeCab(snakeHover); } });
     items.push({ d: MAUL[0] + MAUL[1],
                  f: function () { maulCab(maulHover); } });
+    items.push({ d: PINBALL[0] + PINBALL[1],
+                 f: function () { pinballCab(pinballHover); } });
     items.push({ d: DECKS[0] + DECKS[1],
                  f: function () { decksCab(decksHover); } });
     items.push({ d: WARDROBE[0] + WARDROBE[1],
@@ -2835,8 +3006,8 @@
     player.dir = "SW";
     buildGuests();
     hover = null;
-    arcadeHover = snakeHover = maulHover = decksHover = boomHover =
-      wardrobeHover = false;
+    arcadeHover = snakeHover = maulHover = pinballHover = decksHover =
+      boomHover = wardrobeHover = false;
     hoveredDoor = null;
     hoveredRecord = null;
     hoveredPoster = null;
@@ -2851,22 +3022,26 @@
   cv.addEventListener("mousemove", function (ev) {
     var p = toCanvas(ev);
     if (scene === "lounge") {
-      arcadeHover = inArcade(p);
-      snakeHover = inSnake(p);
-      /* WINTER MAUL stands one tile in front of the DECKS and its art rises
-         over them, so it has to win the hover where the two boxes overlap. */
-      maulHover = !arcadeHover && !snakeHover && inMaul(p);
-      decksHover = !arcadeHover && !snakeHover && !maulHover && inDecks(p);
-      boomHover = !arcadeHover && !snakeHover && !maulHover && !decksHover &&
-                  inBoombox(p);
-      wardrobeHover = !arcadeHover && !snakeHover && !maulHover && !decksHover &&
-                      !boomHover && inWardrobe(p);
+      /* The arcade row overlaps itself: each machine's art rises over the one
+         behind it (up the wall), so the FRONT-most fixture has to win the hover
+         in the band they share. Test the row front to back - PINBALL at the
+         front, then SNAKE, BRICK SMASH, and WINTER MAUL at the back. */
+      pinballHover = inPinball(p);
+      snakeHover = !pinballHover && inSnake(p);
+      arcadeHover = !pinballHover && !snakeHover && inArcade(p);
+      maulHover = !pinballHover && !snakeHover && !arcadeHover && inMaul(p);
+      var inRow = pinballHover || snakeHover || arcadeHover || maulHover;
+      /* The sound system on the far wall: the boombox stands in front of the
+         DECKS, so it takes the hover where the two meet. */
+      boomHover = !inRow && inBoombox(p);
+      decksHover = !inRow && !boomHover && inDecks(p);
+      wardrobeHover = !inRow && !boomHover && !decksHover && inWardrobe(p);
     } else {
-      arcadeHover = snakeHover = maulHover = decksHover = boomHover =
-        wardrobeHover = false;
+      arcadeHover = snakeHover = maulHover = pinballHover = decksHover =
+        boomHover = wardrobeHover = false;
     }
-    var overFixture = arcadeHover || snakeHover || maulHover || decksHover ||
-                      boomHover || wardrobeHover;
+    var overFixture = arcadeHover || snakeHover || maulHover || pinballHover ||
+                      decksHover || boomHover || wardrobeHover;
     hoveredRecord = overFixture ? null : recordAt(p);
     hoveredDoor = (overFixture || hoveredRecord) ? null : doorAt(p);
     hoveredPoster = (overFixture || hoveredRecord || hoveredDoor) ? null : posterAt(p);
@@ -2878,7 +3053,8 @@
   });
   cv.addEventListener("mouseleave", function () {
     hover = null; arcadeHover = false; snakeHover = false; maulHover = false;
-    decksHover = false; boomHover = false; wardrobeHover = false;
+    pinballHover = false; decksHover = false; boomHover = false;
+    wardrobeHover = false;
     hoveredDoor = null; hoveredRecord = null; hoveredPoster = null;
   });
   cv.addEventListener("click", function (ev) {
@@ -2886,11 +3062,14 @@
     /* A cabinet wins the click before the floor does: its art overlaps tiles
        you would otherwise walk to. Cabinets only exist in the lounge. */
     if (scene === "lounge") {
-      if (inArcade(p)) { if (window.FrostArcade) window.FrostArcade.open(); return; }
-      if (inSnake(p))  { if (window.FrostSnake)  window.FrostSnake.open();  return; }
-      if (inMaul(p))   { if (window.FrostMaul)   window.FrostMaul.open();   return; }
-      if (inDecks(p))  { if (window.FrostDecks)  window.FrostDecks.open();  return; }
+      /* Same front-to-back order as the hover test: the machine drawn on top
+         claims the click where the row's art overlaps. */
+      if (inPinball(p)) { if (window.FrostPinball) window.FrostPinball.open(); return; }
+      if (inSnake(p))   { if (window.FrostSnake)   window.FrostSnake.open();   return; }
+      if (inArcade(p))  { if (window.FrostArcade)  window.FrostArcade.open();  return; }
+      if (inMaul(p))    { if (window.FrostMaul)    window.FrostMaul.open();    return; }
       if (inBoombox(p)) { toggleMusic(); return; }
+      if (inDecks(p))   { if (window.FrostDecks)   window.FrostDecks.open();   return; }
       if (inWardrobe(p)) { openWardrobe(); return; }
     }
     /* Click a record sleeve: a released one opens its Spotify track in a new
@@ -3224,7 +3403,7 @@
     doorAt: doorAt, recordAt: recordAt, records: RECORDS, rooms: ROOMS,
     dims: { TW: TW, TH: TH, GW: GW, GH: GH, SPR_W: SPR_W, SPR_H: SPR_H,
             BOOMBOX: BOOMBOX, SPEAKER: SPEAKER, SNAKE: SNAKE, ARCADE: ARCADE,
-            DECKS: DECKS }
+            MAUL: MAUL, PINBALL: PINBALL, DECKS: DECKS }
   };
 })();
 </script>
@@ -5159,6 +5338,654 @@
       return { state: state, score: score, level: level,
                length: snake.length, dir: { x: dir.x, y: dir.y },
                snake: snake.slice(), food: { x: food.x, y: food.y },
+               scores: scores.slice() };
+    }
+  };
+})();
+</script>
+
+<script>
+/* =======================================================================
+   FROST PINBALL :: the arcade's fourth cabinet, and the only table you look
+   DOWN into. A real ball under gravity, two flippers, three pop bumpers, a pair
+   of slingshots and three snowflake rollovers that light for a climbing bonus.
+   Same shell as the other cabinets - state machine, the shared /api/scores
+   board with a localStorage warm cache, pause on a hidden tab - so all four
+   machines read as one arcade. The physics is sub-stepped so the ball can never
+   tunnel a flipper or a wall, and every line you see on the table is a segment
+   it actually collides with. A ball that comes to rest in the plunger lane is
+   auto-served again, so the table can't soft-lock.
+   ======================================================================= */
+(function () {
+  "use strict";
+
+  var overlay = document.getElementById("pinball");
+  var cv = document.getElementById("pb-canvas");
+  if (!overlay || !cv) return;
+  var ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+
+  var elScore = document.getElementById("pb-score");
+  var elBall = document.getElementById("pb-ball");
+  var elMult = document.getElementById("pb-mult");
+  var elMsg = document.getElementById("pb-msg");
+  var elBoard = document.getElementById("pb-board");
+  var elExit = document.getElementById("pb-exit");
+
+  /* ---- palette: the lounge's ice tones plus the cabinet's own rose ---- */
+  var INK = "#02101c", GLASS = "#06161f", RAIL = "#2b6f96";
+  var ROSE = "#ff5aa0", CYAN = "#38e6ff", GOLD = "#ffd68a", SNOW = "#eafcff";
+
+  /* ---- leaderboard — the same shared board (and offline fallback) as Snake
+     and Brick Smash; initials are escaped on render so a row can't inject
+     markup wherever it came from. ---- */
+  var GAME = "pinball";
+  var KEY = "frost_pinball_v1";
+  var MAX_SCORES = 8;
+  var SEED = [
+    { i: "FRO", s: 52000 }, { i: "ICE", s: 38000 }, { i: "MIL", s: 24000 },
+    { i: "SNO", s: 12000 }, { i: "AAA", s: 5000 }
+  ];
+  var apiOK = false;
+  function sortCap(list) {
+    return list.filter(function (e) { return e && typeof e.s === "number"; })
+               .sort(function (a, b) { return b.s - a.s; })
+               .slice(0, MAX_SCORES);
+  }
+  function localLoad() {
+    var list = SEED.slice();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var v = JSON.parse(raw); if (Array.isArray(v)) list = v; }
+    } catch (e) {}
+    return sortCap(list);
+  }
+  function localSave(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function esc(s) {
+    var d = document.createElement("div"); d.textContent = s; return d.innerHTML;
+  }
+  function renderBoard(highlight) {
+    elBoard.innerHTML = scores.map(function (e, idx) {
+      return '<li' + (idx === highlight ? ' class="is-new"' : "") + ">" +
+        '<span class="rank">' + (idx + 1) + "</span>" +
+        '<span class="who">' + esc(e.i) + "</span>" +
+        '<span class="pts">' + e.s + "</span></li>";
+    }).join("");
+  }
+  function qualifies(sc) {
+    if (sc <= 0) return false;
+    return scores.length < MAX_SCORES || sc > scores[scores.length - 1].s;
+  }
+  function rankOf(name, sc) {
+    for (var i = 0; i < scores.length; i++) {
+      if (scores[i].i === name && scores[i].s === sc) return i;
+    }
+    return -1;
+  }
+  function refresh() {
+    fetch("/api/scores?game=" + GAME)
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        apiOK = true; scores = sortCap(d.scores); localSave(scores); renderBoard(-1);
+      })
+      .catch(function () {});
+  }
+  function submit(initials, sc) {
+    var name = (initials || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
+    function localAppend() {
+      scores.push({ i: name, s: sc }); scores = sortCap(scores);
+      localSave(scores); renderBoard(rankOf(name, sc));
+    }
+    localAppend();
+    if (!apiOK) return;
+    fetch("/api/scores", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ game: GAME, initials: name, score: sc })
+    })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.scores)) throw 0;
+        scores = sortCap(d.scores); localSave(scores); renderBoard(rankOf(name, sc));
+      })
+      .catch(function () {});
+  }
+  var scores = localLoad();
+
+  /* ================= the table =================
+     One set of coordinates, in canvas pixels, drives both the collision model
+     and the art - so the ball hits exactly what you see. WALLS are segments
+     [ax,ay,bx,by]; the ball rolls the left rail, the arched top and the plunger
+     lane on the right, and drains through the gap between the flipper tips. */
+  var R = 7;                       /* ball radius */
+  var G = 760;                     /* gravity, px/s^2 */
+  var CAP = 780;                   /* speed cap, keeps the ball off the tunnels */
+  var DRAIN_Y = 452;               /* below this the ball is gone */
+  var MAX_BALLS = 3;
+
+  var WALLS = [
+    [14, 132, 14, 414],            /* left wall */
+    [14, 132, 72, 66],             /* top-left shoulder */
+    [72, 66, 168, 48],             /* top flat, left half */
+    [168, 48, 260, 66],            /* top flat, right half */
+    [260, 66, 322, 122],           /* top-right shoulder into the lane */
+    [322, 122, 328, 122],          /* cap */
+    [328, 122, 328, 414],          /* plunger-lane outer wall */
+    [302, 414, 328, 414],          /* lane floor, where the ball waits on serve */
+    [14, 344, 100, 392],           /* left inlane, feeding the left flipper */
+    [302, 346, 232, 392]           /* right inlane, feeding the right flipper */
+  ];
+  /* The lane divider is a ONE-WAY gate: the launched ball passes left through it
+     into the playfield once, up at the top, but a ball in play can never cross
+     back RIGHT into the lane - which is what keeps a ball coming down the right
+     side funnelling to the right flipper instead of dropping back to the
+     plunger. Collision is applied only while the ball is moving into the lane. */
+  var GATE = [302, 116, 302, 346];
+
+  /* pop bumpers: [x, y, r, colour]; slingshots: [x, y, r] */
+  var BUMPERS = [
+    { x: 95, y: 150, r: 15, c: CYAN, flash: 0 },
+    { x: 215, y: 150, r: 15, c: GOLD, flash: 0 },
+    { x: 155, y: 104, r: 15, c: ROSE, flash: 0 }
+  ];
+  var SLINGS = [
+    { x: 100, y: 330, r: 9, flash: 0 },
+    { x: 214, y: 330, r: 9, flash: 0 }
+  ];
+  /* the three snowflake rollovers across the top lanes */
+  var ROLLS = [
+    { x: 74, y: 78, lit: false, flash: 0 },
+    { x: 155, y: 62, lit: false, flash: 0 },
+    { x: 236, y: 78, lit: false, flash: 0 }
+  ];
+
+  /* ---- flippers: a bat pivoting from its base, its tip sweeping up when the
+     button is held. omega (its angular speed) is what actually launches the
+     ball, so a well-timed flip flings it rather than just blocking it. ---- */
+  function Flipper(px, py, len, rest, up) {
+    this.px = px; this.py = py; this.len = len;
+    this.rest = rest; this.upAng = up;
+    this.ang = rest; this.omega = 0; this.on = false;
+  }
+  Flipper.prototype.tip = function () {
+    return [this.px + Math.cos(this.ang) * this.len,
+            this.py + Math.sin(this.ang) * this.len];
+  };
+  Flipper.prototype.advance = function (dt) {
+    var prev = this.ang;
+    var target = (this.on && !tilted) ? this.upAng : this.rest;
+    var sp = 26 * dt;
+    if (this.ang < target) this.ang = Math.min(target, this.ang + sp);
+    else if (this.ang > target) this.ang = Math.max(target, this.ang - sp);
+    this.omega = (this.ang - prev) / (dt || 0.016);
+  };
+  var fL = new Flipper(104, 388, 44, 0.42, -0.36);
+  var fR = new Flipper(210, 388, 44, Math.PI - 0.42, Math.PI + 0.36);
+
+  /* ================= state ================= */
+  var STATE = { IDLE: 0, READY: 1, PLAY: 2, PAUSED: 3, OVER: 4, ENTER: 5 };
+  var state = STATE.IDLE;
+  var score = 0, mult = 1, ballNo = 1;
+  var ball = { x: 315, y: 407, vx: 0, vy: 0 };
+  var tilted = false, nudgeHeat = 0, laneRest = 0, shake = 0;
+  var plunger = 0, charging = false;
+  var rollPulse = 0, ballShine = 0;
+  var raf = null, lastT = 0, running = false;
+
+  function showMsg(html) {
+    if (html == null) { elMsg.hidden = true; elMsg.innerHTML = ""; return; }
+    elMsg.hidden = false; elMsg.innerHTML = html;
+  }
+  function syncHud() {
+    elScore.textContent = score;
+    elBall.textContent = ballNo;
+    elMult.innerHTML = "&times;" + mult;
+  }
+
+  var overSig = null;
+  function syncOver() {
+    var v = (state === STATE.OVER || state === STATE.ENTER);
+    if (v === overSig) return;
+    overSig = v; overlay.classList.toggle("is-over", v);
+  }
+
+  function newGame() {
+    score = 0; mult = 1; ballNo = 1;
+    ROLLS.forEach(function (r) { r.lit = false; r.flash = 0; });
+    state = STATE.IDLE; syncHud();
+    parkBall();
+    showMsg('<b>FROST PINBALL</b>' +
+      '<small class="blink">CLICK OR PRESS SPACE TO PLAY</small>');
+  }
+  function parkBall() { ball.x = 315; ball.y = 407; ball.vx = 0; ball.vy = 0; }
+
+  function startPlay() {
+    score = 0; mult = 1; ballNo = 1;
+    ROLLS.forEach(function (r) { r.lit = false; r.flash = 0; });
+    syncHud(); serve();
+  }
+  function serve() {
+    parkBall();
+    tilted = false; nudgeHeat = 0; laneRest = 0; plunger = 0; charging = false;
+    state = STATE.READY;
+    showMsg('<b>BALL ' + ballNo + '</b>' +
+      '<small class="blink">HOLD SPACE OR TAP TO LAUNCH</small>');
+  }
+  function launch(power) {
+    if (state !== STATE.READY) return;
+    ball.vy = -(760 + (power || 0) * 120);
+    ball.vx = -(1 + Math.random() * 3);   /* barely left, so the top deflects it, not drift */
+    state = STATE.PLAY; showMsg(null);
+  }
+  function drainBall() {
+    parkBall();
+    if (ballNo >= MAX_BALLS) { gameOver(); }
+    else { ballNo++; serve(); }
+  }
+  function gameOver() {
+    if (qualifies(score)) {
+      state = STATE.ENTER;
+      showMsg('<b>NEW HIGH SCORE!</b>' +
+        '<small>' + score + ' points &middot; enter your initials</small>' +
+        '<form class="arcade__enter" id="pb-enter">' +
+        '<input id="pb-initials" maxlength="3" autocomplete="off" ' +
+        'aria-label="Your initials" placeholder="AAA">' +
+        '<button type="submit" class="arcade__ok">OK</button></form>');
+      var form = document.getElementById("pb-enter");
+      var inp = document.getElementById("pb-initials");
+      if (inp) inp.focus();
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          submit(inp ? inp.value : "", score);
+          state = STATE.OVER;
+          showMsg('<b>GAME OVER</b><small>' + score +
+            ' points</small><small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+        });
+      }
+    } else {
+      state = STATE.OVER;
+      showMsg('<b>GAME OVER</b><small>' + score +
+        ' points</small><small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
+    }
+  }
+
+  function addScore(n) {
+    if (tilted) return;
+    score += n * mult; syncHud();
+  }
+
+  /* ================= physics ================= */
+  function reflectSeg(ax, ay, bx, by, rr, e, vpx, vpy) {
+    /* Push the ball out of a segment and bounce it, optionally about a moving
+       contact point (vpx,vpy) - that's how a flipper hands the ball its speed.
+       Returns true if it touched. */
+    var dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+    var t = L2 ? ((ball.x - ax) * dx + (ball.y - ay) * dy) / L2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    var cx = ax + t * dx, cy = ay + t * dy;
+    var nx = ball.x - cx, ny = ball.y - cy, d = Math.sqrt(nx * nx + ny * ny);
+    if (d >= rr || d === 0) return false;
+    nx /= d; ny /= d;
+    ball.x = cx + nx * rr; ball.y = cy + ny * rr;
+    var rvx = ball.vx - (vpx || 0), rvy = ball.vy - (vpy || 0);
+    var vn = rvx * nx + rvy * ny;
+    if (vn < 0) {
+      rvx -= (1 + e) * vn * nx; rvy -= (1 + e) * vn * ny;
+      ball.vx = rvx + (vpx || 0); ball.vy = rvy + (vpy || 0);
+    }
+    return true;
+  }
+  function hitCircle(o, e, kick) {
+    var nx = ball.x - o.x, ny = ball.y - o.y;
+    var d = Math.sqrt(nx * nx + ny * ny), rr = R + o.r;
+    if (d >= rr || d === 0) return false;
+    nx /= d; ny /= d;
+    ball.x = o.x + nx * rr; ball.y = o.y + ny * rr;
+    var vn = ball.vx * nx + ball.vy * ny;
+    if (vn < 0) { ball.vx -= (1 + e) * vn * nx; ball.vy -= (1 + e) * vn * ny; }
+    ball.vx += nx * kick; ball.vy += ny * kick;
+    return true;
+  }
+  function hitFlipper(f) {
+    var tip = f.tip();
+    var cxp, cyp;
+    /* contact-point velocity = omega x r, evaluated at the closest point */
+    var dx = tip[0] - f.px, dy = tip[1] - f.py, L2 = dx * dx + dy * dy;
+    var t = L2 ? ((ball.x - f.px) * dx + (ball.y - f.py) * dy) / L2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    cxp = f.px + t * dx; cyp = f.py + t * dy;
+    var vpx = -f.omega * (cyp - f.py), vpy = f.omega * (cxp - f.px);
+    return reflectSeg(f.px, f.py, tip[0], tip[1], R + 4, 0.5, vpx, vpy);
+  }
+  function physics(h) {
+    ball.vy += G * h;
+    ball.vx *= 0.9994;
+    ball.x += ball.vx * h; ball.y += ball.vy * h;
+
+    for (var i = 0; i < WALLS.length; i++) {
+      var w = WALLS[i];
+      reflectSeg(w[0], w[1], w[2], w[3], R, 0.42);
+    }
+    /* one-way lane gate: only solid to a ball heading right, into the lane */
+    if (ball.vx > 0) reflectSeg(GATE[0], GATE[1], GATE[2], GATE[3], R, 0.35);
+    for (i = 0; i < BUMPERS.length; i++) {
+      if (hitCircle(BUMPERS[i], 0.5, 150)) { BUMPERS[i].flash = 1; addScore(100); shake = Math.max(shake, 3); }
+    }
+    for (i = 0; i < SLINGS.length; i++) {
+      if (hitCircle(SLINGS[i], 0.5, 130)) { SLINGS[i].flash = 1; addScore(25); shake = Math.max(shake, 2); }
+    }
+    hitFlipper(fL); hitFlipper(fR);
+
+    /* rollovers: pass over an unlit snowflake to light it; light all three and
+       the bonus multiplier climbs and they reset for another lap */
+    if (!tilted) {
+      var allLit = true;
+      for (i = 0; i < ROLLS.length; i++) {
+        var rr = ROLLS[i];
+        if (!rr.lit) {
+          var ddx = ball.x - rr.x, ddy = ball.y - rr.y;
+          if (ddx * ddx + ddy * ddy < 196) { rr.lit = true; rr.flash = 1; addScore(150); }
+        }
+        if (!rr.lit) allLit = false;
+      }
+      if (allLit) {
+        mult = Math.min(5, mult + 1);
+        addScore(1000);
+        ROLLS.forEach(function (r) { r.lit = false; r.flash = 1; });
+        syncHud();
+      }
+    }
+
+    var sp = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+    if (sp > CAP) { ball.vx *= CAP / sp; ball.vy *= CAP / sp; }
+    if (ball.y - R > DRAIN_Y) drainBall();
+  }
+
+  function update(dt) {
+    rollPulse += dt * 3;
+    ballShine += dt;
+    if (shake > 0) shake = Math.max(0, shake - dt * 24);
+    BUMPERS.forEach(function (b) { if (b.flash > 0) b.flash = Math.max(0, b.flash - dt * 4); });
+    SLINGS.forEach(function (s) { if (s.flash > 0) s.flash = Math.max(0, s.flash - dt * 4); });
+    ROLLS.forEach(function (r) { if (r.flash > 0) r.flash = Math.max(0, r.flash - dt * 3); });
+
+    fL.advance(dt); fR.advance(dt);
+
+    if (state === STATE.READY && charging) plunger = Math.min(1, plunger + dt * 1.5);
+    if (nudgeHeat > 0) nudgeHeat = Math.max(0, nudgeHeat - dt * 0.8);
+
+    if (state !== STATE.PLAY) return;
+
+    var speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+    var steps = Math.max(1, Math.min(8, Math.ceil(speed * dt / 3.0)));
+    var h = dt / steps;
+    for (var s = 0; s < steps; s++) { physics(h); if (state !== STATE.PLAY) break; }
+
+    /* anti-soft-lock: a ball loitering in the plunger lane gets served again */
+    if (state === STATE.PLAY && ball.x > 304 && ball.y > 360 && speed < 24) {
+      laneRest += dt;
+      if (laneRest > 0.8) { state = STATE.READY; laneRest = 0; launch(0.4); }
+    } else { laneRest = 0; }
+  }
+
+  /* ================= draw ================= */
+  function roundCircle(x, y, r, fill) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill();
+  }
+  function draw() {
+    syncOver();
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+    /* playfield: a dark vertical wash, faint centre seam */
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#08202f"); g.addColorStop(1, INK);
+    ctx.fillStyle = g; ctx.fillRect(-6, -6, W + 12, H + 12);
+    ctx.strokeStyle = "rgba(43,111,150,.25)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(157, 60); ctx.lineTo(157, 380); ctx.stroke();
+
+    /* rollovers */
+    ROLLS.forEach(function (r) {
+      var on = r.lit || r.flash > 0.2;
+      ctx.save();
+      ctx.globalAlpha = on ? 1 : 0.5;
+      ctx.fillStyle = on ? SNOW : RAIL;
+      if (on) { ctx.shadowColor = CYAN; ctx.shadowBlur = 8; }
+      ctx.font = "14px ui-monospace,Consolas,monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("❄", r.x, r.y);
+      ctx.restore();
+    });
+
+    /* walls */
+    ctx.strokeStyle = RAIL; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    WALLS.forEach(function (w) {
+      ctx.beginPath(); ctx.moveTo(w[0], w[1]); ctx.lineTo(w[2], w[3]); ctx.stroke();
+    });
+    ctx.strokeStyle = "rgba(184,236,255,.35)"; ctx.lineWidth = 1;
+    WALLS.forEach(function (w) {
+      ctx.beginPath(); ctx.moveTo(w[0], w[1]); ctx.lineTo(w[2], w[3]); ctx.stroke();
+    });
+    /* the one-way lane gate, dashed so it reads as a gate the ball drops in through */
+    ctx.strokeStyle = "rgba(255,90,160,.5)"; ctx.lineWidth = 2;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(GATE[0], GATE[1]); ctx.lineTo(GATE[2], GATE[3]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineCap = "butt";
+
+    /* slingshots */
+    SLINGS.forEach(function (s) {
+      roundCircle(s.x, s.y, s.r + 1.5, "#12303f");
+      roundCircle(s.x, s.y, s.r, s.flash > 0.1 ? SNOW : ROSE);
+    });
+
+    /* bumpers: dark skirt, colour body, bright cap that pops on a hit */
+    BUMPERS.forEach(function (b) {
+      roundCircle(b.x, b.y, b.r + 2, "#0c2331");
+      roundCircle(b.x, b.y, b.r, b.c);
+      ctx.globalAlpha = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(rollPulse * 1.3));
+      roundCircle(b.x, b.y, b.r * 0.55, b.flash > 0.1 ? SNOW : "rgba(234,252,255,.7)");
+      ctx.globalAlpha = 1;
+      roundCircle(b.x, b.y, 2.4, INK);
+    });
+
+    /* flippers */
+    [fL, fR].forEach(function (f) {
+      var tip = f.tip();
+      ctx.strokeStyle = f.on && !tilted ? SNOW : CYAN;
+      ctx.lineWidth = 8; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(f.px, f.py); ctx.lineTo(tip[0], tip[1]); ctx.stroke();
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(2,16,28,.5)";
+      ctx.beginPath(); ctx.moveTo(f.px, f.py); ctx.lineTo(tip[0], tip[1]); ctx.stroke();
+      roundCircle(f.px, f.py, 4, RAIL);
+      ctx.lineCap = "butt";
+    });
+
+    /* plunger charge, shown while a ball waits in the lane */
+    if (state === STATE.READY) {
+      var ph = 44 * plunger;
+      ctx.fillStyle = "rgba(255,90,160,.25)";
+      ctx.fillRect(309, 366, 12, 44);
+      ctx.fillStyle = ROSE;
+      ctx.fillRect(309, 410 - ph, 12, ph);
+    }
+
+    /* the ball: a lit sphere with a moving shine and a soft floor shadow */
+    if (state !== STATE.OVER && state !== STATE.IDLE) {
+      ctx.fillStyle = "rgba(0,0,0,.35)";
+      ctx.beginPath(); ctx.ellipse(ball.x, ball.y + R - 1, R, R * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      roundCircle(ball.x, ball.y, R, "#cfe9f6");
+      roundCircle(ball.x, ball.y, R, "rgba(255,255,255,0)");
+      var grd = ctx.createRadialGradient(ball.x - 2.5, ball.y - 2.5, 1, ball.x, ball.y, R);
+      grd.addColorStop(0, SNOW); grd.addColorStop(1, "#7fb4cc");
+      roundCircle(ball.x, ball.y, R, grd);
+      roundCircle(ball.x - 2.4, ball.y - 2.4, 1.6, "rgba(255,255,255,.9)");
+    }
+
+    /* the TILT stamp sits on the glass, not in the message box */
+    if (tilted && state === STATE.PLAY) {
+      ctx.fillStyle = "rgba(255,90,160,.9)";
+      ctx.font = "bold 26px ui-monospace,Consolas,monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("TILT", 157, 250);
+    }
+    ctx.restore();
+  }
+
+  /* ================= loop ================= */
+  function frame(now) {
+    if (!running) return;
+    var dt = Math.min((now - lastT) / 1000, 0.05);
+    lastT = now;
+    update(dt); draw();
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* ================= input ================= */
+  function pressAction() {
+    if (state === STATE.IDLE || state === STATE.OVER) { startPlay(); return; }
+    if (state === STATE.PAUSED) { state = STATE.PLAY; showMsg(null); return; }
+    if (state === STATE.READY) { charging = true; }
+  }
+  function releaseAction() {
+    if (state === STATE.READY && charging) { charging = false; launch(plunger); }
+  }
+  function nudge() {
+    if (state !== STATE.PLAY) return;
+    var dir = ball.x < 157 ? 1 : -1;
+    ball.vx += dir * 40; ball.vy -= 30;
+    shake = Math.max(shake, 5);
+    nudgeHeat += 1.1;
+    if (nudgeHeat >= 3) { tilted = true; }
+  }
+
+  function onKeyDown(e) {
+    if (!running) return;
+    var k = e.key;
+    /* While the initials form is up, the keys ARE the initials (A and L are
+       flipper keys AND common initials) - so hands off everything but ESC and
+       let the input field have them. */
+    if (state === STATE.ENTER) {
+      if (k === "Escape") { if (imm.isOn()) imm.leave(); else close(); }
+      return;
+    }
+    if (k === "ArrowLeft" || k === "a" || k === "A" || k === "z" || k === "Z") {
+      fL.on = true; e.preventDefault();
+    } else if (k === "ArrowRight" || k === "d" || k === "D" || k === "l" || k === "L") {
+      fR.on = true; e.preventDefault();
+    } else if (k === "ArrowUp" || k === "w" || k === "W") {
+      nudge(); e.preventDefault();
+    } else if (k === " " || k === "Spacebar") {
+      pressAction(); e.preventDefault();
+    } else if (k === "Escape") {
+      if (imm.isOn()) imm.leave(); else close();
+    }
+  }
+  function onKeyUp(e) {
+    if (!running) return;
+    if (state === STATE.ENTER) return;
+    var k = e.key;
+    if (k === "ArrowLeft" || k === "a" || k === "A" || k === "z" || k === "Z") fL.on = false;
+    else if (k === "ArrowRight" || k === "d" || k === "D" || k === "l" || k === "L") fR.on = false;
+    else if (k === " " || k === "Spacebar") releaseAction();
+  }
+
+  /* Pointer/touch: a press in the READY lane launches; otherwise the screen's
+     left half works the left flipper and the right half the right, so the table
+     is fully playable with two thumbs. */
+  var pointers = {};
+  function halfFromEvent(ev) {
+    var r = cv.getBoundingClientRect();
+    var x = (ev.clientX - r.left) * (W / r.width);
+    return x < W / 2 ? "L" : "R";
+  }
+  cv.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === STATE.IDLE || state === STATE.OVER) { startPlay(); return; }
+    if (state === STATE.PAUSED) { state = STATE.PLAY; showMsg(null); return; }
+    if (state === STATE.READY) { launch(0.55); return; }
+    var half = halfFromEvent(ev);
+    pointers[ev.pointerId] = half;
+    if (half === "L") fL.on = true; else fR.on = true;
+    if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (e) {} }
+  });
+  function liftPointer(ev) {
+    var half = pointers[ev.pointerId];
+    if (!half) return;
+    delete pointers[ev.pointerId];
+    /* only drop the flipper if no other finger still holds that side */
+    var still = false;
+    for (var id in pointers) if (pointers[id] === half) still = true;
+    if (!still) { if (half === "L") fL.on = false; else fR.on = false; }
+  }
+  cv.addEventListener("pointerup", liftPointer);
+  cv.addEventListener("pointercancel", liftPointer);
+
+  /* ================= immersive ================= */
+  var elFull = document.getElementById("pb-full");
+  var imm = window.ArcadeImmersive.create(overlay, {
+    fitCanvas: cv,
+    onChange: function (on) {
+      elFull.setAttribute("aria-pressed", String(on));
+      elFull.innerHTML = on ? "&#10005;" : "&#9974; FULLSCREEN";
+      elFull.setAttribute("aria-label", on ? "Leave fullscreen" : "Enter fullscreen");
+    }
+  });
+  elFull.addEventListener("click", function () { imm.toggle(); });
+
+  /* ================= open / close ================= */
+  var lastFocus = null;
+  function open() {
+    if (running) return;
+    lastFocus = document.activeElement;
+    scores = localLoad(); renderBoard(-1); refresh();
+    overlay.classList.add("is-open");
+    overlay.removeAttribute("aria-hidden");
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    running = true; lastT = performance.now();
+    newGame();
+    imm.enter();
+    raf = requestAnimationFrame(frame);
+    elExit.focus({ preventScroll: true });
+  }
+  function close() {
+    if (!running) return;
+    if (imm.isOn()) imm.leave();
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    document.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("keyup", onKeyUp);
+    fL.on = fR.on = false; charging = false;
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  elExit.addEventListener("click", close);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === STATE.PLAY) {
+      state = STATE.PAUSED;
+      showMsg('<b>PAUSED</b><small class="blink">CLICK OR PRESS SPACE</small>');
+    }
+  });
+
+  window.FrostPinball = {
+    open: open, close: close,
+    step: function (dt, n) {
+      for (var i = 0; i < (n || 1); i++) update(dt || 0.016);
+      draw();
+    },
+    start: pressAction, release: releaseAction, launch: launch, nudge: nudge,
+    flip: function (side, on) { (side === "R" ? fR : fL).on = !!on; },
+    peek: function () {
+      return { state: state, score: score, mult: mult, ballNo: ballNo,
+               tilted: tilted, ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy },
+               flippers: { L: fL.ang, R: fR.ang },
+               rolls: ROLLS.map(function (r) { return r.lit; }),
                scores: scores.slice() };
     }
   };

@@ -1,8 +1,8 @@
 /* =======================================================================
    /api/scores  —  the arcade high-score boards (Cloudflare Pages Function)
 
-   The lounge's two cabinets - Brick Smash and Snake - share this endpoint,
-   one KV key per game ("scores:bricksmash", "scores:snake").
+   The lounge's cabinets - Brick Smash, Snake, Winter Maul and Frost Pinball -
+   share this endpoint, one KV key per game ("scores:bricksmash", etc.).
 
    GET  /api/scores?game=<id>  -> { scores: [ { i, s }, ... ] }, high first.
    POST { game, initials, score, website } -> ranks it, returns the board.
@@ -53,6 +53,17 @@ var GAMES = {
       { i: "SNO", s: 2400 }, { i: "AAA", s: 900 }
     ],
     max: 250000
+  },
+  /* Frost Pinball pays out in hundreds and thousands - bumpers times a bonus
+     multiplier, plus the snowflake jackpots - so its board sits an order up from
+     the others. The ceiling allows a long, well-kept ball without letting a
+     console-typed number stick. Mirrors the client SEED in lounge.html. */
+  pinball: {
+    seed: [
+      { i: "FRO", s: 52000 }, { i: "ICE", s: 38000 }, { i: "MIL", s: 24000 },
+      { i: "SNO", s: 12000 }, { i: "AAA", s: 5000 }
+    ],
+    max: 5000000
   }
 };
 
