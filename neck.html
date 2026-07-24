@@ -58,11 +58,12 @@
 </head>
 
 <body>
-  <!-- ================= DUST ================= -->
-  <!-- The counterpart to the snow on the Frost page: this room's weather is
-       dust in a light shaft. Purely decorative, and JS skips it entirely
-       when the visitor asks for reduced motion. (The paper grain is a
-       background layer on <body>, not an overlay — see the note in neck.css.) -->
+  <!-- ================= THE RAISED (embers & smoke) ================= -->
+  <!-- The counterpart to the snow on the Frost page, and its opposite: snow
+       falls, this rises. Embers and smoke lift off the floor of the juke and
+       go out near the top — the ghosts pulled up out of the boards. Purely
+       decorative; JS skips it entirely under reduced motion. (Kept the id
+       "dust" so the stylesheet/JS hooks stay stable.) -->
   <div id="dust" aria-hidden="true"></div>
 
   <!-- ================= NOTICE STRIP ================= -->
@@ -78,6 +79,13 @@
     <!-- ---------- THE HANDBILL ---------- -->
     <header class="bill" id="top">
       <div class="bill__edge bill__edge--top" aria-hidden="true"></div>
+
+      <!-- A rubber approval stamp, slapped on askew and half dry. -->
+      <div class="bill__stamp" aria-hidden="true">
+        <b>AUDITIONED</b>
+        <span>&amp; RAISED</span>
+        <i>GRAFTON · WIS.</i>
+      </div>
 
       <p class="bill__eyebrow">☞ &nbsp;RAISING THE GHOSTS OF THE BLUES&nbsp; ☜</p>
       <hr class="rule rule--fat" />
@@ -106,6 +114,14 @@
         <a class="ink-btn" href="#heads">☞ MEET THE HEADS</a>
         <a class="ink-btn ink-btn--red" href="#booking">☞ BOOK THE BAND</a>
       </div>
+
+      <!-- The wood-type bottom matter every old handbill carried — house rules,
+           half of them a joke, the register the Frost marquee runs in. -->
+      <p class="bill__matter">
+        ☞ ONE NIGHT ONLY &nbsp;·&nbsp; POSITIVELY NO REQUESTS &nbsp;·&nbsp; DANCING TIL THE
+        LAW SAYS STOP &nbsp;·&nbsp; BRING YOUR OWN GHOST &nbsp;·&nbsp; THE MANAGEMENT IS NOT
+        RESPONSIBLE FOR WHAT THE MUSIC RAISES ☜
+      </p>
 
       <!-- The real band logo (his Instagram profile picture), stamped on the
            handbill. It's black line-art on cream, so mix-blend-mode:multiply in
@@ -638,6 +654,17 @@
     <!-- ================= FOOTER ================= -->
     <footer class="foot">
       <hr class="rule rule--fat" />
+
+      <!-- The colophon badges — the room's answer to the Frost page's
+           "MADE WITH NOTEPAD" web-buttons. The last one is the honest one:
+           there is no audio or image file behind the hiss or the amp. -->
+      <div class="marks" aria-hidden="true">
+        <span class="mark">PRESSED IN<br /><b>SHELLAC</b></span>
+        <span class="mark">PLAYED AT<br /><b>78 R.P.M.</b></span>
+        <span class="mark">SET IN<br /><b>LEAD &amp; WOOD</b></span>
+        <span class="mark">NO FILE ·<br /><b>ALL BROWSER</b></span>
+      </div>
+
       <p class="foot__line">NECK &amp; THE HEADS &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp; <span id="year">2026</span></p>
       <p class="foot__line foot__small">
         A room in the <a href="index.html">FROST MILANO</a> network &nbsp;·&nbsp;

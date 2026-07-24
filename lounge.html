@@ -1087,13 +1087,11 @@
       <button type="button" class="arcade__full" id="wm-full"
               aria-pressed="false">&#9974; FULLSCREEN</button>
     </div>
-    <!-- Camera controls, 3D only. Snap turns rather than a free-spin drag are
-         what a square-grid maul actually wants on a phone: the four corner
-         views are the ones you flick between, and a thumb can hit a button
-         while a two-finger orbit is fighting the build gesture. -->
+    <!-- Camera controls, 3D only. The view is locked to one heading - a Winter
+         Maul is played from a fixed angle and only ever panned or zoomed, so
+         there is nothing to turn. What's left is the button that re-frames the
+         whole board after a pan or a zoom has wandered off it. -->
     <div class="maul__cam" id="wm-cam" hidden>
-      <button type="button" class="maul__act" data-cam="ccw">&#8630; TURN</button>
-      <button type="button" class="maul__act" data-cam="cw">TURN &#8631;</button>
       <button type="button" class="maul__act" data-cam="reset">RESET VIEW</button>
     </div>
     <div class="arcade__rotate" aria-hidden="true">
@@ -5968,6 +5966,7 @@
       return false;
     }
     mode3d = !!on;
+    edgePan = null;               /* no stale scroll carried across the toggle */
     cv.hidden = mode3d;
     cv3d.hidden = !mode3d;
     elCam.hidden = !mode3d;
@@ -7341,6 +7340,7 @@
     lastT = now;
     try {
       update(dt);
+      applyEdgePan(dt);
       draw();
       drawMini();
       if (dirty || state === STATE.PLAY) syncAll();
@@ -7499,9 +7499,46 @@
     return (immersive || mode3d) && ev.pointerType === "touch";
   }
 
-  /* Orbiting the 3D camera with a held mouse button. Null in 2D and while a
-     touch gesture owns the camera. */
-  var orbitDrag = null;
+  /* ---- Warcraft-style edge scroll ----
+     While the bare cursor rests near an edge of the 3D view, the camera slides
+     that way - faster the closer to the edge, and diagonally in a corner. Mouse
+     only: a touch has no hovering cursor to leave sitting in a corner, and the
+     board's own drag- and pinch-pan already cover panning there. Recomputed on
+     every mouse move (updateEdgePan) and applied per frame (applyEdgePan), so it
+     keeps scrolling while the mouse holds still and runs the same on any refresh
+     rate. Null whenever a drag, paint or pinch already owns the pointer, or the
+     cursor is off the canvas. */
+  var edgePan = null;                 /* { x, y } push in pan()'s screen axes */
+  var EDGE_MARGIN = 46;               /* px band inside each edge that scrolls */
+  var EDGE_SPEED = 12;                /* tiles/sec at the very edge */
+  function updateEdgePan(cx, cy) {
+    var r = cv3d.getBoundingClientRect();
+    if (!r.width || !r.height ||
+        cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) {
+      edgePan = null; return;
+    }
+    /* Depth into each edge: 0 at the margin line, 1 hard against the edge. The
+       signs match pan()'s screen axes - right edge scrolls right, top edge
+       scrolls toward the far side of the board, the way Warcraft's top edge
+       takes you - so applyEdgePan can hand these straight through. */
+    var dx = 0, dz = 0;
+    var l = cx - r.left, rt = r.right - cx, tp = cy - r.top, bt = r.bottom - cy;
+    if (l < EDGE_MARGIN) dx = -(1 - l / EDGE_MARGIN);
+    else if (rt < EDGE_MARGIN) dx = 1 - rt / EDGE_MARGIN;
+    if (tp < EDGE_MARGIN) dz = 1 - tp / EDGE_MARGIN;
+    else if (bt < EDGE_MARGIN) dz = -(1 - bt / EDGE_MARGIN);
+    edgePan = (dx || dz) ? { x: dx, y: dz } : null;
+  }
+  /* Applied per frame rather than per move so the slide continues while the
+     cursor is still, and scaled by dt so a 144Hz panel and a 30fps phone travel
+     the same distance per second. */
+  function applyEdgePan(dt) {
+    if (!edgePan || !mode3d || !gl3d) return;
+    var v = EDGE_SPEED * dt;
+    gl3d.camera.pan(edgePan.x * v, edgePan.y * v);
+    userCam3d = true;
+    dirty = true;
+  }
 
   /* ---- 3D: a drag moves the view, a tap builds ----
      On the flat board a drag can only mean one thing, so it paints a wall. In
@@ -7581,11 +7618,17 @@
       if (ptrs.length > 2) return;
     }
     /* The middle and right buttons drive the view: there's no second finger to
-       spare on a mouse and the left button is building. In 3D they orbit; in
-       2D immersive they pan the flat camera, as before. */
+       spare on a mouse and the left button is building. In 3D they grab-drag the
+       board - the camera no longer turns, so there is nothing left to orbit and
+       dragging it is the natural thing those buttons should do instead; in 2D
+       immersive they pan the flat camera, as before. */
     if ((mode3d || immersive) && (ev.button === 1 || ev.button === 2)) {
-      if (mode3d && gl3d) orbitDrag = { x: ev.clientX, y: ev.clientY };
-      else pinch = { drag: true, w: clientToWorld(ev.clientX, ev.clientY) };
+      if (mode3d && gl3d) {
+        viewDrag = { x: ev.clientX, y: ev.clientY,
+                     anchor: groundAt3D(ev.clientX, ev.clientY) };
+        edgePan = null;
+        cv3d.classList.add("is-panning");
+      } else pinch = { drag: true, w: clientToWorld(ev.clientX, ev.clientY) };
       ev.preventDefault();
       if (target.setPointerCapture) {
         try { target.setPointerCapture(ev.pointerId); } catch (e) {}
@@ -7639,16 +7682,14 @@
       /* A third finger, or the leftover of a lifted pinch: neither builds. */
       if (ptrs.length > 1) return;
     }
-    if (orbitDrag) {
-      /* Yaw is unbounded - turning all the way round is the point - and pitch
-         is clamped inside the renderer, so this just hands over deltas. */
-      gl3d.camera.orbit((ev.clientX - orbitDrag.x) * 0.009,
-                        -(ev.clientY - orbitDrag.y) * 0.007);
-      orbitDrag.x = ev.clientX;
-      orbitDrag.y = ev.clientY;
-      userCam3d = true;
-      dirty = true;
-      return;
+    /* Edge scroll rides the bare cursor, so it's read on every mouse move that
+       isn't already driving a gesture - and dropped the instant one is, so a
+       drag or pinch never leaves a phantom scroll running underneath it. */
+    if (mode3d && gl3d && ev.pointerType === "mouse" &&
+        !viewDrag && !tapPress && !(pinch && pinch.drag)) {
+      updateEdgePan(ev.clientX, ev.clientY);
+    } else {
+      edgePan = null;
     }
     if (tapPress) {
       if (Math.abs(ev.clientX - tapPress.x) < TAP_SLOP &&
@@ -7683,7 +7724,6 @@
   function onUp(ev) {
     dropPtr(ev.pointerId);
     if (pinch && pinch.drag) pinch = null;
-    orbitDrag = null;
     /* Lifted without ever travelling: the press was a tap after all, so pay
        out the build it was holding. */
     if (tapPress && tapPress.id === ev.pointerId) tapCell(tapPress.cell);
@@ -7692,8 +7732,9 @@
   }
   function onLeave(ev) {
     dropPtr(ev.pointerId);
-    orbitDrag = null;
-    /* No build here: a press that left the canvas was never a tap on it. */
+    /* The cursor is off the board: no build (a press that left was never a tap
+       on it), and no edge scroll (there's no cursor sitting in a corner). */
+    edgePan = null;
     endTap();
     endPaint();
     hoverCell = -1;
@@ -7732,13 +7773,15 @@
   elCam.addEventListener("click", function (ev) {
     var b = ev.target.closest ? ev.target.closest("[data-cam]") : null;
     if (!b || !gl3d) return;
-    var k = b.getAttribute("data-cam");
-    if (k === "cw") gl3d.camera.snap(1);
-    else if (k === "ccw") gl3d.camera.snap(-1);
-    /* Reset hands the framing back to the viewport-fit, so it also drops the
-       "player owns the camera" flag - the board re-fits on the next resize as
-       if freshly opened. */
-    else { gl3d.camera.reset(); userCam3d = false; }
+    /* Only RESET VIEW survives the camera lock. It hands the framing back to the
+       viewport-fit, so it also drops the "player owns the camera" flag and any
+       edge scroll in progress - the board re-fits on the next resize as if
+       freshly opened. */
+    if (b.getAttribute("data-cam") === "reset") {
+      gl3d.camera.reset();
+      userCam3d = false;
+      edgePan = null;
+    }
     dirty = true;
     draw();
   });
@@ -7777,15 +7820,6 @@
     if (tag === "BUTTON" && (k === " " || k === "Spacebar" || k === "Enter")) return;
     if (k >= "1" && k <= String(TOWERS.length)) {
       pick = +k - 1; sel = null; dirty = true; syncAll(); e.preventDefault();
-    } else if (k === "q" || k === "Q" || k === "e" || k === "E") {
-      /* Quarter turns rather than a held spin: on a square grid the four
-         corner views are the ones you actually flick between, and a key that
-         turns by 90 degrees lands on one every time. */
-      if (mode3d && gl3d) {
-        gl3d.camera.snap((k === "e" || k === "E") ? 1 : -1);
-        draw();
-        e.preventDefault();
-      }
     } else if (k === "r" || k === "R") {
       if (mode3d && gl3d) { gl3d.camera.reset(); userCam3d = false; draw(); e.preventDefault(); }
     } else if (k === "u" || k === "U") {

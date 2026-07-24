@@ -95,6 +95,17 @@ body{
   background-repeat:repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 
+/* The bulb never holds steady. A wide amber pool up top guttering slowly, the
+   way a single low filament does in a back room — it lifts and dips the whole
+   room's light a hair. Fixed and cheap (only opacity animates), sits behind the
+   page column, pointer-events off. Stilled under reduced motion (bottom of file). */
+body::after{
+  content:""; position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:radial-gradient(120% 78% at 50% -12%, rgba(232,178,72,.06) 0%, transparent 58%);
+  animation:gutter 7.5s ease-in-out infinite;
+}
+@keyframes gutter{ 0%,100%{ opacity:.72; } 40%{ opacity:1; } 58%{ opacity:.5; } 74%{ opacity:.92; } }
+
 a{ color:var(--red); text-underline-offset:2px; }
 a:hover{ color:var(--red-deep); }
 
@@ -108,24 +119,42 @@ a:hover{ color:var(--red-deep); }
    many bots skip hidden fields but happily complete a visible-to-them one. */
 .hp{ position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; opacity:0; pointer-events:none; }
 
-/* ---------- SMOKE IN THE BULB LIGHT ---------- */
-/* Was dust in a daylight shaft; in the juke joint it reads as cigarette smoke
-   and haze drifting through the low amber bulb. The layer itself is transparent
-   and paints nothing — only its motes animate, on composited transforms — so it
-   does not cost a scroll repaint the way a fixed *background* would.
-   pointer-events:none, and killed entirely under prefers-reduced-motion (see
-   the block at the very bottom of this file). */
+/* ---------- THE RAISED — embers & smoke off the floor ---------- */
+/* The Frost page's counterpart is snow falling. This room's weather does the
+   opposite and is the whole thesis of the page: heat RISING. Embers lift off
+   the floor of the juke, catch the bulb, sway, cool, and go out; slow smoke
+   curls up with them. It's the séance made ambient — the ghosts he raises,
+   drifting up out of the boards. The layer paints nothing itself; only the
+   motes animate, on composited transform+opacity, so it never costs a scroll
+   repaint the way a fixed *background* would. pointer-events:none, and killed
+   entirely under prefers-reduced-motion (block at the very bottom of the file).
+   JS (js/neck.js) sets each mote's size, lane, duration, and its two --sway
+   values, which give the climb an S-curve instead of a straight diagonal. */
 #dust{ position:fixed; inset:0; z-index:3; pointer-events:none; overflow:hidden; }
 .mote{
-  position:absolute; top:-14px; border-radius:50%; filter:blur(1px);
-  background:radial-gradient(circle at 40% 35%, rgba(230,205,165,.5), rgba(150,124,92,.22) 70%, transparent);
-  animation-name:drift; animation-timing-function:linear; animation-iteration-count:1;
+  position:absolute; bottom:-26px; border-radius:50%;
+  will-change:transform, opacity;
+  animation-name:rise; animation-iteration-count:1;
 }
-@keyframes drift{
-  0%{ transform:translateY(-12px) translateX(0); opacity:0; }
-  12%{ opacity:.8; }
-  88%{ opacity:.6; }
-  100%{ transform:translateY(102vh) translateX(28px); opacity:0; }
+/* An ember: a hot amber coal, small and bright, with a glow that reads through
+   the smoke. Cools from gold toward the label's barn red as it climbs. */
+.mote--ember{
+  animation-timing-function:ease-out;
+  background:radial-gradient(circle at 45% 40%, #ffe7ab 0%, var(--whiskey-lit) 42%, rgba(158,43,30,.55) 76%, transparent 100%);
+  box-shadow:0 0 6px rgba(232,178,72,.85), 0 0 13px rgba(201,88,36,.4);
+}
+/* Smoke: soft, near-transparent, blurred; it expands as it lifts. */
+.mote--smoke{
+  animation-timing-function:ease-in-out; filter:blur(3px);
+  background:radial-gradient(circle at 40% 35%, rgba(214,190,152,.26), rgba(120,96,70,.13) 60%, transparent 72%);
+  box-shadow:none;
+}
+@keyframes rise{
+  0%  { transform:translateY(0)      translateX(0)                 scale(.55); opacity:0; }
+  10% { opacity:var(--op,.85); }
+  50% { transform:translateY(-52vh)  translateX(var(--sway-mid,12px)) scale(1); }
+  85% { opacity:calc(var(--op,.85) * .45); }
+  100%{ transform:translateY(-112vh) translateX(var(--sway,-16px))    scale(1.4); opacity:0; }
 }
 
 /* ---------- NOTICE STRIP (the ticker) ---------- */
@@ -161,7 +190,14 @@ a:hover{ color:var(--red-deep); }
    ======================================================================= */
 .bill{
   position:relative; margin-top:26px; padding:30px 26px 34px; text-align:center;
+  /* Aged handbill stock: brown foxing blooms, a fine paper fibre, the old
+     barn-red watermark, then the lit paper underneath. */
   background:
+    radial-gradient(circle at 14% 20%, rgba(120,80,30,.07) 0 7px, transparent 8px),
+    radial-gradient(circle at 86% 15%, rgba(92,60,22,.055) 0 5px, transparent 6px),
+    radial-gradient(circle at 74% 84%, rgba(120,80,30,.06) 0 9px, transparent 10px),
+    radial-gradient(circle at 22% 88%, rgba(92,60,22,.05) 0 6px, transparent 7px),
+    repeating-linear-gradient(0deg, rgba(36,26,18,.022) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(45deg, rgba(158,43,30,.05) 0 12px, transparent 12px 24px),
     var(--paper-1);
   border:2px solid var(--ink);
@@ -232,6 +268,28 @@ a:hover{ color:var(--red-deep); }
   mix-blend-mode:multiply; transform:rotate(-4deg);
 }
 
+/* A rubber approval stamp slapped in the corner, ink half dry so it prints
+   uneven. multiply drops it into the paper; it sits askew like a real stamp. */
+.bill__stamp{
+  position:absolute; top:14px; right:12px; z-index:2; pointer-events:none;
+  width:98px; height:98px; border-radius:50%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; transform:rotate(-13deg);
+  color:var(--red); border:2.5px solid var(--red); box-shadow:inset 0 0 0 2px var(--red);
+  opacity:.6; mix-blend-mode:multiply; filter:contrast(1.15);
+}
+.bill__stamp b{ font-family:var(--type); font-size:.56rem; letter-spacing:.16em; display:block; }
+.bill__stamp span{ font-family:var(--ornament); font-size:.9rem; line-height:.95; margin:3px 0; letter-spacing:.02em; }
+.bill__stamp i{ font-style:normal; font-family:var(--type); font-size:.42rem; letter-spacing:.24em; }
+
+/* The bottom matter every handbill carried in tiny wood type — the house rules,
+   half of them a joke, exactly the register the Frost page's marquee runs in. */
+.bill__matter{
+  font-family:var(--type); font-size:clamp(.58rem,1.9vw,.72rem); letter-spacing:.08em;
+  color:var(--ink-soft); text-transform:uppercase; margin:20px auto 0; max-width:46ch;
+  line-height:1.7;
+}
+
 /* =======================================================================
    INK BUTTONS
    A pressed-metal stamp: paper-coloured plate, hard ink border, a shove
@@ -275,7 +333,17 @@ a:hover{ color:var(--red-deep); }
    ======================================================================= */
 .leaf{
   position:relative; margin:22px 0; padding:26px 24px 30px;
-  background:var(--paper-1);
+  /* Not a flat fill: foxing blooms, a lamp vignette darkening toward the far
+     corner (so each page reads as lit from the upper-left bulb), and a hair of
+     paper fibre. The dark/stage leaves below reset all of this with their own
+     background shorthand. */
+  background-color:var(--paper-1);
+  background-image:
+    radial-gradient(circle at 88% 12%, rgba(120,80,30,.055) 0 8px, transparent 9px),
+    radial-gradient(circle at 9% 40%,  rgba(92,60,22,.05)  0 6px, transparent 7px),
+    radial-gradient(circle at 63% 92%, rgba(120,80,30,.05) 0 7px, transparent 8px),
+    radial-gradient(150% 130% at 12% -6%, transparent 52%, rgba(36,22,12,.06) 100%),
+    repeating-linear-gradient(0deg, rgba(36,26,18,.016) 0 1px, transparent 1px 3px);
   border:1.5px solid var(--ink-soft);
   /* A lit page in a dark room: an inner top highlight, a deep drop, and a
      faint amber halo picked up off the bulb. */
@@ -443,20 +511,27 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
    NOT by :hover — a hover flip is a trap on touch and unreachable by keyboard.
    Under reduced motion the rotate becomes an instant swap (bottom of file). */
 .disc{ perspective:1400px; }
+/* The card's height is driven by JS (js/neck.js): it sits at 380px showing the
+   front, and grows to fit the liner-notes back when flipped, then shrinks back.
+   That's what fixed the mobile lineage — the back used to be locked into a
+   420px box and its ~1000px of notes were clipped into a tiny inner scroll.
+   NOTE: no overflow property here — a non-visible overflow on a preserve-3d
+   element flattens it and kills the flip; the clipping lives on the faces. */
 .disc__inner{
   position:relative; transform-style:preserve-3d;
-  transition:transform .7s cubic-bezier(.4,.1,.2,1);
-  min-height:420px;
+  transition:transform .7s cubic-bezier(.4,.1,.2,1), height .5s ease;
+  height:380px;
 }
 .disc.flipped .disc__inner{ transform:rotateY(180deg); }
 .disc__face{
-  position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  position:absolute; inset:0; overflow:hidden;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
   display:flex; flex-direction:column; align-items:center;
   border:1.5px solid #000; padding:20px 18px;
   background:linear-gradient(180deg,#241a14,#140d0a);
 }
-.disc__face--front{ justify-content:space-between; }
-.disc__face--back{ transform:rotateY(180deg); background:var(--paper-1); border-color:var(--ink); overflow:auto; align-items:stretch; }
+.disc__face--front{ justify-content:center; gap:16px; }
+.disc__face--back{ transform:rotateY(180deg); background:var(--paper-1); border-color:var(--ink); align-items:stretch; }
 
 /* Front: a big black 78 with a printed label. The printed matter is stacked
    (flex-direction:column) and width-capped so it stays inside the paper
@@ -557,7 +632,7 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 /* =======================================================================
    WHO'S NECK
    ======================================================================= */
-.about{ display:grid; grid-template-columns:minmax(180px,260px) 1fr; gap:28px; align-items:start; }
+.about{ display:grid; grid-template-columns:minmax(150px,210px) 1fr; gap:28px; align-items:start; }
 .about__plate{ position:relative; text-align:center; }
 .about__img{
   width:100%; aspect-ratio:4/5; object-fit:cover; object-position:50% 42%; display:block;
@@ -648,16 +723,26 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 /* FROM THE FLOOR — real live shots, tacked to the stage wall like photos in a
    juke joint. Each sits in a dark mount with a whiskey edge; a small tilt and a
    hover lift so they read as pinned prints, not a stock grid. */
-.floor{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:28px; }
+/* Small prints tacked to the stage wall — deliberately modest, not a hero
+   band. A strip of tape holds each one; they tilt, and straighten on hover. */
+.floor{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:28px; max-width:760px; margin-left:auto; margin-right:auto; }
 .floor__shot{
-  margin:0; overflow:hidden; background:#0c0806;
+  position:relative; margin:0; overflow:visible; background:#0c0806;
   border:3px solid #0c0806; outline:1px solid var(--whiskey-deep);
-  box-shadow:0 12px 24px rgba(0,0,0,.6);
+  box-shadow:0 10px 20px rgba(0,0,0,.6);
   transition:transform .15s, box-shadow .15s;
 }
-.floor__shot img{ display:block; width:100%; height:210px; object-fit:cover; filter:contrast(1.04) saturate(.97); }
-.floor__shot:nth-child(odd){ transform:rotate(-1.4deg); }
-.floor__shot:nth-child(even){ transform:rotate(1.4deg); }
+.floor__shot img{ display:block; width:100%; height:150px; object-fit:cover; filter:contrast(1.04) saturate(.97); }
+/* the tape strip */
+.floor__shot::before{
+  content:""; position:absolute; top:-9px; left:50%; z-index:2;
+  width:48px; height:16px; transform:translateX(-50%) rotate(-4deg);
+  background:linear-gradient(180deg, rgba(224,198,148,.62), rgba(198,168,110,.5));
+  border:1px solid rgba(120,92,52,.4); box-shadow:0 1px 3px rgba(0,0,0,.35);
+}
+.floor__shot:nth-child(odd){ transform:rotate(-1.8deg); }
+.floor__shot:nth-child(even){ transform:rotate(1.8deg); }
+.floor__shot:nth-child(even)::before{ transform:translateX(-50%) rotate(5deg); }
 .floor__shot:hover{ transform:rotate(0) translateY(-3px); box-shadow:0 16px 30px rgba(0,0,0,.7), 0 0 26px rgba(232,178,72,.14); }
 .floor__cap{ text-align:center; font-family:var(--type); font-size:.78rem; letter-spacing:.12em; color:var(--whiskey-lit); margin:14px 0 0; }
 
@@ -740,18 +825,52 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
 .foot a{ color:var(--whiskey-lit); }
 .foot a:hover{ color:var(--paper-1); }
 
+/* The colophon badges — the room's answer to the Frost page's "MADE WITH
+   NOTEPAD" web-buttons. Little pressed seals on the dark, in whiskey. */
+.marks{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 4px; }
+.mark{
+  font-family:var(--type); font-size:.58rem; letter-spacing:.1em; line-height:1.35;
+  text-align:center; color:var(--whiskey-lit);
+  border:1.5px solid var(--whiskey-deep); background:rgba(232,178,72,.05);
+  padding:7px 10px; box-shadow:2px 2px 0 rgba(0,0,0,.5);
+}
+.mark:nth-child(odd){ transform:rotate(-2deg); }
+.mark:nth-child(even){ transform:rotate(1.5deg); }
+.mark b{ font-size:.74rem; color:var(--paper-1); letter-spacing:.06em; }
+
 /* =======================================================================
    RESPONSIVE
    ======================================================================= */
 @media (max-width:720px){
+  .sheet{ padding:0 12px 48px; }
+  .leaf{ padding:22px 16px 24px; }
+
   .victrola{ grid-template-columns:1fr; }
   .heads{ grid-template-columns:1fr; }
-  .floor{ grid-template-columns:repeat(2,1fr); }
-  .floor__shot img{ height:170px; }
+  .floor{ grid-template-columns:repeat(2,1fr); max-width:none; gap:22px; }
+  .floor__shot img{ height:150px; }
   .about{ grid-template-columns:1fr; }
-  .about__plate{ max-width:260px; margin:0 auto; }
+  .about__plate{ max-width:240px; margin:0 auto; }
   .booking{ grid-template-columns:1fr; }
-  .head::before,.head::after{ width:calc(50% - 6ch); }
+
+  /* On a phone the section title nearly fills the column, so the ink rules that
+     flank it would strike through the letters. Drop them and just centre it. */
+  .head::before,.head::after{ display:none; }
+  .head span{ padding:0; }
+
+  /* The filing tabs become one swipeable row instead of a five-deep block. */
+  .tabs{ flex-wrap:nowrap; justify-content:flex-start; overflow-x:auto;
+    -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; padding:0 4px 2px; }
+  .tab{ flex:0 0 auto; scroll-snap-align:start; }
+
+  /* Tighter liner notes so the auto-sized flip cards aren't a mile tall. */
+  .facts{ font-size:.82rem; }
+  .notes{ font-size:.85rem; }
+
+  /* Pull the corner stamp in so it clears the wordmark. */
+  .bill{ padding:26px 18px 30px; }
+  .bill__stamp{ width:74px; height:74px; top:8px; right:6px; }
+  .bill__stamp span{ font-size:.74rem; }
   /* Table → cards, the same pattern the Frost tour table uses. */
   .dates thead{ display:none; }
   .dates, .dates tbody, .dates tr, .dates td{ display:block; width:100%; }
@@ -774,6 +893,7 @@ code{ font-family:var(--type); background:rgba(36,26,18,.08); padding:1px 5px; b
   .platter__disc.spinning{ animation:none; }
   .mote{ animation:none; }
   #dust{ display:none; }
+  body::after{ animation:none; }
   .card{ animation:none; }
   .disc__inner{ transition:none; }
   .side:hover .side__disc{ transform:none; }

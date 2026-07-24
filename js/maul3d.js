@@ -400,25 +400,26 @@
     }
 
     /* ---------------- camera ----------------
-       Orbit around a target that sits on the ground plane. Yaw is free - that
-       is the ask - pitch is clamped away from both the horizon and straight
-       down, because a maul read from ground level is unplayable and a maul
-       read from directly above is just the 2D board with extra steps. */
+       A target that sits on the ground plane, viewed from one fixed heading and
+       pitch (YAW0/PITCH0 below): the board is panned and zoomed, never turned -
+       the Warcraft camera, where you slide over the map instead of orbiting it.
+       The pitch clamp and MIN/MAX below still bound anything that could move the
+       angle, but with the lock on nothing does; they are the guard rails for the
+       day the lock comes back off. */
     /* Framing is derived from the board rather than hardcoded, so a larger map
        opens correctly framed instead of needing the constants retuned. At this
        field of view a board of N tiles subtends the view at about 1.15N. */
     var FIT = Math.max(COLS, ROWS) * 1.15;
-    /* The view the board opens on, and the one RESET VIEW returns to. Half a
-       turn round from the old default so the gate (top of the board) sits at
-       the front of the shot and the creeps walk down toward the drain and the
-       player, the way the Warcraft III mauls are read - not away from them.
-       Still a corner view, not an edge-on one; it's the old 45 deg plus 180,
-       so the framing that was tuned there is kept, just seen from the far
-       corner. Every other angle is still a TURN or a two-finger orbit away. */
-    var YAW0 = Math.PI * 1.25;
+    /* The heading the board is played from, and the one RESET VIEW returns to.
+       180 degrees: the gate at the back of the shot, the creeps walking down
+       toward the drain and the player, the way the Warcraft III mauls are read.
+       PITCH0 is held with it. LOCKED freezes both - orbit, snap and the rotation
+       half of a pinch all become no-ops - so the only camera verbs left are pan
+       (edge-scroll or drag) and zoom. */
+    var YAW0 = Math.PI, PITCH0 = 0.95, LOCKED = true;
     var cam = {
       tx: (COLS - 1) / 2, tz: (ROWS - 1) / 2,
-      yaw: YAW0, pitch: 0.95, dist: FIT
+      yaw: YAW0, pitch: PITCH0, dist: FIT
     };
     var MIN_PITCH = 0.30, MAX_PITCH = 1.45;
     /* The zoom-out clamp is deliberately far: a phone held portrait has to pull
@@ -501,6 +502,7 @@
     var camera = {
       get yaw() { return cam.yaw; },
       orbit: function (dy, dp) {
+        if (LOCKED) return;              /* the view no longer turns - see YAW0 */
         cam.yaw += dy;
         cam.pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, cam.pitch + dp));
       },
@@ -512,8 +514,12 @@
          the fingers say and where the camera is compounds over a long
          two-finger drag. */
       set: function (yaw, pitch, dist) {
-        cam.yaw = yaw;
-        cam.pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch));
+        /* A pinch still zooms; with the lock on it just can't turn or tilt while
+           it does, so the two-finger yaw/pitch it hands in are dropped. */
+        if (!LOCKED) {
+          cam.yaw = yaw;
+          cam.pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch));
+        }
         cam.dist = clampDist(dist);
       },
       pan: pan,
@@ -540,12 +546,13 @@
          built on a square grid and the four corner views are the ones a player
          actually wants to flick between. */
       snap: function (dir) {
+        if (LOCKED) return;              /* nothing to snap between - see YAW0 */
         var q = Math.PI / 2;
         cam.yaw = (Math.round(cam.yaw / q) + dir) * q;
       },
       reset: function () {
         cam.tx = (COLS - 1) / 2; cam.tz = (ROWS - 1) / 2;
-        cam.yaw = YAW0; cam.pitch = 0.95;
+        cam.yaw = YAW0; cam.pitch = PITCH0;
         cam.dist = clampDist(fitDist(lastAspect));
       },
       state: function () {

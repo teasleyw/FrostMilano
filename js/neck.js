@@ -17,28 +17,39 @@
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
   /* ----------------------------------------------------------------- *
-   * Dust in the light shaft — the room's weather. Skipped entirely for
-   * reduced motion (the CSS also hides the layer, this just never spawns).
+   * The Raised — embers and smoke lifting off the floor. The Frost page's
+   * snow falls; this room's heat rises, which is the whole point of the
+   * place (the ghosts pulled UP out of the boards). Embers are small, bright
+   * and fast; smoke wisps are big, soft and slow. Each gets an S-curve climb
+   * via two --sway values the CSS keyframe reads. Skipped entirely under
+   * reduced motion — the CSS also hides the layer, this just never spawns.
    * ----------------------------------------------------------------- */
-  (function dust() {
+  (function embers() {
     if (reduceMotion) return;
     var layer = document.getElementById("dust");
     if (!layer) return;
-    var MAX = 34;
+    var MAX = 30;
     function spawn() {
       if (layer.childElementCount >= MAX) return;
+      var smoke = Math.random() < 0.32;                 // ~1 in 3 is a smoke wisp
       var m = document.createElement("span");
-      m.className = "mote";
-      var size = 1 + Math.random() * 3;
-      var dur = 9 + Math.random() * 12;
-      m.style.left = (Math.random() * 100) + "vw";
+      m.className = "mote " + (smoke ? "mote--smoke" : "mote--ember");
+      var size = smoke ? 10 + Math.random() * 18        // wisps are big and soft
+                       : 1.5 + Math.random() * 3;        // embers are small
+      var dur  = smoke ? 16 + Math.random() * 12
+                       : 8 + Math.random() * 7;
+      var swing = smoke ? 30 + Math.random() * 60 : 14 + Math.random() * 34;
+      var dir = Math.random() < 0.5 ? -1 : 1;            // curl left or right
+      m.style.left = Math.random() * 100 + "vw";
       m.style.width = m.style.height = size + "px";
-      m.style.opacity = 0.3 + Math.random() * 0.5;
       m.style.animationDuration = dur + "s";
+      m.style.setProperty("--op", (smoke ? 0.5 : 0.8) + Math.random() * 0.2);
+      m.style.setProperty("--sway-mid", dir * swing * 0.55 + "px");
+      m.style.setProperty("--sway", -dir * swing + "px");
       layer.appendChild(m);
-      setTimeout(function () { if (m.parentNode) m.parentNode.removeChild(m); }, dur * 1000 + 200);
+      setTimeout(function () { if (m.parentNode) m.parentNode.removeChild(m); }, dur * 1000 + 300);
     }
-    setInterval(spawn, 520);
+    setInterval(spawn, 560);
   })();
 
   /* ----------------------------------------------------------------- *
@@ -241,18 +252,44 @@
    * button tracks state for assistive tech.
    * ----------------------------------------------------------------- */
   (function lineage() {
+    var FRONT_H = 380;   /* the resting height, matches .disc__inner in the CSS */
+
     [].forEach.call(document.querySelectorAll(".disc"), function (card) {
       var front = card.querySelector('.disc__face--front .disc__flip');
+      var inner = card.querySelector('.disc__inner');
+      var back = card.querySelector('.disc__face--back');
+
+      /* Grow the card to fit the liner notes when it's turned over, shrink it
+         back to the front's resting height when it's turned face-up. back's
+         scrollHeight is the notes' true height at the current card width (the
+         back is inset:0, so it's already that wide); +12 clears sub-pixel
+         rounding so a line never hairline-clips. */
+      function sizeTo(on) {
+        if (inner) inner.style.height = (on && back ? back.scrollHeight + 12 : FRONT_H) + "px";
+      }
       function setFlipped(on) {
         card.classList.toggle("flipped", on);
         if (front) front.setAttribute("aria-expanded", String(on));
+        sizeTo(on);
       }
+      sizeTo(false);   /* pin the starting height so the first flip animates */
+
       [].forEach.call(card.querySelectorAll(".disc__flip"), function (b) {
         b.addEventListener("click", function () { setFlipped(!card.classList.contains("flipped")); });
       });
       card.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && card.classList.contains("flipped")) setFlipped(false);
       });
+      card._resize = function () { sizeTo(card.classList.contains("flipped")); };
+    });
+
+    /* A width change re-flows the notes, so re-measure any card that's open. */
+    var t;
+    window.addEventListener("resize", function () {
+      clearTimeout(t);
+      t = setTimeout(function () {
+        [].forEach.call(document.querySelectorAll(".disc"), function (c) { if (c._resize) c._resize(); });
+      }, 150);
     });
   })();
 
