@@ -86,14 +86,21 @@
     "attribute vec3 iColor;",
     "attribute float iGlow;",
     "uniform mat4 uViewProj;",
+    "uniform vec3 uTarget;",
     "varying vec3 vNormal;",
     "varying vec3 vColor;",
     "varying float vGlow;",
+    "varying float vFog;",
     "void main() {",
     "  vec3 world = iOffset + aPos * iScale;",
     "  vNormal = aNormal;",
     "  vColor = iColor;",
     "  vGlow = iGlow;",
+    /* Fog is measured as horizontal distance from the camera's ground target,
+       not from the eye - so it stays put as you zoom (an eye-distance fog would
+       swallow the whole board the moment you pulled back). Whatever you are
+       looking at is clear; the tundra fades to the horizon around it. */
+    "  vFog = length(world.xz - uTarget.xz);",
     "  gl_Position = uViewProj * vec4(world, 1.0);",
     "}"
   ].join("\n");
@@ -103,7 +110,10 @@
     "varying vec3 vNormal;",
     "varying vec3 vColor;",
     "varying float vGlow;",
+    "varying float vFog;",
     "uniform vec3 uLight;",
+    "uniform vec3 uFogColor;",
+    "uniform vec2 uFogRange;",             /* x: clear out to here, y: gone by here */
     "void main() {",
     "  vec3 n = normalize(vNormal);",
     "  float d = max(dot(n, uLight), 0.0);",
@@ -119,6 +129,13 @@
        when the camera swings behind it is a road you have to re-find every
        time you turn. So it is emissive, not lit. */
     "  c = mix(c, vColor * 1.18, vGlow);",
+    /* Then the whole thing sinks into the horizon with distance. This is what
+       turns a slab hanging over black into ground that runs out to a snowy
+       skyline: the far tiles, the surrounding field and the base's cliff all
+       dissolve into the same colour the frame is cleared to, so there is no
+       edge left to read as "the board stops here". */
+    "  float fog = clamp((vFog - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);",
+    "  c = mix(c, uFogColor, fog);",
     "  gl_FragColor = vec4(c, 1.0);",
     "}"
   ].join("\n");
@@ -281,7 +298,10 @@
     };
     var U = {
       viewProj: gl.getUniformLocation(prog, "uViewProj"),
-      light: gl.getUniformLocation(prog, "uLight")
+      light: gl.getUniformLocation(prog, "uLight"),
+      target: gl.getUniformLocation(prog, "uTarget"),
+      fogColor: gl.getUniformLocation(prog, "uFogColor"),
+      fogRange: gl.getUniformLocation(prog, "uFogRange")
     };
 
     var fxProg = link(FX_VERT, FX_FRAG);
@@ -676,15 +696,27 @@
        Lifted from the 2D cabinet so the two renderers are recognisably the
        same room, and cached as float triples because the shader wants those
        and hex parsing per instance per frame would be absurd. */
-    /* Brighter across the board than the 2D palette it descends from, and
-       deliberately so. The flat renderer could sit the floor almost black
-       because nothing was lit and the road was the only bright thing on
-       screen; here everything carries a lambert term that only ever darkens
-       it, and a floor that starts dark ends up unreadable on the faces
-       turned away from the light. */
+    /* The board is a polar tundra now, not a dark ice cavern. The floor is
+       snow - a cool packed white that the lambert term shades blue on the faces
+       turned from the light - rather than the near-black teal the 2D cabinet
+       used. That old dark floor was a readability trick from the flat renderer
+       (nothing was lit, so the road had to be the one bright thing); here the
+       road glows regardless, so the ground is free to be the snowfield it
+       always wanted to be, and a bright ground is what stops the whole board
+       reading as a slab floating in the dark.
+         floor: the walked snow of the arena.  field: the same snow, run out
+       past the maze to the fog so there is no island edge.  bank/bankCap: the
+       terrain blockers, now drifts of elevated snow between the lanes - brighter
+       than the floor, with a lit crest, so "the wall between you and them" is a
+       snow berm.  base: the frozen earth under it all, seen only as the cliff
+       at the field's rim, and mostly lost to fog.  Sky and fog share one colour
+       so the ground dissolves into the horizon instead of ending at it. */
+    var SKY = hexToRGB("#33475a");
     var COL = {
-      floorA: hexToRGB("#15384c"), floorB: hexToRGB("#1a4258"),
-      rock:   hexToRGB("#356f8e"),
+      floorA: hexToRGB("#83a1b3"), floorB: hexToRGB("#8faec0"),
+      field:  hexToRGB("#7d9aac"),
+      rock:   hexToRGB("#b0c6d4"), bankCap: hexToRGB("#dcebf4"),
+      base:   hexToRGB("#39505f"),
       road:   hexToRGB("#2f9dc4"), roadHot: hexToRGB("#c4f6ff"),
       plinth: hexToRGB("#1d4a63"),
       creep:  hexToRGB("#eafcff"), creepSlow: hexToRGB("#8ad9ff"),
@@ -710,6 +742,23 @@
     var towerCol = {};
     function towerColour(hex) {
       return towerCol[hex] || (towerCol[hex] = hexToRGB(hex));
+    }
+
+    /* Snow is never one flat white, and a renderer of solid-colour cubes has no
+       texture map to say so. A per-tile hash instead: each floor and field cell
+       is nudged a few percent brighter or darker, which at box scale reads as
+       the grain and drift of settled snow rather than a painted plane. The
+       result is written into a shared scratch triple because push() copies it
+       out immediately - the alternative is an array per tile per frame, and the
+       whole board is built to allocate nothing in steady state. */
+    var FIELD = 14;                 /* tiles of open tundra ringing the maze */
+    var _grain = [0, 0, 0];
+    function grainCol(c, x, y) {
+      var h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      h -= Math.floor(h);
+      var m = 0.92 + h * 0.16;      /* 0.92 .. 1.08 */
+      _grain[0] = c[0] * m; _grain[1] = c[1] * m; _grain[2] = c[2] * m;
+      return _grain;
     }
 
     /* ---------------- snow ----------------
@@ -1128,13 +1177,21 @@
         for (x = 0; x < COLS; x++) {
           c = y * COLS + x;
           if (W.isRock(x, y)) {
+            /* A snow drift, not a rock. The base keeps its old height band (so
+               columnHeight's 1.15 still stands in for it when a click asks what
+               it can see over) and takes the grain; a smaller, brighter crest
+               rides on top so the drift catches the light and reads as heaped
+               snow rather than a flat-topped block. These are the "elevated snow
+               between you and the enemy" - the terrain that walls the lanes. */
             var rh = 1.0 + ((x * 7 + y * 13) % 5) * 0.06;
-            push(x + ox, 0, y + oz, 0.98, rh, 0.98, COL.rock);
+            push(x + ox, 0, y + oz, 0.99, rh, 0.99, grainCol(COL.rock, x, y));
+            push(x + ox, rh - 0.16, y + oz, 0.74, 0.24, 0.74, COL.bankCap, 0);
             continue;
           }
           var ri = onRoute[c];
           if (ri === undefined) {
-            push(x + ox, 0, y + oz, 0.96, 0.06, 0.96, ((x + y) & 1) ? COL.floorA : COL.floorB, 0);
+            push(x + ox, 0, y + oz, 0.96, 0.06, 0.96,
+                 grainCol((x + y) & 1 ? COL.floorA : COL.floorB, x, y), 0);
           } else {
             var d = head - ri, glow = (d >= 0 && d < 9) ? (1 - d / 9) : 0;
             var col = [
@@ -1145,6 +1202,33 @@
             push(x + ox, 0, y + oz, 0.96, 0.085 + glow * 0.05, 0.96, col, 0.7 + glow * 0.3);
           }
         }
+      }
+
+      /* The tundra the maze sits in. The same snow run FIELD tiles past every
+         edge so the board never ends at an island rim, and one slab of frozen
+         earth under the whole spread so the ground has real thickness under it
+         instead of being a sheet of paper hung in the air. The field fades into
+         the fog well before its own edge, and the slab's only visible face -
+         the cliff where the field runs out - fades with it. Emitted once, for
+         the player's board at the origin; the fog and the surround are the two
+         halves of "not floating", and neither belongs to a second board. */
+      if (primary) {
+        /* The tundra spans BOTH boards when a rival is in play, so panning
+           across to the AI's maze crosses continuous snow rather than a gap of
+           sky between two islands. With no rival (RVX = RVZ = 0) it collapses to
+           a single field ringing the one board. */
+        var loX = Math.min(0, RVX) - FIELD, hiX = Math.max(0, RVX) + COLS - 1 + FIELD;
+        var loZ = Math.min(0, RVZ) - FIELD, hiZ = Math.max(0, RVZ) + ROWS - 1 + FIELD;
+        var fx2, fy2;
+        for (fy2 = loZ; fy2 <= hiZ; fy2++) {
+          for (fx2 = loX; fx2 <= hiX; fx2++) {
+            if (fx2 >= 0 && fx2 < COLS && fy2 >= 0 && fy2 < ROWS) continue;
+            if (RIV && fx2 >= RVX && fx2 < RVX + COLS && fy2 >= RVZ && fy2 < RVZ + ROWS) continue;
+            push(fx2, 0, fy2, 1.0, 0.05, 1.0, grainCol(COL.field, fx2, fy2), 0);
+          }
+        }
+        push((loX + hiX) / 2, -1.7, (loZ + hiZ) / 2,
+             (hiX - loX) + 4, 1.7, (hiZ - loZ) + 4, COL.base, 0);
       }
 
       var built = W.getBuilt();
@@ -1238,7 +1322,7 @@
     function draw(t) {
       var w = canvas.width, h = canvas.height;
       gl.viewport(0, 0, w, h);
-      gl.clearColor(0.008, 0.047, 0.078, 1);
+      gl.clearColor(SKY[0], SKY[1], SKY[2], 1);
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl.BACK);
@@ -1254,10 +1338,13 @@
          for byte. */
       var rival = world.getRival ? world.getRival() : null;
 
-      /* Room for both boards and their creeps' boxes, with headroom. reserve()
-         only ever grows, and only here before the first push of the frame, so
-         a steady-state frame allocates nothing. */
-      reserve(COLS * ROWS * (rival ? 2 : 1) + 8192);
+      /* Room for both boards, the tundra field ringing the primary one, and all
+         their creeps' boxes, with headroom. reserve() only ever grows, and only
+         here before the first push of the frame, so a steady-state frame
+         allocates nothing. */
+      reserve(COLS * ROWS * (rival ? 2 : 1) +
+              (COLS + FIELD * 2 + Math.abs(RVX)) *
+              (ROWS + FIELD * 2 + Math.abs(RVZ)) + 8192);
 
       emitSolids(world, 0, 0, true, t);
       if (rival) emitSolids(rival, rival.offset[0], rival.offset[1], false, t);
@@ -1320,6 +1407,15 @@
 
       gl.uniformMatrix4fv(U.viewProj, false, viewProj);
       gl.uniform3f(U.light, 0.48, 0.78, 0.40);
+      gl.uniform3f(U.target, cam.tx, 0, cam.tz);
+      gl.uniform3f(U.fogColor, SKY[0], SKY[1], SKY[2]);
+      /* Tied to the framing distance, not to live zoom, so the horizon sits at
+         a fixed spread of tundra rather than breathing in and out as you pinch.
+         Clear past the board's own half-span (so the maze never hazes), and
+         fully gone a touch INSIDE the field's rim - the surround is sized to run
+         a couple of tiles past this, so the field always dissolves into the sky
+         before it can show an edge. */
+      gl.uniform2f(U.fogRange, FIT * 0.66, FIT * 0.98);
       ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, cube.count, nInst);
 
       /* ---- the effects pass ----
