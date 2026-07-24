@@ -2820,8 +2820,11 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
      you - the two hazards exist to make "should I go get that one?" a real
      question, which is the whole point of drops in a game this simple.
      Timed effects stack their clocks, never their strength: catching WIDE
-     twice buys more seconds, not a paddle the width of the screen. */
-  var DROP_CHANCE = 0.16;               /* per brick smashed */
+     twice buys more seconds, not a paddle the width of the screen.
+     The rate is deliberately generous - a level-1 wall drops a dozen or so
+     capsules, enough that MULTIBALL lands early and the opening stage doesn't
+     outstay its welcome before the squadron shows up. */
+  var DROP_CHANCE = 0.3;                /* per brick smashed */
   var DROP_SPEED = 140;                 /* px/sec: slow enough to be a choice */
   var DROP_W = 22, DROP_H = 11;
   var DROP_BONUS = 50;                  /* points for the catch itself */
@@ -2856,7 +2859,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   var EN_COLS = 7, EN_W = 20, EN_H = 14, EN_GAP = 10;
   var EN_TOP = 58, EN_ROW_H = 26;
   var EN_PTS = [120, 80, 60, 40];       /* by row: the front rank is the prize */
-  var EN_DROP_CHANCE = 0.14;
+  var EN_DROP_CHANCE = 0.26;
   var ENTRY_TIME = 1.1, ENTRY_STAGGER = 0.07;
   var DIVE_TIME = 2.4, RETURN_TIME = 0.9;
   var BULLET_SPEED = 540, FIRE_GAP = 0.18, MAX_BULLETS = 8;
