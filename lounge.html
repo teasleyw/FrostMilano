@@ -33,7 +33,9 @@
     /* Native pixel buffer, upscaled by CSS - never resample pixel art. */
     image-rendering:pixelated;
     width:min(680px,96vw); height:auto;
-    border:3px ridge #6bb8dd; border-radius:6px;
+    /* No frame: the room reads as the page itself, not a picture hung on it.
+       Every other canvas here (#bs, #sn, #wc, #wm) sets its own border, since
+       those really are screens inside a cabinet. */
     background:#05131f; cursor:pointer;
   }
   #hud{ font-size:.72rem; color:#2b6f96; }
@@ -747,11 +749,6 @@
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
 <h1>&#10052; FROST LOUNGE &#10052;</h1>
-<p>click a tile to walk &mdash; step up to the <b>DECKS</b> to build a loop &mdash;
-click a cabinet for <b>BRICK SMASH</b>, <b>SNAKE</b> or <b>WINTER MAUL</b>
-&mdash; click the boombox
-to work the <b>JUKEBOX</b> &mdash; hit the <b>WARDROBE</b> to make your guest &mdash;
-take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
 <canvas id="stage" width="340" height="300"></canvas>
 <div id="hud"></div>
 
