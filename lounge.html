@@ -75,7 +75,7 @@
   .arcade.is-open{ display:flex; }
   .arcade__cab{
     width:min(720px,100%); max-height:100%; overflow:auto;
-    box-sizing:border-box;
+    box-sizing:border-box; position:relative;
     display:flex; flex-direction:column; gap:12px;
     padding:14px; border-radius:10px;
     background:linear-gradient(180deg,#0b2a40,#061826);
@@ -842,6 +842,105 @@
   @media (prefers-reduced-motion:reduce){
     .arcade__rotate span{ animation:none; }
   }
+
+  /* ================= the maul menu scene =================
+     Winter Maul's own front screen. The other cabinets drop you onto the board
+     behind a line of "press start" text floated over it; this covers the whole
+     cabinet instead - home/play, the leaderboard, and settings - and the run
+     lives behind it until PLAY. Absolute over .arcade__cab so it fills the
+     cabinet windowed and the whole viewport in immersive with the same rule. */
+  .maul__menu{
+    position:absolute; inset:0; z-index:90;
+    display:flex; align-items:center; justify-content:center;
+    padding:22px; box-sizing:border-box; overflow-y:auto;
+    background:
+      radial-gradient(120% 78% at 50% 0%, rgba(56,230,255,.12), transparent 62%),
+      linear-gradient(180deg,#072033,#03121e);
+  }
+  .maul__menu[hidden]{ display:none; }
+  .maul__menuwrap{
+    width:100%; max-width:460px; display:flex; flex-direction:column;
+    align-items:stretch; gap:14px; text-align:center;
+  }
+  .maul__menutitle{
+    margin:0; font-size:1.5rem; letter-spacing:6px; font-weight:bold; color:#eafcff;
+    text-shadow:0 0 14px rgba(56,230,255,.7), 0 0 3px rgba(56,230,255,.9);
+  }
+  .maul__result{
+    font-size:.72rem; letter-spacing:1.5px; color:#ffd68a; line-height:1.5;
+    border:1px solid rgba(255,214,138,.4); border-radius:6px;
+    padding:9px 11px; background:rgba(255,214,138,.08);
+  }
+  .maul__result[hidden]{ display:none; }
+  .maul__result b{ display:block; color:#fff; font-size:1rem; letter-spacing:3px; margin-bottom:3px; }
+  .maul__menutabs{
+    display:flex; gap:4px; justify-content:center;
+    border-bottom:2px solid rgba(107,184,221,.25);
+  }
+  .maul__menutabs button{
+    flex:1 1 auto; cursor:pointer; font:inherit; margin-bottom:-2px;
+    padding:9px 6px; font-size:.66rem; letter-spacing:2px;
+    color:#6bb8dd; background:transparent; border:0; border-bottom:2px solid transparent;
+  }
+  .maul__menutabs button:hover{ color:#b8ecff; }
+  .maul__menutabs button.is-on{
+    color:#38e6ff; border-bottom-color:#38e6ff; text-shadow:0 0 8px rgba(56,230,255,.6);
+  }
+  .maul__panel{ display:flex; flex-direction:column; gap:12px; }
+  .maul__panel[hidden]{ display:none; }
+  .maul__tag{ margin:0; font-size:.74rem; color:#9fd6ef; letter-spacing:.5px; line-height:1.55; }
+  .maul__play{
+    cursor:pointer; font:inherit; font-weight:bold; font-size:1.05rem; letter-spacing:4px;
+    color:#03121e; padding:14px 18px; border-radius:8px; border:2px outset #7fdcff;
+    background:linear-gradient(180deg,#7ff0ff,#38b6d8);
+    box-shadow:0 0 18px rgba(56,230,255,.45);
+  }
+  .maul__play:hover{ background:linear-gradient(180deg,#9ff6ff,#4ec6e6); }
+  .maul__play:active{ border-style:inset; }
+  .maul__hint2{ margin:0; font-size:.62rem; color:#4d86a6; letter-spacing:.5px; line-height:1.7; }
+  .maul__hint2 b{ color:#8fd0ea; }
+  .maul__scores2{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px; text-align:left; }
+  .maul__scores2 li{
+    display:flex; align-items:center; gap:10px; padding:6px 11px; border-radius:5px;
+    font-size:.8rem; background:rgba(2,16,28,.5); border:1px solid rgba(43,111,150,.4);
+  }
+  .maul__scores2 li.is-new{ background:rgba(56,230,255,.14); border-color:#38e6ff; }
+  .maul__scores2 .rank{ width:1.6em; color:#4d86a6; font-size:.7rem; }
+  .maul__scores2 .who{ flex:1; color:#eafcff; letter-spacing:2px; }
+  .maul__scores2 .pts{ color:#ffd68a; font-variant-numeric:tabular-nums; }
+  .maul__scores2 .maul__empty{ display:block; color:#4d86a6; letter-spacing:1px; }
+  .maul__setrow{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 12px; border-radius:6px; text-align:left;
+    background:rgba(2,16,28,.5); border:1px solid rgba(43,111,150,.4);
+  }
+  .maul__setrow > span{ font-size:.72rem; letter-spacing:1px; color:#b8ecff; }
+  .maul__setrow small{ display:block; margin-top:2px; font-size:.58rem; letter-spacing:.3px; color:#4d86a6; }
+  .maul__seg{ display:flex; flex:none; border:1px solid #2b6f96; border-radius:6px; overflow:hidden; }
+  .maul__seg button{
+    cursor:pointer; font:inherit; font-size:.6rem; letter-spacing:1px;
+    padding:8px 9px; border:0; color:#6bb8dd; background:transparent;
+  }
+  .maul__seg button + button{ border-left:1px solid #2b6f96; }
+  .maul__seg button.is-on{ background:#155a82; color:#eafcff; }
+  .maul__switch{
+    cursor:pointer; font:inherit; font-size:.64rem; letter-spacing:1px; flex:none; min-width:72px;
+    padding:8px 14px; border-radius:6px; border:1px solid #2b6f96; color:#6bb8dd; background:transparent;
+  }
+  .maul__switch.is-on{ background:#155a82; color:#eafcff; border-color:#4bb4d8; }
+  .maul__menuexit{
+    cursor:pointer; font:inherit; font-size:.66rem; letter-spacing:2px; margin-top:2px;
+    color:#ff9db4; background:transparent; border:0; padding:8px;
+  }
+  .maul__menuexit:hover{ color:#ff7b9c; text-decoration:underline; }
+  /* Short landscape phones in immersive: tighten so it never needs scrolling. */
+  @media (max-height:520px){
+    .maul__menu{ padding:12px; align-items:flex-start; }
+    .maul__menutitle{ font-size:1.15rem; letter-spacing:4px; }
+    .maul__menuwrap{ gap:10px; max-width:420px; }
+    .maul__play{ padding:11px 16px; font-size:.95rem; }
+    .maul__tag{ font-size:.68rem; }
+  }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
@@ -1114,6 +1213,54 @@
     <div class="maul__cam" id="wm-cam" hidden>
       <button type="button" class="maul__act" data-cam="reset">RESET VIEW</button>
     </div>
+    <!-- The menu scene. Its own screen over the whole cabinet - the run sits
+         behind it until PLAY, and it comes back on game over. HOME to play,
+         HIGH SCORES for the board, SETTINGS for the toggles. -->
+    <div class="maul__menu" id="wm-menu" hidden>
+      <div class="maul__menuwrap">
+        <h2 class="maul__menutitle">&#10052; WINTER MAUL &#10052;</h2>
+        <div class="maul__result" id="wm-result" hidden></div>
+        <div class="maul__menutabs" role="tablist" aria-label="Menu">
+          <button type="button" data-tab="home" class="is-on">HOME</button>
+          <button type="button" data-tab="scores">HIGH SCORES</button>
+          <button type="button" data-tab="settings">SETTINGS</button>
+        </div>
+
+        <section class="maul__panel" data-panel="home">
+          <p class="maul__tag">Build a maze you can't seal shut and outlast the
+            rival's. The creeps march head-on for the drain at your feet.</p>
+          <button type="button" class="maul__play" id="wm-play">&#9654; PLAY</button>
+          <p class="maul__hint2">tap or drag the grid to build &middot;
+            <b>1&ndash;4</b> pick a tower &middot; tap a tower to upgrade or sell
+            &middot; <b>SPACE</b> sends the next wave</p>
+        </section>
+
+        <section class="maul__panel" data-panel="scores" hidden>
+          <ol class="maul__scores2" id="wm-menuboard"></ol>
+        </section>
+
+        <section class="maul__panel" data-panel="settings" hidden>
+          <div class="maul__setrow">
+            <span>3D BOARD<small>the tilted arena, or the flat iso board</small></span>
+            <button type="button" class="maul__switch is-on" id="wm-set3d" aria-pressed="true">3D</button>
+          </div>
+          <div class="maul__setrow">
+            <span>DIFFICULTY<small>how many leaks your maze can take</small></span>
+            <div class="maul__seg" id="wm-diff" role="group" aria-label="Difficulty">
+              <button type="button" data-diff="cozy">COZY</button>
+              <button type="button" data-diff="normal" class="is-on">NORMAL</button>
+              <button type="button" data-diff="brutal">BRUTAL</button>
+            </div>
+          </div>
+          <div class="maul__setrow">
+            <span>SOUND<small>icy blips, wave calls and kills</small></span>
+            <button type="button" class="maul__switch is-on" id="wm-setsound" aria-pressed="true">ON</button>
+          </div>
+        </section>
+
+        <button type="button" class="maul__menuexit" id="wm-menuexit">&#10005; EXIT TO LOUNGE</button>
+      </div>
+    </div>
     <div class="arcade__rotate" aria-hidden="true">
       <span>&#128241;</span>
       <p>TURN THE PHONE SIDEWAYS</p>
@@ -1208,17 +1355,32 @@
      threshold tile [col, 0] carries you to `to`; you LAND one tile in front of
      that room's door leading back here, so you never bounce straight through. */
   var scene = "lounge";
-  var LOUNGE_DOOR = 4;       /* lounge's BAR door, between poster(3) and SNAKE(6) */
+  var LOUNGE_DOOR = 4;       /* lounge's BAR door (Frost's), between poster(3) and NECK(5) */
   var LOUNGE_REC_DOOR = 2;   /* lounge's RECORD ROOM door, left of the poster */
+  var LOUNGE_NECK_DOOR = 5;  /* lounge's door out to Neck's room (neck.html), left of SNAKE(6) */
   var BAR_DOOR = 1;          /* bar's door back to the lounge */
   var REC_DOOR = 1;          /* record room's door back to the lounge */
+  var DIZZY_DOOR = 1;        /* the Dizzy Rooster's door back out to the lounge */
+  var NECK_POSTER_COL = 3;   /* the NECK & THE HEADS gig bill on the lounge wall */
+  /* A door normally names a `to` room reached by stepping on its threshold. A
+     door with a `url` instead is a way OUT of the lounge world to another page
+     (Neck's room) - the same threshold-step navigates the browser there. An
+     optional `hoverLabel` is the fuller name shown in the floating tag, when the
+     tight neon over the lintel has to run a shorter word.
+
+     THE DIZZY ROOSTER is Neck's own venue, a room in its own right (not Frost's
+     bar, which stays his). You reach it from Neck's page (neck.html links to
+     lounge.html#room=dizzy); its one door leads back out into the Frost Lounge,
+     closing the loop lounge -> Neck's room -> the Dizzy Rooster -> lounge. */
   var ROOMS = {
     lounge:  { doors: [
-      { col: LOUNGE_DOOR,     to: "bar",     label: "BAR",     glow: "#ff8a1a" },
-      { col: LOUNGE_REC_DOOR, to: "records", label: "RECORDS", glow: "#ff5aa0" }
+      { col: LOUNGE_DOOR,      to: "bar",      label: "BAR",     glow: "#ff8a1a" },
+      { col: LOUNGE_REC_DOOR,  to: "records",  label: "RECORDS", glow: "#ff5aa0" },
+      { col: LOUNGE_NECK_DOOR, url: "neck.html", label: "NECK", hoverLabel: "NECK & THE HEADS", glow: "#e8b24a" }
     ] },
     bar:     { doors: [ { col: BAR_DOOR, to: "lounge", label: "LOUNGE", glow: HEX.bright } ] },
-    records: { doors: [ { col: REC_DOOR, to: "lounge", label: "LOUNGE", glow: "#c9b3ff" } ] }
+    records: { doors: [ { col: REC_DOOR, to: "lounge", label: "LOUNGE", glow: "#c9b3ff" } ] },
+    dizzy:   { doors: [ { col: DIZZY_DOOR, to: "lounge", label: "LOUNGE", glow: "#e8b24a" } ] }
   };
 
   /* The record room's wall of singles - the real catalogue, one framed sleeve
@@ -1248,7 +1410,9 @@
 
   function buildBlocked() {
     BLOCKED = {};
-    if (scene === "bar") {
+    /* The Dizzy Rooster shares the bar's 9x9 furniture layout (counter, stools,
+       stage), so it blocks the same tiles. */
+    if (scene === "bar" || scene === "dizzy") {
       for (var x = BAR_COUNTER.x0; x <= BAR_COUNTER.x1; x++) {
         block(x, BAR_COUNTER.y);   /* counter */
         block(x, 0);               /* the well behind it */
@@ -1371,18 +1535,31 @@
     ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
   }
 
-  /* A framed record sleeve on the wall - the one warm object in the room, so
-     the eye has somewhere to land that isn't black, white or cyan. */
-  function poster(tx) {
+  /* NECK & THE HEADS' gig bill - the one warm object on the lounge wall, and a
+     way into his room: click it to open neck.html. An oxblood-leather field in a
+     gold frame, a barn-red foot and a whiskey flash, echoing his page. The frame
+     brightens and the flash lifts on hover so it reads as pickable. */
+  function poster(tx, hovered) {
     /* Sits low on the checkered wall so its gold frame has clear air above. */
-    wallQuad(tx, 0.08, 0.92, 18, 41, HEX.gold);
-    wallQuad(tx, 0.12, 0.88, 20, 39, css(shade(rgb(HEX.gold), 0.55)));
-    wallQuad(tx, 0.16, 0.84, 22, 37, HEX.O);
-    wallQuad(tx, 0.16, 0.84, 22, 30, css(shade(rgb(HEX.mid), 1.1)));
-    wallQuad(tx, 0.16, 0.84, 30, 37, HEX.deep2);
-    /* the sleeve's diagonal flash, echoing the sun glint on the snow */
-    wallQuad(tx, 0.27, 0.39, 22, 37, HEX.bright);
-    wallQuad(tx, 0.43, 0.49, 22, 37, HEX.chkLight);
+    wallQuad(tx, 0.08, 0.92, 18, 41, hovered ? "#f0c869" : "#c9872b"); /* gold frame */
+    wallQuad(tx, 0.12, 0.88, 20, 39, "#7a4e14");                       /* inner bevel */
+    wallQuad(tx, 0.16, 0.84, 22, 37, "#2e0f14");                       /* oxblood field */
+    wallQuad(tx, 0.16, 0.84, 22, 27, "#43151b");                       /* headline band */
+    wallQuad(tx, 0.16, 0.84, 33, 37, "#9e2b1e");                       /* barn-red foot */
+    /* the whiskey flash across the bill, echoing the sun glint on the snow */
+    wallQuad(tx, 0.27, 0.39, 22, 37, hovered ? "#ffe7ab" : "#e8b24a");
+    wallQuad(tx, 0.43, 0.49, 22, 37, "#c9872b");
+  }
+  /* The gig bill's clickable parallelogram on the wall, and the hit-test that
+     maps a cursor point onto it (lounge only), mirroring sleeveRegion/recordAt. */
+  function posterRegion(tx) {
+    return [wallPoint(tx, 0.08, 18), wallPoint(tx, 0.92, 18),
+            wallPoint(tx, 0.92, 41), wallPoint(tx, 0.08, 41)]
+           .map(function (q) { return [q.x, q.y]; });
+  }
+  function posterAt(p) {
+    if (scene !== "lounge") return null;
+    return pointInPoly(p.x, p.y, posterRegion(NECK_POSTER_COL)) ? NECK_POSTER_COL : null;
   }
 
   /* ---- walls & floor, shared by both room renderers ----
@@ -1445,7 +1622,7 @@
      over the lintel. On hover it names the room it leads to. The threshold tile
      in front stays walkable - stepping onto it is what carries you through
      (see the tick loop). */
-  function doorway(tx, glow, label, hovered) {
+  function doorway(tx, glow, label, hovered, hoverLabel) {
     var g = rgb(glow);
     wallQuad(tx, 0.16, 0.84, 3, WALL_H, "#03080d");                 /* recess */
     wallQuad(tx, 0.24, 0.76, WALL_H * 0.5, WALL_H, rgba(g, 0.10));  /* light spill */
@@ -1456,7 +1633,7 @@
     wallQuad(tx, 0.16, 0.84, 3, 7, jamb);                           /* lintel */
     var s = wallPoint(tx, 0.5, 0);
     neonSign(s.x, s.y - 3, label, glow);
-    if (hovered) cabinetLabelAt([tx, 0], WALL_H + 10, "▶ " + label);
+    if (hovered) cabinetLabelAt([tx, 0], WALL_H + 10, "▶ " + (hoverLabel || label));
   }
 
   /* Point-in-polygon (ray cast) to hit-test the doorway opening, which is a
@@ -2247,12 +2424,36 @@
   var patronSet  = makeSpriteSet(makeLook(
     { hairColor: HEX.gold, coatColor: "#3a5a86", pantsColor: "#20140a",
       glasses: true }));
+  /* The act at the Dizzy Rooster. Neck is the suited bluesman of the band logo -
+     dark suit, dark shades; the two Heads flank him, one in a red tee, one in a
+     work jacket, so the trio reads as a band and not three of the same guest. */
+  var neckSet  = makeSpriteSet(makeLook(
+    { hairColor: "#1c140e", coatColor: "#241a12", pantsColor: "#160f0a",
+      skinColor: "#c98d5a", outfit: "coat", glasses: true }));
+  var headSetA = makeSpriteSet(makeLook(
+    { hairColor: "#0f0b08", coatColor: "#7a2416", pantsColor: "#1a120c",
+      skinColor: "#b07a48", hat: "cap", hatColor: "#20100a", outfit: "tee" }));
+  var headSetB = makeSpriteSet(makeLook(
+    { hairColor: "#3a2a1a", coatColor: "#3f3a26", pantsColor: "#1a140c",
+      skinColor: "#caa06a", hat: "beanie", hatColor: "#241a12" }));
   var guests = [];
   function buildGuests() {
     if (scene === "bar") {
       var keep = new Guest(BARKEEP[0], BARKEEP[1], barkeepSet, false);
       keep.dir = "SW";   /* faces the room across the bar */
       guests = [player, keep, new Guest(6, 4, patronSet, true)];
+    } else if (scene === "dizzy") {
+      /* Neck & the Heads on the stage, a barkeep behind the counter, and a
+         patron down front. The band stands just off the low riser (x=1-2) so
+         they depth-sort in front of the amp and guitar backline, and all face
+         SE - out into the room, faces to the crowd. */
+      var dkeep = new Guest(BARKEEP[0], BARKEEP[1], barkeepSet, false);
+      dkeep.dir = "SW";
+      var neck = new Guest(1, 7, neckSet, false);
+      var headA = new Guest(1, 6, headSetA, false);
+      var headB = new Guest(2, 7, headSetB, false);
+      neck.dir = headA.dir = headB.dir = "SE";
+      guests = [player, dkeep, headA, neck, headB, new Guest(6, 4, patronSet, true)];
     } else if (scene === "records") {
       /* One crate-digger browsing the wall of singles. */
       guests = [player, new Guest(7, 6, loungeWander[0], true)];
@@ -2269,7 +2470,13 @@
      Drawn only in renderBar. The counter is split into one-tile columns so it
      depth-sorts against guests the same way every other fixture does; drawn
      with a shared fill the columns fuse into one unbroken slab. */
-  function backBar() {
+  /* The back bar behind the counter: a mirror, a lit shelf, three bottles, and a
+     neon over it. Shared by Frost's bar and the Dizzy Rooster - the sign text and
+     its glow are passed in so the same shelf reads "DIRTY WHISKEY" in Frost's
+     room and "DIZZY ROOSTER" in Neck's. */
+  function backBar(signText, signGlow) {
+    signText = signText || "DIRTY WHISKEY";
+    signGlow = signGlow || "#ffb347";
     var lo = BAR_COUNTER.x0, hi = BAR_COUNTER.x1;
     for (var tx = lo; tx <= hi; tx++) {
       wallQuad(tx, 0.05, 0.95, 8, 32, "#170f09");                     /* mirror panel */
@@ -2284,7 +2491,7 @@
       }
     }
     var mid = wallPoint((lo + hi) / 2 + 0.5, 0, 0);
-    neonSign(mid.x, mid.y + 6, "DIRTY WHISKEY", "#ffb347");
+    neonSign(mid.x, mid.y + 6, signText, signGlow);
   }
 
   function counterColumn(x) {
@@ -2363,9 +2570,11 @@
   var wardrobeHover = false;
   var hoveredDoor = null;     /* the door object under the cursor, or null */
   var hoveredRecord = null;   /* the record-room sleeve under the cursor, or null */
+  var hoveredPoster = null;   /* the Neck gig bill under the cursor (its col), or null */
 
   function render() {
     if (scene === "bar") { renderBar(); return; }
+    if (scene === "dizzy") { renderDizzy(); return; }
     if (scene === "records") { renderRecords(); return; }
     renderLounge();
   }
@@ -2390,9 +2599,9 @@
     chkWall(GH, "L", 0.5, HEX.chkLight, HEX.chkDark);   /* back-left, deeper shadow */
     chkWall(GW, "R", 0.72, HEX.chkLight, HEX.chkDark);  /* back-right, more light */
 
-    poster(3);
+    poster(NECK_POSTER_COL, !!hoveredPoster);
     ROOMS.lounge.doors.forEach(function (dr) {
-      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col);
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col, dr.hoverLabel);
     });
 
     floorCheck(HEX.chkLight, HEX.chkDark, "rgba(120,160,185,.35)");
@@ -2448,6 +2657,10 @@
     items.sort(function (a, b) { return a.d - b.d; });
     items.forEach(function (it) { it.f(); });
 
+    /* The gig bill names the act when hovered, the same chip the record sleeves
+       use - so it reads as a link to Neck's room, not just wall dressing. */
+    if (hoveredPoster != null) recordLabelAt(NECK_POSTER_COL, "▶ NECK & THE HEADS");
+
     /* Bubbles last and unsorted: speech should never be occluded by furniture
        standing in front of the speaker. */
     guests.forEach(function (g) { g.drawBubble(); });
@@ -2462,7 +2675,7 @@
 
     backBar();
     ROOMS.bar.doors.forEach(function (dr) {
-      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col);
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col, dr.hoverLabel);
     });
 
     floorCheck("#3a2a1a", "#281c11", "rgba(150,110,70,.28)");
@@ -2476,6 +2689,44 @@
       })(cx);
     }
     items.push({ d: 5 + BAR_COUNTER.y + 0.4, f: function () { whiskeyGlass(5); } });
+    STOOLS.forEach(function (s) {
+      items.push({ d: s[0] + s[1], f: function () { stool(s[0], s[1]); } });
+    });
+    items.push({ d: STAGE.x + STAGE.y1, f: function () { stage(); } });
+    guests.forEach(function (g) {
+      items.push({ d: g.depth(), f: function () { g.draw(); } });
+    });
+    items.sort(function (a, b) { return a.d - b.d; });
+    items.forEach(function (it) { it.f(); });
+
+    guests.forEach(function (g) { g.drawBubble(); });
+  }
+
+  /* THE DIZZY ROOSTER - Neck's own juke joint, reached from his page. Same iso
+     bar grammar as Frost's room (counter, stools, a corner stage) but a smokier,
+     redder oxblood mood, its own "DIZZY ROOSTER" neon, and Neck & the Heads up
+     on the stage (placed by buildGuests). Deliberately NOT Frost's bar - that
+     stays his. No frost-ice rocks glass here; this is whiskey and shellac. */
+  function renderDizzy() {
+    ctx.fillStyle = "#0e0806";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    chkWall(GH, "L", 0.55, "#4a2a20", "#2a1410");
+    chkWall(GW, "R", 0.78, "#4a2a20", "#2a1410");
+
+    backBar("DIZZY ROOSTER", "#e8b24a");
+    ROOMS.dizzy.doors.forEach(function (dr) {
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col, dr.hoverLabel);
+    });
+
+    floorCheck("#38201a", "#24120e", "rgba(150,90,60,.26)");
+    drawHover();
+
+    var items = [];
+    for (var cx = BAR_COUNTER.x0; cx <= BAR_COUNTER.x1; cx++) {
+      (function (x) {
+        items.push({ d: x + BAR_COUNTER.y, f: function () { counterColumn(x); } });
+      })(cx);
+    }
     STOOLS.forEach(function (s) {
       items.push({ d: s[0] + s[1], f: function () { stool(s[0], s[1]); } });
     });
@@ -2537,7 +2788,7 @@
     chkWall(GW, "R", 0.8, "#2a1840", "#160b26");
 
     ROOMS.records.doors.forEach(function (dr) {
-      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col);
+      doorway(dr.col, dr.glow, dr.label, !!hoveredDoor && hoveredDoor.col === dr.col, dr.hoverLabel);
     });
     RECORDS.forEach(function (rec) { recordSleeve(rec, hoveredRecord === rec); });
 
@@ -2588,6 +2839,7 @@
       wardrobeHover = false;
     hoveredDoor = null;
     hoveredRecord = null;
+    hoveredPoster = null;
   }
 
   /* ================= input ================= */
@@ -2617,15 +2869,17 @@
                       boomHover || wardrobeHover;
     hoveredRecord = overFixture ? null : recordAt(p);
     hoveredDoor = (overFixture || hoveredRecord) ? null : doorAt(p);
-    /* Suppress the tile highlight while over a fixture, a sleeve or a door, so
-       the room doesn't advertise a walk to a spot the click won't walk to. */
-    hover = (overFixture || hoveredRecord || hoveredDoor)
+    hoveredPoster = (overFixture || hoveredRecord || hoveredDoor) ? null : posterAt(p);
+    /* Suppress the tile highlight while over a fixture, a sleeve, a door or the
+       gig bill, so the room doesn't advertise a walk to a spot the click won't
+       walk to. */
+    hover = (overFixture || hoveredRecord || hoveredDoor || hoveredPoster)
       ? null : screenToTile(p.x, p.y);
   });
   cv.addEventListener("mouseleave", function () {
     hover = null; arcadeHover = false; snakeHover = false; maulHover = false;
     decksHover = false; boomHover = false; wardrobeHover = false;
-    hoveredDoor = null; hoveredRecord = null;
+    hoveredDoor = null; hoveredRecord = null; hoveredPoster = null;
   });
   cv.addEventListener("click", function (ev) {
     var p = toCanvas(ev);
@@ -2651,6 +2905,10 @@
       }
       return;
     }
+    /* Click the NECK & THE HEADS gig bill: open his room (neck.html) in a new
+       tab. The wall door at col 5 walks you through instead; the poster is the
+       quick peek. */
+    if (posterAt(p)) { window.open("neck.html", "_blank", "noopener"); return; }
     /* Click a doorway and you walk to its threshold; arriving there carries you
        through to the room it leads to (see the tick loop). */
     var dr = doorAt(p);
@@ -2910,7 +3168,13 @@
     if (!player.path.length && player.ty === 0) {
       var ds = ROOMS[scene].doors;
       for (var di = 0; di < ds.length; di++) {
-        if (player.tx === ds[di].col) { enterScene(ds[di].to); break; }
+        if (player.tx === ds[di].col) {
+          /* A `url` door leads out of the lounge world (to Neck's room); every
+             other door leads to another room in it. */
+          if (ds[di].url) { window.location.href = ds[di].url; }
+          else enterScene(ds[di].to);
+          break;
+        }
       }
     }
     render();
@@ -2920,6 +3184,19 @@
                       "  queue " + player.path.length;
     requestAnimationFrame(tick);
   }
+
+  /* Deep link: Neck's page points here as lounge.html#room=dizzy so it opens
+     straight into the Dizzy Rooster rather than the lounge floor. Other rooms
+     are accepted too; an unknown or missing room just leaves you in the lounge.
+     enterScene rebuilds the room and lands the player at its door back out. */
+  (function openRoomFromHash() {
+    var m = (location.hash || "").match(/[#&]room=([a-z]+)/i);
+    if (!m) return;
+    var room = m[1].toLowerCase();
+    if (room === "rooster") room = "dizzy";   /* friendly alias */
+    if (ROOMS[room] && room !== "lounge") enterScene(room);
+  })();
+
   requestAnimationFrame(tick);
 
   /* Exposed purely so the room can be driven from the console while testing.
@@ -5504,6 +5781,17 @@
   var elNote = document.getElementById("wm-note");
   var elMini = document.getElementById("wm-mini");
   var miniCtx = elMini ? elMini.getContext("2d") : null;
+  /* The menu scene and its controls (see the markup and the menu section far
+     below). menuOpen gates the key handler so a game key can't fire through it. */
+  var elMenu = document.getElementById("wm-menu");
+  var elResult = document.getElementById("wm-result");
+  var elMenuBoard = document.getElementById("wm-menuboard");
+  var elPlay = document.getElementById("wm-play");
+  var elMenuExit = document.getElementById("wm-menuexit");
+  var elSet3d = document.getElementById("wm-set3d");
+  var elDiff = document.getElementById("wm-diff");
+  var elSetSound = document.getElementById("wm-setsound");
+  var menuOpen = false;
 
   /* ---- palette: the room's ice tones, plus one warm hazard colour ---- */
   var INK = "#02101c";
@@ -5745,6 +6033,80 @@
 
   /* ---- tuning ---- */
   var START_GOLD = 90, START_LIVES = 20, RIVAL_LIVES = 20;
+
+  /* ---- sound: a small icy SFX kit, muteable and remembered. The cabinets have
+     been silent until now; this is the first to speak. One shared AudioContext,
+     built lazily on the first gesture (a menu tap) so autoplay policy is never in
+     the way, and every effect is one or two short oscillator blips - no assets to
+     fetch, nothing to preload. ---- */
+  var SND_KEY = "frost_maul_sound";
+  var sound = (function () {
+    var muted = false;
+    try { muted = localStorage.getItem(SND_KEY) === "off"; } catch (e) {}
+    var AC = null, master = null, lastKill = 0;
+    function ctx() {
+      if (AC) return AC;
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { AC = new C(); } catch (e) { return null; }
+      master = AC.createGain();
+      master.gain.value = 0.5;
+      master.connect(AC.destination);
+      return AC;
+    }
+    /* One blip: a single oscillator with a fast attack and an exponential tail,
+       optionally gliding to a second pitch. Exp ramps can't touch zero, hence the
+       0.0001 floors. `delay` schedules ahead so a chord can be spelled out. */
+    function tone(freq, dur, type, vol, glide, delay) {
+      if (muted) return;
+      var ac = ctx(); if (!ac) return;
+      if (ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
+      var t0 = ac.currentTime + (delay || 0);
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, t0);
+      if (glide) o.frequency.exponentialRampToValueAtTime(Math.max(20, glide), t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.3, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(master);
+      o.start(t0); o.stop(t0 + dur + 0.03);
+    }
+    function chord(freqs, dur, type, vol, stepT) {
+      for (var i = 0; i < freqs.length; i++) tone(freqs[i], dur, type, vol, 0, i * (stepT || 0.12));
+    }
+    return {
+      ui:      function () { tone(660, 0.05, "sine", 0.12); },
+      build:   function () { tone(300, 0.10, "triangle", 0.26, 360); },
+      upgrade: function () { tone(520, 0.09, "triangle", 0.24); tone(784, 0.13, "sine", 0.20, 0, 0.06); },
+      sell:    function () { tone(340, 0.14, "sine", 0.22, 150); },
+      send:    function () { tone(180, 0.18, "sawtooth", 0.16, 90); },
+      wave:    function () { tone(233, 0.09, "square", 0.14); tone(349, 0.20, "square", 0.14, 0, 0.09); },
+      /* Kills come in bursts on a boss wave; throttle so a splash tower doesn't
+         machine-gun the speakers, and keep each one a short bright chirp. */
+      kill:    function () { var n = (window.performance && performance.now()) || Date.now(); if (n - lastKill < 55) return; lastKill = n; tone(920, 0.06, "sine", 0.12, 1380); },
+      leak:    function () { tone(220, 0.26, "sawtooth", 0.30, 70); },
+      win:     function () { chord([523, 659, 784, 1047], 0.26, "triangle", 0.28, 0.13); },
+      lose:    function () { chord([392, 330, 262, 196], 0.32, "sine", 0.26, 0.15); },
+      hiscore: function () { chord([784, 988, 1319], 0.28, "triangle", 0.28, 0.12); },
+      isMuted: function () { return muted; },
+      setMuted: function (m) {
+        muted = !!m;
+        try { localStorage.setItem(SND_KEY, muted ? "off" : "on"); } catch (e) {}
+        if (!muted) { var ac = ctx(); if (ac && ac.state === "suspended") { try { ac.resume(); } catch (e) {} } }
+      }
+    };
+  })();
+
+  /* ---- difficulty: how many leaks your maze can take before it falls. Chosen
+     in the menu, remembered, and applied at the next newGame() - START_LIVES is
+     reassigned here rather than being a constant. RIVAL_LIVES stays put: the
+     setting is your cushion, not a handicap on the rival. ---- */
+  var DIFF_KEY = "frost_maul_diff";
+  var DIFFS = { cozy: 30, normal: 20, brutal: 12 };
+  var difficulty = "normal";
+  try { var savedDiff = localStorage.getItem(DIFF_KEY); if (savedDiff && DIFFS[savedDiff]) difficulty = savedDiff; } catch (e) {}
+  START_LIVES = DIFFS[difficulty];
   var WAVE_EVERY = 24;        /* seconds; the clock does not wait for a wave to die */
   var FIRST_WAVE = 22;        /* a longer opening so there's a maze to walk into */
   var WAVE_GOLD = 20;         /* base payout per wave, before income */
@@ -6106,6 +6468,7 @@
                  /* a fixed spin offset so a row of drums doesn't turn in lockstep */
                  seed: Math.random() * TAU };
     repath();
+    sound.build();
     dirty = true;
     return true;
   }
@@ -6116,6 +6479,7 @@
     gold -= c;
     t.spent += c;
     t.lvl++;
+    sound.upgrade();
     dirty = true;
   }
   function sell(t) {
@@ -6123,6 +6487,7 @@
     gold += Math.floor(t.spent * REFUND);
     built[idx(t.x, t.y)] = undefined;
     if (sel === t) sel = null;
+    sound.sell();
     repath();
     dirty = true;
   }
@@ -6133,6 +6498,7 @@
     if (gold < s.cost) { note = "NOT ENOUGH GOLD"; return; }
     gold -= s.cost;
     income += s.inc;
+    sound.send();
     foeSendCreeps(s);            /* real bodies on the rival's board, now */
     note = "SENT " + s.name + " — INCOME +" + s.inc;
     noteHit = true;
@@ -6172,6 +6538,7 @@
     scheduleWave(wave);
     if (foe) foeStartWave(foe, wave);
     waveT = WAVE_EVERY;
+    sound.wave();
     dirty = true;
   }
   function callWave() {
@@ -6190,6 +6557,7 @@
       gold += cr.spec.bounty;
       score += cr.spec.pts;
       puffs.push({ x: creepFX(cr), y: creepFY(cr), t: 0.35, boss: cr.boss });
+      sound.kill();
       dirty = true;
     }
   }
@@ -6257,6 +6625,7 @@
       if (cr.cell === idx(DRAIN.x, DRAIN.y)) {
         cr.gone = true;
         lives -= cr.spec.cost;
+        sound.leak();
         note = "LEAK! −" + cr.spec.cost + (cr.spec.cost > 1 ? " LIVES" : " LIFE");
         noteHit = true;
         dirty = true;
@@ -7203,8 +7572,16 @@
         Math.max(0, Math.ceil(waveT)) + "s</b>" +
         (income ? " · INCOME <b>+" + income + "</b>" : "");
       elCall.hidden = false;
+      elCall.innerHTML = "&#9654; CALL IT NOW";
+    } else if (state === STATE.IDLE) {
+      /* The build phase is its own prompt now: the CALL button doubles as START,
+         so nothing is floated over the board. Pressing it (or SPACE) begins the
+         waves - see pressStart, which both this and the key handler route to. */
+      elClock.innerHTML = "BUILD YOUR MAZE";
+      elCall.hidden = false;
+      elCall.innerHTML = "&#9654; START WAVES";
     } else {
-      elClock.textContent = state === STATE.IDLE ? "BUILD YOUR MAZE" : "—";
+      elClock.textContent = "—";
       elCall.hidden = true;
     }
   }
@@ -7237,10 +7614,10 @@
     repath();
     state = STATE.IDLE;
     syncAll();
-    showMsg('<b>WINTER MAUL</b>' +
-      "<small>build a maze — you cannot seal it<br>" +
-      "outlast the rival's maze to win</small>" +
-      '<small class="blink">CLICK OR PRESS SPACE TO START</small>');
+    /* No overlay floated on the board any more: on open the menu scene covers it,
+       and PLAY drops you straight into the build phase, where the deck's START
+       control is the only prompt you need (see syncClock). */
+    hideMsg();
   }
   function finish(victory) {
     /* Both mazes can fall on the same wave tick; whichever check gets here
@@ -7251,8 +7628,18 @@
     score += 40 * Math.max(0, lives);
     state = STATE.OVER;
     syncAll();
+    sound[victory ? "win" : "lose"]();
+    /* The line the menu wears on the way back - the run's result. Its presence
+       is also what flips PLAY to PLAY AGAIN (see showMenu). */
+    var banner = "<b>" + (victory ? "VICTORY" : "GAME OVER") + "</b>" +
+      score + " points · wave " + wave +
+      (victory ? " · you outlasted the rival" : " · the rival outlasted you");
     if (qualifies(score)) {
+      /* A qualifying score still takes the initials in a focused prompt over the
+         board - it wants the keyboard to itself - and only then does the menu
+         come back, on the HIGH SCORES tab with the new row lit. */
       state = STATE.ENTER;
+      sound.hiscore();
       showMsg("<b>" + (victory ? "THE RIVAL IS OUT!" : "YOUR MAZE FELL") + "</b>" +
         "<small>" + score + " points · wave " + wave + " · enter your initials</small>" +
         '<form class="arcade__enter" id="wm-enter">' +
@@ -7265,21 +7652,20 @@
       if (form) {
         form.addEventListener("submit", function (e) {
           e.preventDefault();
+          /* Same normalisation submit() uses, so the row we light is the row it
+             actually stored. */
+          var nm = ((inp ? inp.value : "") || "").toUpperCase()
+                     .replace(/[^A-Z0-9]/g, "").slice(0, 3) || "???";
           submit(inp ? inp.value : "", score);
           state = STATE.OVER;
-          overMsg(victory);
+          syncAll();
+          showMenu("scores", banner);
+          renderMenuScores(rankOf(nm, score));
         });
       }
     } else {
-      overMsg(victory);
+      showMenu("home", banner);
     }
-  }
-  function overMsg(victory) {
-    showMsg("<b>" + (victory ? "VICTORY" : "GAME OVER") + "</b>" +
-      "<small>" + score + " points · wave " + wave +
-      (victory ? " · you outlasted the rival" : " · the rival outlasted you") +
-      "</small>" +
-      '<small class="blink">CLICK OR PRESS SPACE TO PLAY AGAIN</small>');
   }
   /* SPACE and the screen do double duty: start a run, unpause one, call the
      next wave while playing, or start over from the end screen. */
@@ -7838,7 +8224,9 @@
     doSend(SENDS[+b.getAttribute("data-i")]);
     syncAll();
   });
-  elCall.addEventListener("click", function () { callWave(); syncAll(); });
+  /* Doubles as START in the build phase: pressStart begins the waves from IDLE
+     and calls the next one early during play. */
+  elCall.addEventListener("click", function () { pressStart(); syncAll(); });
 
   /* Key handling lives at document level but only bites while the cabinet is
      open, so the room's own controls are untouched when it's closed. */
@@ -7854,6 +8242,13 @@
     /* SPACE and ENTER belong to whichever control has focus - otherwise
        tabbing to SEND and pressing space would also call the next wave. */
     if (tag === "BUTTON" && (k === " " || k === "Spacebar" || k === "Enter")) return;
+    /* The menu scene owns the screen while it's up: focused menu buttons keep
+       their own SPACE/ENTER (handled just above), every game key is swallowed,
+       and only ESC still backs out. */
+    if (menuOpen) {
+      if (k === "Escape") { if (immersive) leaveImmersive(); else close(); }
+      return;
+    }
     if (k >= "1" && k <= String(TOWERS.length)) {
       pick = +k - 1; sel = null; dirty = true; syncAll(); e.preventDefault();
     } else if (k === "r" || k === "R") {
@@ -7902,6 +8297,119 @@
   function leaveImmersive() { imm.leave(); }
   elFull.addEventListener("click", function () { imm.toggle(); });
 
+  /* ================= menu scene =================
+     The cabinet's front screen (see .maul__menu in the markup). It covers the
+     whole board on open and again on game over; the run lives behind it. Three
+     tabs - HOME to play, HIGH SCORES for the board, SETTINGS for the toggles -
+     and an exit. The first tap in here is also what wakes the AudioContext, which
+     is the gesture the browser wants before it will make any sound at all. */
+  function renderMenuScores(highlight) {
+    if (!elMenuBoard) return;
+    if (!scores.length) {
+      elMenuBoard.innerHTML = '<li class="maul__empty">no scores yet — be the first</li>';
+      return;
+    }
+    elMenuBoard.innerHTML = scores.map(function (e, i) {
+      return '<li' + (i === highlight ? ' class="is-new"' : "") + ">" +
+        '<span class="rank">' + (i + 1) + "</span>" +
+        '<span class="who">' + esc(e.i) + "</span>" +
+        '<span class="pts">' + e.s + "</span></li>";
+    }).join("");
+  }
+  function setMenuTab(tab) {
+    if (!elMenu) return;
+    var tabs = elMenu.querySelectorAll(".maul__menutabs button"), i;
+    for (i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle("is-on", tabs[i].getAttribute("data-tab") === tab);
+    }
+    var panels = elMenu.querySelectorAll(".maul__panel");
+    for (i = 0; i < panels.length; i++) {
+      panels[i].hidden = panels[i].getAttribute("data-panel") !== tab;
+    }
+    if (tab === "scores") renderMenuScores(-1);
+  }
+  /* The settings controls only ever mirror live state - mode3d, the mute flag,
+     the chosen difficulty - so this is called whenever any of them might have
+     moved, including from the foot 3D button that settings shares. */
+  function syncSettingsUI() {
+    if (elSet3d) {
+      elSet3d.classList.toggle("is-on", mode3d);
+      elSet3d.setAttribute("aria-pressed", String(mode3d));
+      elSet3d.textContent = mode3d ? "3D" : "2D";
+    }
+    if (elSetSound) {
+      var on = !sound.isMuted();
+      elSetSound.classList.toggle("is-on", on);
+      elSetSound.setAttribute("aria-pressed", String(on));
+      elSetSound.textContent = on ? "ON" : "MUTE";
+    }
+    if (elDiff) {
+      var b = elDiff.querySelectorAll("button");
+      for (var i = 0; i < b.length; i++) {
+        b[i].classList.toggle("is-on", b[i].getAttribute("data-diff") === difficulty);
+      }
+    }
+  }
+  function showMenu(tab, result) {
+    if (!elMenu) return;
+    menuOpen = true;
+    hideMsg();
+    if (elResult) {
+      if (result) { elResult.innerHTML = result; elResult.hidden = false; }
+      else elResult.hidden = true;
+    }
+    if (elPlay) elPlay.innerHTML = result ? "&#9654; PLAY AGAIN" : "&#9654; PLAY";
+    setMenuTab(tab || "home");
+    syncSettingsUI();
+    elMenu.hidden = false;
+    if (elPlay) { try { elPlay.focus(); } catch (e) {} }
+  }
+  function hideMenu() {
+    menuOpen = false;
+    if (elMenu) elMenu.hidden = true;
+  }
+  /* PLAY: a fresh board every time, dropped into the build phase behind the now
+     hidden menu. The camera re-fits so a run always opens framed, and focus goes
+     to the board so SPACE starts the waves once the maze is ready. */
+  function playFromMenu() {
+    sound.ui();
+    hideMenu();
+    newGame();
+    if (mode3d && gl3d) { gl3d.camera.reset(); userCam3d = false; }
+    resize();
+    draw();
+    try { overlay.focus(); } catch (e) {}
+  }
+
+  if (elMenu) {
+    var elTabs = elMenu.querySelector(".maul__menutabs");
+    if (elTabs) elTabs.addEventListener("click", function (ev) {
+      var b = ev.target.closest ? ev.target.closest("button[data-tab]") : null;
+      if (!b) return;
+      sound.ui();
+      setMenuTab(b.getAttribute("data-tab"));
+    });
+    if (elPlay) elPlay.addEventListener("click", playFromMenu);
+    if (elMenuExit) elMenuExit.addEventListener("click", function () { sound.ui(); close(); });
+    if (elSet3d) elSet3d.addEventListener("click", function () {
+      sound.ui(); set3D(!mode3d); syncAll(); syncSettingsUI();
+    });
+    if (elSetSound) elSetSound.addEventListener("click", function () {
+      sound.setMuted(!sound.isMuted());
+      if (!sound.isMuted()) sound.ui();     /* a chirp to prove it's back on */
+      syncSettingsUI();
+    });
+    if (elDiff) elDiff.addEventListener("click", function (ev) {
+      var b = ev.target.closest ? ev.target.closest("button[data-diff]") : null;
+      if (!b || !DIFFS[b.getAttribute("data-diff")]) return;
+      difficulty = b.getAttribute("data-diff");
+      START_LIVES = DIFFS[difficulty];   /* applies at the next newGame() */
+      try { localStorage.setItem(DIFF_KEY, difficulty); } catch (e) {}
+      sound.ui();
+      syncSettingsUI();
+    });
+  }
+
   /* ================= open / close ================= */
   var lastFocus = null;
   function open() {
@@ -7936,11 +8444,12 @@
     resize();
     draw();
     raf = requestAnimationFrame(frame);
-    /* Focus the dialog itself rather than a control inside it: SPACE is the
-       start button here, and it would otherwise land on whatever button held
-       focus - EXIT, in the other cabinets' case. */
+    /* Land on the menu scene, not the board: it covers the run until PLAY and
+       takes focus itself (its PLAY button), so the keyboard has somewhere to be.
+       The overlay keeps a tabindex for when the menu closes and focus returns to
+       it, where SPACE starts the waves. */
     overlay.setAttribute("tabindex", "-1");
-    overlay.focus();
+    showMenu("home");
   }
   function close() {
     if (!running) return;

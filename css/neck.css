@@ -268,22 +268,45 @@ a:hover{ color:var(--red-deep); }
   font-family:var(--type); font-size:clamp(.66rem,2vw,.82rem); letter-spacing:.1em;
   color:var(--whiskey); margin:10px 0 0; text-transform:uppercase;
 }
+/* THE STANDING GIG — the weekly Thursday residency, lifted out of the fine
+   print and made a headline in its own right: the one recurring fact a walk-up
+   fan needs. A lit marquee panel on the leather, gold on a barn-red-piped card. */
+.bill__resident{
+  margin:18px auto 4px; max-width:34ch; padding:12px 18px;
+  border:1.5px solid var(--red-lit);
+  background:radial-gradient(120% 120% at 50% -10%, rgba(232,178,72,.12) 0%, transparent 60%), rgba(158,43,30,.14);
+  box-shadow:inset 0 0 0 1px rgba(232,178,72,.18), 0 6px 18px rgba(0,0,0,.4);
+}
+.bill__resident-kicker{
+  display:block; font-family:var(--type); font-size:.7rem; letter-spacing:.2em;
+  color:var(--whiskey-lit); text-transform:uppercase; margin-bottom:4px;
+}
+.bill__resident-head{
+  display:block; font-family:var(--poster); line-height:1.05; letter-spacing:.01em;
+  font-size:clamp(1.15rem,4.4vw,2rem); color:var(--gold-lit);
+  text-shadow:1px 1px 0 rgba(158,43,30,.5), 0 2px 16px rgba(232,178,72,.28);
+}
+.bill__resident-sub{
+  display:block; margin-top:6px; font-family:var(--type);
+  font-size:clamp(.6rem,1.9vw,.74rem); letter-spacing:.1em;
+  color:var(--cream-soft); text-transform:uppercase;
+}
+
 .bill__pitch{
   font-style:italic; color:var(--cream-soft); max-width:44ch; margin:10px auto 0; font-size:1.02rem;
 }
 .bill__buttons{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:22px; }
 
-/* The band logo stamped on the handbill. It's black line-art on cream. On the
-   dark leather a multiply blend would swallow it whole (black on oxblood), so
-   it's inverted to warm line-art on a near-black field, then SCREENED — screen
-   drops the near-black field into the leather and leaves the light lines
-   glowing, so it reads as a gold-ink seal branded into the hide rather than a
-   pasted sticker. isolation:isolate keeps the blend inside the bill. */
-.bill{ isolation:isolate; }
+/* The band logo stamped on the handbill. The source (neck-heads-logo.png) is
+   the line-art keyed onto a TRANSPARENT field — the original JPG's light-grey
+   background was only near-black once inverted, so a screen blend left a faint
+   grey box around it on the leather. With a real alpha channel the field just
+   isn't there, and invert(1)+sepia recolours the black ink to warm gold so it
+   reads as a gold-ink seal branded into the hide rather than a pasted sticker. */
 .bill__seal{
   display:block; width:clamp(96px,20vw,132px); height:auto; margin:24px auto 0;
   filter:invert(1) sepia(.5) saturate(1.6) hue-rotate(-8deg) brightness(1.02);
-  mix-blend-mode:screen; opacity:.92; transform:rotate(-4deg);
+  opacity:.92; transform:rotate(-4deg);
 }
 
 /* A rubber approval stamp slapped in the corner, ink half dry so it prints
@@ -397,14 +420,20 @@ a:hover{ color:var(--red-deep); }
 }
 
 .head{
-  text-align:center; margin:2px 0 6px;
+  /* position:relative is load-bearing: the flanking gold rules below are
+     absolutely positioned, so without it they resolve against the .leaf and
+     land halfway down the whole section, striking across the content instead
+     of through the title. Anchoring them to the header keeps them on its line. */
+  text-align:center; margin:2px 0 6px; position:relative;
   font-family:var(--poster); font-size:clamp(1.6rem,5vw,2.6rem);
   letter-spacing:.02em; color:var(--cream);
 }
 .head span{
-  display:inline-block; padding:0 16px; position:relative;
+  display:inline-block; padding:0 16px; position:relative; z-index:1;
 }
-/* The ruled line through a section head, broken by the words. */
+/* The ruled line through a section head, broken by the words. Sits behind the
+   title (z-index:1 on the span) and runs from each edge to a clear gap either
+   side of the centred words. */
 .head::before,.head::after{
   content:""; display:block; height:3px; background:var(--gold);
   position:absolute; top:50%; width:calc(50% - 8ch);
@@ -625,7 +654,12 @@ code{ font-family:var(--type); background:rgba(232,178,72,.12); color:var(--crea
 .rail{ position:relative; padding:20px 0 8px; }
 .rail__line{ position:absolute; left:0; right:0; top:38px; height:3px; background:var(--gold); opacity:.4; }
 .rail__years{
-  display:flex; gap:10px; overflow-x:auto; padding:6px 2px 14px; scroll-snap-type:x proximity;
+  /* safe center: centre the year chips when they fit (they don't fill the rail,
+     so flush-left left a wide dead gap on the right), but fall back to flex-start
+     when the row overflows on a narrow screen so the first year is never clipped
+     out of reach behind the scroll. */
+  display:flex; gap:10px; justify-content:safe center;
+  overflow-x:auto; padding:6px 2px 14px; scroll-snap-type:x proximity;
 }
 .year{
   flex:0 0 auto; scroll-snap-align:center; cursor:pointer;
@@ -812,6 +846,15 @@ code{ font-family:var(--type); background:rgba(232,178,72,.12); color:var(--crea
 /* The standing Thursday gig, marked with a faint amber wash and a gold date. */
 .dates__residency{ background:rgba(232,178,72,.05); }
 .dates__residency td:first-child{ font-family:var(--type); color:var(--gold-lit); letter-spacing:.06em; font-size:.9rem; }
+
+/* The after-hours portal into the Frost Lounge's Dizzy Rooster, centred under
+   the dates table: the button is the door, the note the aside beneath it. */
+.dates__lounge{ text-align:center; margin:22px 0 4px; }
+.dates__lounge-note{
+  text-align:center; max-width:54ch; margin:0 auto;
+  font-style:italic; color:var(--cream-soft); font-size:.94rem;
+}
+.dates__lounge-note a{ color:var(--gold-lit); }
 
 /* =======================================================================
    THE SONG MENU

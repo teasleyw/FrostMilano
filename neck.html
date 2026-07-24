@@ -69,8 +69,8 @@
   <!-- ================= NOTICE STRIP ================= -->
   <div class="notice" aria-hidden="true">
     <div class="notice__track">
-      ☞ NECK BARHAM &amp; THE HEADS ☜ &nbsp;·&nbsp; TRAP BLUES &nbsp;·&nbsp; RAISING THE GHOSTS OF THE DELTA ON A MODERN BEAT &nbsp;·&nbsp; EVERY THURSDAY AT THE DIZZY ROOSTER &nbsp;·&nbsp; REQUESTS OFF THE MENU &nbsp;·&nbsp; THE HEADS PLAY IT LOUD &nbsp;·&nbsp; WHISKEY, SMOKE &amp; SHELLAC &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp;
-      ☞ NECK BARHAM &amp; THE HEADS ☜ &nbsp;·&nbsp; TRAP BLUES &nbsp;·&nbsp; RAISING THE GHOSTS OF THE DELTA ON A MODERN BEAT &nbsp;·&nbsp; EVERY THURSDAY AT THE DIZZY ROOSTER &nbsp;·&nbsp; REQUESTS OFF THE MENU &nbsp;·&nbsp; THE HEADS PLAY IT LOUD &nbsp;·&nbsp; WHISKEY, SMOKE &amp; SHELLAC &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp;
+      ☞ NECK BARHAM &amp; THE HEADS ☜ &nbsp;·&nbsp; TRAP BLUES &nbsp;·&nbsp; RAISING THE GHOSTS OF THE DELTA ON A MODERN BEAT &nbsp;·&nbsp; EVERY THURSDAY AT THE DIZZY ROOSTER &nbsp;·&nbsp; EVERY SONG'S A REQUEST &nbsp;·&nbsp; THE HEADS PLAY IT LOUD &nbsp;·&nbsp; WHISKEY, SMOKE &amp; SHELLAC &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp;
+      ☞ NECK BARHAM &amp; THE HEADS ☜ &nbsp;·&nbsp; TRAP BLUES &nbsp;·&nbsp; RAISING THE GHOSTS OF THE DELTA ON A MODERN BEAT &nbsp;·&nbsp; EVERY THURSDAY AT THE DIZZY ROOSTER &nbsp;·&nbsp; EVERY SONG'S A REQUEST &nbsp;·&nbsp; THE HEADS PLAY IT LOUD &nbsp;·&nbsp; WHISKEY, SMOKE &amp; SHELLAC &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp;
     </div>
   </div>
 
@@ -98,6 +98,15 @@
       <hr class="rule rule--fat" />
       <p class="bill__sub">TRAP BLUES &nbsp;·&nbsp; DEEP DELTA &nbsp;·&nbsp; ON A MODERN BEAT</p>
       <p class="bill__where">AUSTIN, TEXAS</p>
+
+      <!-- The standing weekly gig, promoted from the fine print to a headline —
+           it's the one recurring fact a fan actually plans around. -->
+      <p class="bill__resident">
+        <span class="bill__resident-kicker">☞ THE STANDING GIG ☜</span>
+        <b class="bill__resident-head">THURSDAYS AT THE DIZZY ROOSTER</b>
+        <span class="bill__resident-sub">6TH STREET, AUSTIN &nbsp;·&nbsp; EVERY SONG'S A REQUEST</span>
+      </p>
+
       <!-- The Frost page's "Bars On Record, Blues On Stage" — the split, up top. -->
       <p class="bill__split">☞ &nbsp;NECK BARHAM MAKES THE RECORDS &nbsp;·&nbsp; THE HEADS PLAY 'EM LOUD&nbsp; ☜</p>
 
@@ -117,15 +126,16 @@
       <!-- The wood-type bottom matter every old handbill carried — house rules,
            half of them a joke, the register the Frost marquee runs in. -->
       <p class="bill__matter">
-        ☞ EVERY THURSDAY AT THE DIZZY ROOSTER &nbsp;·&nbsp; REQUESTS OFF THE MENU &nbsp;·&nbsp;
+        ☞ EVERY THURSDAY AT THE DIZZY ROOSTER &nbsp;·&nbsp; EVERY SONG'S A REQUEST &nbsp;·&nbsp;
         DANCING TIL THE LAW SAYS STOP &nbsp;·&nbsp; BRING YOUR OWN GHOST &nbsp;·&nbsp; THE
         MANAGEMENT IS NOT RESPONSIBLE FOR WHAT THE MUSIC RAISES ☜
       </p>
 
       <!-- The real band logo (his Instagram profile picture), stamped on the
-           handbill. It's black line-art on cream, so mix-blend-mode:multiply in
-           the CSS drops the cream into the paper and leaves only the ink. -->
-      <img class="bill__seal" src="images/neck-heads-logo.jpg"
+           handbill. neck-heads-logo.png is the line-art keyed onto a transparent
+           field (the source JPG's light-grey background left a faint box on the
+           leather); the CSS recolours the black ink to gold. -->
+      <img class="bill__seal" src="images/neck-heads-logo.png"
            alt="Neck and the Heads logo — a suited figure playing guitar with a many-headed neck, ringed by lightning" />
 
       <div class="bill__edge bill__edge--bottom" aria-hidden="true"></div>
@@ -675,6 +685,15 @@
           </tbody>
         </table>
       </div>
+
+      <!-- The after-hours way in: the residency has a pixel twin in the Frost
+           Lounge. This link opens the lounge straight into the Dizzy Rooster
+           (lounge.html#room=dizzy), with Neck & the Heads up on the stage. -->
+      <p class="dates__lounge">
+        <a class="ink-btn ink-btn--red" href="lounge.html#room=dizzy">☞ STEP INTO THE DIZZY ROOSTER</a>
+      </p>
+      <p class="dates__lounge-note">Can't make it out on a Thursday? There's an after-hours Dizzy Rooster in the
+        <a href="lounge.html">Frost Lounge</a> &mdash; walk in and the band's on the stage.</p>
     </section>
 
     <!-- ================= BOOKING ================= -->
@@ -746,6 +765,7 @@
       <p class="foot__line">NECK &amp; THE HEADS &nbsp;·&nbsp; AUSTIN, TEXAS &nbsp;·&nbsp; <span id="year">2026</span></p>
       <p class="foot__line foot__small">
         A room in the <a href="index.html">FROST MILANO</a> network &nbsp;·&nbsp;
+        <a href="lounge.html#room=dizzy">the Dizzy Rooster in the lounge</a> &nbsp;·&nbsp;
         <a href="index.html">&larr; back out to the ice</a>
       </p>
       <p class="foot__line foot__small">
