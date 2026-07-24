@@ -7020,15 +7020,34 @@
     g.fillStyle = GOLD;   g.fillRect(DRAIN.x * S + S * 0.25, H - S * 0.6, S * 0.5, S * 0.6);
   }
 
+  /* Said once, not sixty times a second: a throw that repeats every frame
+     would bury the console, and the tab with it. */
+  var frameErr = false;
   function frame(now) {
     if (!running) return;
+    /* Re-armed FIRST, before anything that can throw, and the body is wrapped.
+       This loop is the only thing that redraws the 3D board, and a WebGL canvas
+       keeps showing its last frame forever - so when the re-arm sat at the end,
+       one exception anywhere in update() or draw() stopped the loop for good and
+       froze the board on whatever frame it had. That reads exactly like a
+       screenshot: the picture never changes again, and the only things that
+       still move it are the controls that call draw() by hand - RESET VIEW and
+       TURN - each painting precisely one more frame. A dropped frame is a far
+       better failure than a dead cabinet. */
+    raf = requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
-    update(dt);
-    draw();
-    drawMini();
-    if (dirty || state === STATE.PLAY) syncAll();
-    raf = requestAnimationFrame(frame);
+    try {
+      update(dt);
+      draw();
+      drawMini();
+      if (dirty || state === STATE.PLAY) syncAll();
+    } catch (e) {
+      if (!frameErr) {
+        frameErr = true;
+        if (window.console && console.error) console.error("winter maul frame:", e);
+      }
+    }
   }
 
   /* ================= input ================= */

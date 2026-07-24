@@ -457,7 +457,13 @@
               cam.tz + Math.sin(cam.yaw) * cp * cam.dist];
     }
     function updateCamera(w, h) {
-      lastAspect = w / Math.max(1, h);
+      /* Both sides clamped, not just the height. A zero width divides into the
+         projection's first term and hands back Infinity, which multiplies out to
+         a NaN matrix - and a NaN matrix does not draw a wrong picture, it draws
+         nothing at all, so the board comes up black and stays black. The canvas
+         really can measure zero here: it is read while the cabinet is
+         mid-transition into fullscreen, before the new layout has landed. */
+      lastAspect = Math.max(1, w) / Math.max(1, h);
       var e = eyePos();
       eye[0]=e[0]; eye[1]=e[1]; eye[2]=e[2];
       target[0]=cam.tx; target[1]=0; target[2]=cam.tz;
@@ -518,7 +524,7 @@
          decides when this is wanted (it holds the "has the player taken the
          camera" flag); here it just does the fit. */
       frame: function (w, h) {
-        lastAspect = w / Math.max(1, h);
+        lastAspect = Math.max(1, w) / Math.max(1, h);   /* see updateCamera */
         cam.tx = (COLS - 1) / 2; cam.tz = (ROWS - 1) / 2;
         cam.dist = clampDist(fitDist(lastAspect));
       },
