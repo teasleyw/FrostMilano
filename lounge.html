@@ -1459,6 +1459,93 @@
     ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
   }
 
+  /* ---- the third dimension on the game cabinets ----
+     cabFace/cabQuad flatten artwork onto the box's own face; these three add
+     the bits that stick OUT of it, so a cabinet stops reading as a box with a
+     picture taped on. Everything is placed in cabinet-local space: `u` runs
+     0..1 across the room-facing face, `z` is height in px up from the floor,
+     and `d` is depth OUT of that face in tiles (0 at the face, positive toward
+     the room). Which screen direction "across" and "out" resolve to depends on
+     the wall the cabinet leans on - the same SE/SW split cabFace uses - so one
+     set of numbers draws both facings without mirroring anything by hand. */
+  function cabPt(tile, side, u, z, d) {
+    var c = centre(tile[0], tile[1]), bx, by, ux, uy, dx, dy;
+    if (side === "SW") {
+      bx = c.x - TW / 2; by = c.y;          ux = TW / 2; uy = TH / 2;  dx = -TW / 2; dy = TH / 2;
+    } else {
+      bx = c.x;          by = c.y + TH / 2;  ux = TW / 2; uy = -TH / 2; dx = TW / 2;  dy = TH / 2;
+    }
+    return { x: bx + u * ux + d * dx, y: by + u * uy + d * dy - z };
+  }
+  /* Fill a polygon given as [u, z, d] triples in that same local space. */
+  function cabFill(tile, side, pts, fill) {
+    ctx.beginPath();
+    for (var i = 0; i < pts.length; i++) {
+      var q = cabPt(tile, side, pts[i][0], pts[i][1], pts[i][2]);
+      if (i) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y);
+    }
+    ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  }
+  /* A knob on the control deck: the iso deck is near-flat, so a round button
+     lies down as a wide ellipse centred on a local point. */
+  function cabDot(tile, side, u, z, d, rx, ry, fill) {
+    var p = cabPt(tile, side, u, z, d);
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = fill; ctx.fill();
+  }
+  /* A rectangle of screen art, addressed 0..1 across (su) and 0..1 down (st)
+     within the recessed glass - so each cabinet paints its frozen game without
+     needing to know where the glass sits on the body. */
+  function cabScreen(tile, side, su0, su1, st0, st1, fill) {
+    var uL = 0.16, uR = 0.84, zT = 36.5, zB = 24;
+    var a = uL + su0 * (uR - uL), b = uL + su1 * (uR - uL);
+    var p = zT - st0 * (zT - zB), q = zT - st1 * (zT - zB);
+    cabFill(tile, side, [[a, p, 0], [b, p, 0], [b, q, 0], [a, q, 0]], fill);
+  }
+  /* The chrome shared by all three game cabinets. The caller draws the body
+     box first (its shading differs by which wall the cabinet leans on); this
+     adds the base, the recessed screen, the projecting control panel and the
+     overhanging marquee on top of it. `tone` is the body's base colour (shaded
+     per facet), `marq` the marquee + joystick tint, `glow` its 0..1 pulse. */
+  function cabShell(tile, side, tone, marq, glow) {
+    var H = CAB_H, pd = 0.32, uL = 0.1, uR = 0.9, e = (side === "SW") ? uL : uR;
+    /* kick-plate foot, with a hard shadow line where it meets the floor */
+    cabFill(tile, side, [[0.08, 7, 0], [0.92, 7, 0], [0.92, 0, 0], [0.08, 0, 0]], css(shade(tone, 0.5)));
+    cabFill(tile, side, [[0.08, 1.6, 0], [0.92, 1.6, 0], [0.92, 0, 0], [0.08, 0, 0]], "rgba(0,0,0,0.45)");
+    /* screen sunk into the shell: bezel, black glass, a lit top lip and a
+       shadowed sill, so the glass reads as set back rather than painted on */
+    cabFill(tile, side, [[0.08, 38, 0], [0.92, 38, 0], [0.92, 22, 0], [0.08, 22, 0]], css(shade(tone, 0.7)));
+    cabFill(tile, side, [[0.14, 36.5, 0], [0.86, 36.5, 0], [0.86, 24, 0], [0.14, 24, 0]], "#02171f");
+    cabFill(tile, side, [[0.14, 36.5, 0], [0.86, 36.5, 0], [0.86, 35.7, 0], [0.14, 35.7, 0]], css(shade(tone, 1.5)));
+    cabFill(tile, side, [[0.14, 24.3, 0], [0.86, 24.3, 0], [0.86, 24, 0], [0.14, 24, 0]], "rgba(0,0,0,0.5)");
+    /* control panel: a wedge that juts toward the room - a lit deck, a dark
+       front lip, and the one end cap that faces the camera */
+    cabFill(tile, side, [[uL, 22, 0], [uR, 22, 0], [uR, 18, pd], [uL, 18, pd]], css(shade(tone, 1.35)));
+    cabFill(tile, side, [[uL, 18, pd], [uR, 18, pd], [uR, 11, pd], [uL, 11, pd]], css(shade(tone, 0.85)));
+    cabFill(tile, side, [[e, 22, 0], [e, 18, pd], [e, 11, pd], [e, 15, 0]], css(shade(tone, 1.1)));
+    /* a joystick and a row of buttons on the deck (t: 0 back .. 1 front edge) */
+    function deck(s, t) { return [uL + s * (uR - uL), 22 - 4 * t, t * pd]; }
+    var j = deck(0.26, 0.55), jb = cabPt(tile, side, j[0], j[1], j[2]);
+    cabDot(tile, side, j[0], j[1], j[2], 3, 1.7, css(shade(tone, 0.35)));
+    ctx.strokeStyle = css(shade(tone, 0.55)); ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(jb.x, jb.y); ctx.lineTo(jb.x, jb.y - 6); ctx.stroke();
+    ctx.beginPath(); ctx.arc(jb.x, jb.y - 7, 2.3, 0, Math.PI * 2);
+    ctx.fillStyle = css(shade(marq, 1.05)); ctx.fill();
+    var btnc = [HEX.bright, HEX.gold, HEX.f3];
+    [0.5, 0.66, 0.82].forEach(function (s, i) {
+      var d = deck(s, 0.46);
+      cabDot(tile, side, d[0], d[1], d[2], 2.6, 1.5, css(shade(tone, 0.28)));
+      cabDot(tile, side, d[0], d[1], d[2], 1.9, 1.1, css(shade(rgb(btnc[i]), 0.65 + glow * 0.35)));
+    });
+    /* marquee crown, hung out over the screen and backlit in the machine's own
+       colour: top in shade, the sign face bright, a shadowed hood beneath it */
+    var ov = 0.16, mL = 0.06, mR = 0.94;
+    cabFill(tile, side, [[mL, H, 0], [mR, H, 0], [mR, H, ov], [mL, H, ov]], css(shade(tone, 1.2)));
+    cabFill(tile, side, [[mL, H, ov], [mR, H, ov], [mR, 38, ov], [mL, 38, ov]], css(shade(marq, 0.5 + glow * 0.5)));
+    cabFill(tile, side, [[mL, 38, 0], [mR, 38, 0], [mR, 38, ov], [mL, 38, ov]], css(shade(tone, 0.4)));
+    cabFill(tile, side, [[e, H, 0], [e, H, ov], [e, 38, ov], [e, 38, 0]], css(shade(tone, 0.85)));
+  }
+
   /* On hover, a floating label so a fixture names itself before the click. */
   function cabinetLabel(tile, label) { cabinetLabelAt(tile, CAB_H, label); }
   function cabinetLabelAt(tile, h, label) {
@@ -1490,22 +1577,21 @@
     var glow = 0.6 + 0.4 * Math.sin(cabPulse) * 0.5 + (hovered ? 0.35 : 0);
     glow = Math.max(0, Math.min(1, glow));
 
-    /* marquee light across the top of the face */
-    cabQuad(ARCADE, 0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.bright), 0.4 + glow * 0.5)));
-    /* screen bezel, then the dark screen itself */
-    cabQuad(ARCADE, 0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
-    cabQuad(ARCADE, 0.14, 0.86, 0.24, 0.58, "#02171f");
-    /* two rows of mini bricks + a paddle + a ball: a game caught mid-play */
+    /* marquee, recessed screen, control panel and base - the upright itself,
+       cyan-signed so its screen colour is echoed on the crown. */
+    cabShell(ARCADE, "SE", rgb(HEX.deep2), rgb(HEX.bright), glow);
+
+    /* three rows of mini bricks + a paddle + a ball: a game caught mid-play */
     var rowC = [HEX.chkLight, HEX.bright, HEX.f3];
     for (var r = 0; r < 3; r++) {
       for (var col = 0; col < 4; col++) {
-        var bu0 = 0.18 + col * 0.165, bv0 = 0.27 + r * 0.05;
-        cabQuad(ARCADE, bu0, bu0 + 0.13, bv0, bv0 + 0.035,
-                css(shade(rgb(rowC[r]), 0.55 + glow * 0.6)));
+        var bs = 0.05 + col * 0.235, bt = 0.08 + r * 0.16;
+        cabScreen(ARCADE, "SE", bs, bs + 0.19, bt, bt + 0.10,
+                  css(shade(rgb(rowC[r]), 0.55 + glow * 0.6)));
       }
     }
-    cabQuad(ARCADE, 0.4, 0.6, 0.53, 0.565, css(shade(rgb(HEX.bright), 0.6 + glow * 0.5)));
-    cabQuad(ARCADE, 0.62, 0.66, 0.45, 0.49, css(shade(rgb(HEX.light), 0.7 + glow * 0.4)));
+    cabScreen(ARCADE, "SE", 0.38, 0.62, 0.80, 0.88, css(shade(rgb(HEX.bright), 0.6 + glow * 0.5)));
+    cabScreen(ARCADE, "SE", 0.62, 0.70, 0.62, 0.72, css(shade(rgb(HEX.light), 0.7 + glow * 0.4)));
 
     if (hovered) cabinetLabel(ARCADE, "▶ BRICK SMASH");
   }
@@ -1521,9 +1607,6 @@
        the lit tone belongs on whichever side is turned toward us. */
     drawBox(tx, ty, CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
             css(shade(rgb(HEX.deep2), 0.92)), css(shade(rgb(HEX.O), 1.35)));
-    var q = function (u0, u1, v0, v1, fill) {
-      cabQuad(SNAKE, u0, u1, v0, v1, fill, "SW");
-    };
 
     /* Phase-shifted from the Brick Smash cabinet so the two screens breathe
        out of sync, and tinted gold instead of cyan so the pair reads as two
@@ -1531,20 +1614,19 @@
     var glow = 0.6 + 0.4 * Math.sin(cabPulse + 1.6) * 0.5 + (hovered ? 0.35 : 0);
     glow = Math.max(0, Math.min(1, glow));
 
-    q(0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.gold), 0.4 + glow * 0.5)));
-    q(0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
-    q(0.14, 0.86, 0.24, 0.58, "#02171f");
+    /* Same shell as Brick Smash, mirrored onto the SW face and gold-signed. */
+    cabShell(SNAKE, "SW", rgb(HEX.deep2), rgb(HEX.gold), glow);
 
-    var segs = [[0.20, 0.28], [0.30, 0.28], [0.40, 0.28], [0.40, 0.38], [0.40, 0.48]];
-    var segColors = [HEX.bright, HEX.light];
+    var segC = [HEX.bright, HEX.light];
+    var segs = [[0.10, 0.20], [0.24, 0.20], [0.38, 0.20], [0.38, 0.42], [0.38, 0.64]];
     segs.forEach(function (s, i) {
-      q(s[0], s[0] + 0.085, s[1], s[1] + 0.045,
-        css(shade(rgb(segColors[i % 2]), 0.55 + glow * 0.6)));
+      cabScreen(SNAKE, "SW", s[0], s[0] + 0.13, s[1], s[1] + 0.18,
+                css(shade(rgb(segC[i % 2]), 0.55 + glow * 0.6)));
     });
     /* head, brighter than the body */
-    q(0.5, 0.585, 0.48, 0.525, css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
+    cabScreen(SNAKE, "SW", 0.50, 0.63, 0.64, 0.82, css(shade(rgb(HEX.bright), 0.75 + glow * 0.5)));
     /* the snowflake it's chasing */
-    q(0.66, 0.7, 0.48, 0.525, css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
+    cabScreen(SNAKE, "SW", 0.74, 0.83, 0.64, 0.82, css(shade(rgb(HEX.gold), 0.6 + glow * 0.6)));
 
     if (hovered) cabinetLabel(SNAKE, "▶ SNAKE");
   }
@@ -1558,7 +1640,6 @@
        body shading; only the screen art and the marquee tone differ. */
     drawBox(MAUL[0], MAUL[1], CAB_H, css(shade(rgb(HEX.deep2), 1.15)),
             css(shade(rgb(HEX.O), 1.35)), css(shade(rgb(HEX.deep2), 0.92)));
-    var q = function (u0, u1, v0, v1, fill) { cabQuad(MAUL, u0, u1, v0, v1, fill); };
 
     /* Third phase offset, so all three screens breathe independently. */
     var glow = 0.6 + 0.4 * Math.sin(cabPulse + 3.2) * 0.5 + (hovered ? 0.35 : 0);
@@ -1566,17 +1647,15 @@
 
     /* Ice-white marquee: cyan and gold are already spoken for by the machines
        either side of it. */
-    q(0.1, 0.9, 0.05, 0.14, css(shade(rgb(HEX.light), 0.4 + glow * 0.5)));
-    q(0.08, 0.92, 0.2, 0.62, css(shade(rgb(HEX.O), 1.5)));
-    q(0.14, 0.86, 0.24, 0.58, "#02171f");
+    cabShell(MAUL, "SE", rgb(HEX.deep2), rgb(HEX.light), glow);
 
     var wall = css(shade(rgb(HEX.bright), 0.5 + glow * 0.55));
-    q(0.17, 0.70, 0.285, 0.325, wall);
-    q(0.30, 0.83, 0.375, 0.415, wall);
-    q(0.17, 0.70, 0.465, 0.505, wall);
+    cabScreen(MAUL, "SE", 0.10, 0.66, 0.22, 0.34, wall);
+    cabScreen(MAUL, "SE", 0.34, 0.90, 0.44, 0.56, wall);
+    cabScreen(MAUL, "SE", 0.10, 0.66, 0.66, 0.78, wall);
     /* the creep, mid-switchback, and the drain it is trying to reach */
-    q(0.74, 0.79, 0.335, 0.365, css(shade(rgb(HEX.gold), 0.7 + glow * 0.5)));
-    q(0.20, 0.25, 0.525, 0.555, css(shade(rgb(HEX.f3), 0.6 + glow * 0.5)));
+    cabScreen(MAUL, "SE", 0.74, 0.82, 0.46, 0.58, css(shade(rgb(HEX.gold), 0.7 + glow * 0.5)));
+    cabScreen(MAUL, "SE", 0.12, 0.20, 0.70, 0.82, css(shade(rgb(HEX.f3), 0.6 + glow * 0.5)));
 
     if (hovered) cabinetLabel(MAUL, "▶ WINTER MAUL");
   }
@@ -1690,7 +1769,9 @@
      footprint diamond. */
   function inCabinet(p, tile) {
     var c = centre(tile[0], tile[1]);
-    return p.x >= c.x - TW / 2 && p.x <= c.x + TW / 2 &&
+    /* A touch wider than the tile footprint so the control panel that juts out
+       past the body (either side, depending on the wall) is clickable too. */
+    return p.x >= c.x - TW / 2 - 5 && p.x <= c.x + TW / 2 + 5 &&
            p.y >= c.y - TH / 2 - CAB_H && p.y <= c.y + TH / 2;
   }
   function inArcade(p) { return inCabinet(p, ARCADE); }
