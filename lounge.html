@@ -500,6 +500,16 @@
   }
   .maul__note{ font-size:.62rem; color:#2b6f96; text-align:center; margin:2px 0 0; }
   .maul__note.is-hit{ color:#ffd68a; }
+  /* The rival's live board. A square panel that fills the aside's width; the
+     backing buffer is a fixed 12px-per-tile grid, scaled down by the browser
+     with nearest-neighbour so the maze stays crisp instead of blurring. */
+  .maul__mini{
+    display:block; width:100%; max-width:200px; margin:8px auto 2px;
+    aspect-ratio:1 / 1; image-rendering:pixelated;
+    border:2px inset #17415c; border-radius:4px; background:#02141f;
+  }
+  /* Immersive mode shrinks the corner panels; the minimap comes along. */
+  .arcade.is-immersive .maul__mini{ max-width:150px; }
   /* Sends stack full-width in the aside: each one is a purchase, and a price
      you can't read is a price you won't spend. */
   .maul__sends{ display:flex; flex-direction:column; gap:5px; }
@@ -729,9 +739,13 @@
   .arcade__foot .arcade__exit{ flex:1; }
   .arcade.is-immersive .arcade__foot{ display:contents; }
 
-  /* Held portrait, a 17-wide iso board is all letterbox however you frame it,
-     so immersive asks for the rotation rather than pretending. Purely an
-     overlay - the game underneath keeps running and keeps its state. */
+  /* Held portrait, the flat 17-wide iso board is all letterbox however you
+     frame it, so in 2D immersive asks for the rotation rather than pretending.
+     The 3D board opts out: its camera pulls back to fit the board to a portrait
+     phone (see fitDist in js/maul3d.js), which is the whole reason a phone can
+     be played upright without losing a third of the screen to the browser's
+     chrome - so the prompt is gated on :not(.is-3d) below. Purely an overlay
+     either way; the game underneath keeps running and keeps its state. */
   .arcade__rotate{
     position:absolute; inset:0; z-index:5; display:none;
     flex-direction:column; align-items:center; justify-content:center; gap:12px;
@@ -740,7 +754,7 @@
   }
   .arcade__rotate span{ font-size:2rem; }
   @media (orientation:portrait){
-    .arcade.is-immersive .arcade__rotate{ display:flex; }
+    .arcade.is-immersive:not(.is-3d) .arcade__rotate{ display:flex; }
   }
   @media (prefers-reduced-motion:reduce){
     .arcade__rotate span{ animation:none; }
@@ -977,6 +991,13 @@
           <div class="maul__meter is-you"><i id="wm-youbar"></i><b id="wm-youlab">YOU 20</b></div>
           <div class="maul__meter"><i id="wm-rivalbar"></i><b id="wm-rivallab">RIVAL 20</b></div>
           <p class="maul__note" id="wm-note">first maze to leak out loses</p>
+          <!-- The rival's board, live. Top-down rather than iso: at this size a
+               diamond is mush, a grid reads. It is the whole point of the panel
+               now - you can watch the AI lay its maze, watch your sends walk it,
+               and watch it hold or crack - so it sits under the meter it
+               explains. Drawn every frame in both 2D and 3D modes. -->
+          <canvas id="wm-mini" class="maul__mini" width="204" height="204"
+                  aria-label="The rival's board" role="img"></canvas>
         </div>
 
         <h3 style="margin-top:14px">&#10052; SEND</h3>
@@ -1395,10 +1416,14 @@
   }
 
   /* ================= arcade cabinets =================
-     BRICK SMASH and SNAKE are both drawn as standing boxes (same trick as the
-     speaker) with a lit screen on their SE face - the one that turns toward
-     the camera from anywhere in the room. CAB_H is the body's rise in px. */
-  var CAB_H = 42;
+     BRICK SMASH, SNAKE and WINTER MAUL each start as a standing box (same trick
+     as the speaker), but a box alone reads as a crate. cabShell (below) then
+     hangs the rest of an upright's silhouette off it: an overhanging marquee,
+     a screen sunk into the shell, and a control panel that juts out toward the
+     player with a stick and buttons. The lit face turns toward the camera -
+     SE for the two on the back-left wall, SW for SNAKE on the back-right.
+     CAB_H is the body's rise in px (tall enough now for marquee + panel). */
+  var CAB_H = 46;
 
   /* A point on one upright face of a box at `tile`, in face-local coordinates:
      u runs 0..1 left->right across the face as drawn, v runs 0..1 top->bottom
@@ -5076,6 +5101,8 @@
   var elRivalBar = document.getElementById("wm-rivalbar");
   var elRivalLab = document.getElementById("wm-rivallab");
   var elNote = document.getElementById("wm-note");
+  var elMini = document.getElementById("wm-mini");
+  var miniCtx = elMini ? elMini.getContext("2d") : null;
 
   /* ---- palette: the room's ice tones, plus one warm hazard colour ---- */
   var INK = "#02101c";
@@ -5102,6 +5129,12 @@
   var SPAWN = { x: 8, y: 0 }, DRAIN = { x: 8, y: 16 };
   var B0 = 1, B1 = 15;                      /* build zone, inclusive */
   var N = COLS * ROWS;
+  /* Where the rival's board is planted in the 3D world, in tiles: one board
+     width to the right with a lane of open ground between, so the two mazes
+     read as two lanes of the same arena rather than one board drawn twice.
+     Only the 3D renderer uses it; the flat board and the minimap each draw one
+     grid at the origin. */
+  var RIVAL_OFFSET = [COLS + 3, 0];
   var TW = 30, TH = 15;                     /* a floor tile on screen */
   /* Logical size; the backing buffer is twice this in each direction and the
      context is scaled to match, so the diagonals stay clean on a retina panel
@@ -5240,6 +5273,11 @@
     var d = Math.min(window.devicePixelRatio || 1, 2);
     var bw = Math.round(w * d), bh = Math.round(h * d);
     if (cv3d.width !== bw || cv3d.height !== bh) { cv3d.width = bw; cv3d.height = bh; }
+    /* Re-fit the 3D framing to the viewport unless the player has taken the
+       camera themselves, so flipping a phone to portrait pulls the board back
+       to fit its width instead of leaving the landscape framing running off
+       both sides. The renderer keeps the angle; only the distance re-fits. */
+    if (gl3d && !userCam3d) gl3d.camera.frame(w, h);
   }
   /* Tinting runs to a few hundred calls a frame across a full maze, and the
      inputs are a handful of fixed palette entries, so the results are worth
@@ -5295,13 +5333,13 @@
   var REFUND = 0.7;
 
   /* ---- sends ----
-     press: how hard it leans on the rival's maze. inc: gold added to every
-     wave payout from now on, forever - which is why a send is an investment
-     and not just an attack. */
+     k picks which body lands on the rival's board (see foeSendCreeps). inc is
+     gold added to every wave payout from now on, forever - which is why a send
+     is an investment and not just an attack. */
   var SENDS = [
-    { k: "pup", name: "FROST PUP", cost: 14, inc: 2, press: 0.55 },
-    { k: "wolf", name: "ICE WOLF", cost: 40, inc: 5, press: 1.3 },
-    { k: "golem", name: "RIME GOLEM", cost: 105, inc: 13, press: 3.2 }
+    { k: "pup", name: "FROST PUP", cost: 14, inc: 2 },
+    { k: "wolf", name: "ICE WOLF", cost: 40, inc: 5 },
+    { k: "golem", name: "RIME GOLEM", cost: 105, inc: 13 }
   ];
 
   /* ---- tuning ---- */
@@ -5435,7 +5473,7 @@
 
   var lives, gold, score, income, wave, waveT, gameT;
   var creeps, queue, beams, puffs, route;
-  var rival, pick, sel, flash, note;
+  var foe, pick, sel, flash, note;
   var raf = null, lastT = 0, running = false, won = false;
 
   /* ================= the 3D board =================
@@ -5450,6 +5488,11 @@
   var el3d = document.getElementById("wm-3d");
   var elCam = document.getElementById("wm-cam");
   var gl3d = null, mode3d = false, gl3dDead = false;
+  /* The 3D twin of userZoomed: true once the player has orbited, pinched or
+     wheeled the perspective camera, which tells resize() to leave their framing
+     alone. Until then the camera re-fits to the viewport on every resize, so
+     turning a phone from landscape to portrait reframes the board to suit. */
+  var userCam3d = false;
 
   function world3d() {
     return {
@@ -5487,6 +5530,28 @@
           }
         }
         return { ghost: g, sel: sel || null, range: ring };
+      },
+      /* Where the rival's board sits in the shared 3D world, and the same
+         accessor bundle for it - so the renderer draws a second maze offset to
+         the side and you can orbit over to watch the AI play. Read at create()
+         for the framing, and every frame for the contents; getRival returns
+         null until a game is running, which the renderer treats as "one board
+         only" - so nothing here changes the single-board path. */
+      rivalOffset: RIVAL_OFFSET,
+      getRival: function () {
+        if (!foe) return null;
+        return {
+          offset: RIVAL_OFFSET,
+          gate: SPAWN, drain: DRAIN,
+          isRock: function (x, y) { return !!foe.rock[idx(x, y)]; },
+          towerAt: function (x, y) { return foe.built[idx(x, y)] || null; },
+          getBuilt: function () { return foe.built; },
+          getCreeps: function () { return foe.creeps; },
+          getRoute: function () { return foe.route; },
+          getBeams: function () { return foe.beams; },
+          getPuffs: function () { return foe.puffs; },
+          creepPos: function (cr) { return { x: creepFX(cr), y: creepFY(cr) }; }
+        };
       }
     };
   }
@@ -5523,6 +5588,11 @@
     cv.hidden = mode3d;
     cv3d.hidden = !mode3d;
     elCam.hidden = !mode3d;
+    /* The rotate-to-play prompt is a 2D-only thing now: the flat board is a
+       fixed wide bitmap that genuinely can't be played portrait, but the 3D
+       camera reframes to fit, so the overlay keys off this class (see the CSS)
+       and stays out of the way in 3D. */
+    overlay.classList.toggle("is-3d", mode3d);
     el3d.setAttribute("aria-pressed", String(mode3d));
     el3d.innerHTML = mode3d ? "&#9673; 2D" : "&#9673; 3D";
     resize();
@@ -5661,7 +5731,7 @@
     if (gold < s.cost) { note = "NOT ENOUGH GOLD"; return; }
     gold -= s.cost;
     income += s.inc;
-    rival.press += s.press;
+    foeSendCreeps(s);            /* real bodies on the rival's board, now */
     note = "SENT " + s.name + " — INCOME +" + s.inc;
     noteHit = true;
     dirty = true;
@@ -5688,39 +5758,18 @@
       for (i = 0; i < rs; i++) queue.push({ t: gameT + 2.5 + i * 0.7, spec: rspec });
     }
   }
-  /* Everything that happens on a wave tick, in order: bank the wave you just
-     survived, let the rival's maze answer for the same wave, pay income, then
-     send the next one. Keeping it all on one tick means the race is resolved
-     at a single readable moment rather than drifting between two clocks. */
+  /* A wave tick banks the wave you just survived, then sends the next one to
+     both boards at once. The rival's leak is no longer decided here by a roll:
+     its creeps are real and its lives come off in foeMove, the moment one of
+     them actually reaches its drain. This just puts the same wave on its
+     clock as on yours. */
   function startWave() {
-    if (wave >= 1) {
-      score += 40 * wave;
-      resolveRival(wave);
-      if (rival.lives <= 0) { finish(true); return; }
-    }
+    if (wave >= 1) score += 40 * wave;
     wave++;
     gold += WAVE_GOLD + income;
     scheduleWave(wave);
+    if (foe) foeStartWave(foe, wave);
     waveT = WAVE_EVERY;
-    dirty = true;
-  }
-  /* The rival's maze, modelled rather than simulated: it holds cleanly through
-     the early waves, starts cracking under its own weight around wave 7, and
-     cracks a lot faster under whatever you've been sending. Pressure decays
-     because a send is a spike, not a permanent handicap. */
-  function resolveRival(n) {
-    var expect = Math.max(0, (n - 6) * 0.42) + rival.press * 0.85;
-    var hit = Math.floor(expect);
-    if (Math.random() < expect - hit) hit++;
-    rival.press *= 0.4;
-    if (hit > 0) {
-      rival.lives = Math.max(0, rival.lives - hit);
-      note = "RIVAL LEAKED " + hit + " ON WAVE " + n;
-      noteHit = true;
-    } else {
-      note = "RIVAL HELD WAVE " + n;
-      noteHit = false;
-    }
     dirty = true;
   }
   function callWave() {
@@ -5817,6 +5866,333 @@
     }
   }
 
+  /* ================= the rival, simulated =================
+     Until now the rival was a number and a curve: resolveRival() rolled a
+     leak count each wave and a maze you never saw "cracked under its own
+     weight". That was enough when there was nothing to look at. There is now
+     - a minimap in the corner, and in 3D a whole board beside yours - so the
+     rival has to actually EXIST. This is a second board: its own maze, its
+     own towers firing at its own creeps, its own gold, leaking its own lives,
+     run on the same wave clock as yours and driven by a small brain.
+
+     It is a leaner sim than the player's - no selection, no gestures, no
+     range preview - but the rules that decide the race are the real ones:
+     creeps walk the shortest open road (foeBfs / stepFrom), a tower shoots
+     the creep furthest along it, a placement that would seal the maze is
+     refused, and a creep that reaches the drain costs a life. What you watch
+     the rival do, it is really doing.
+
+     Everything here takes the board `f` as its first argument rather than
+     closing over module state, so the player's board above is untouched and
+     the two sims can never accidentally share an array. The pure helpers that
+     don't care whose board it is - stepFrom, waveSpec, TOWERS, creepFX/FY,
+     towerH, lvl* - are borrowed as they stand. */
+  function makeFoe() {
+    var f = {
+      rock: new Uint8Array(N), built: new Array(N),
+      field: new Int16Array(N), scratch: new Int16Array(N),
+      q: new Int32Array(N),
+      creeps: [], queue: [], beams: [], puffs: [], route: [],
+      gold: START_GOLD, lives: RIVAL_LIVES, income: 0,
+      buildT: 0, plan: null, planI: 0
+    };
+    /* Same shell as yours: rock ring, a gate cut in the top and a drain in
+       the bottom. */
+    for (var x = 0; x < COLS; x++) {
+      f.rock[idx(x, 0)] = (x === SPAWN.x) ? 0 : 1;
+      f.rock[idx(x, ROWS - 1)] = (x === DRAIN.x) ? 0 : 1;
+    }
+    for (var y = 1; y < ROWS - 1; y++) { f.rock[idx(0, y)] = 1; f.rock[idx(COLS - 1, y)] = 1; }
+    foeMazePlan(f);
+    foeRepath(f);
+    return f;
+  }
+
+  /* The maze the rival is TRYING to build, as a list of cells to fill in
+     order - not the maze it has. It pays for every wall out of the same purse
+     the guns come from and the same START_GOLD you get, so the rival is a
+     player, not a fixture: it opens with a partial comb it could afford, leaks
+     a little while it's thin, thickens as its bounties come in, and - the
+     whole point - is beatable, because it is spending against the same wave
+     scaling you are.
+
+     The shape is a serpentine of near-full-width walls with a three-wide gap
+     that alternates end to end: no straight shot down the middle, so a creep
+     walks the whole snake. Laid top to bottom so you watch it grow, and open
+     by construction so a completed comb can never seal. */
+  function foeMazePlan(f) {
+    var plan = [], rows = [3, 5, 7, 9, 11, 13];
+    for (var r = 0; r < rows.length; r++) {
+      var y = rows[r], gapRight = (r % 2 === 0);
+      for (var x = B0; x <= B1; x++) {
+        if (gapRight && x >= B1 - 2) continue;   /* leave x=13..15 open */
+        if (!gapRight && x <= B0 + 2) continue;   /* leave x=1..3 open */
+        plan.push(idx(x, y));
+      }
+    }
+    f.plan = plan; f.planI = 0;
+  }
+  /* Lay the next wall the plan still wants, if the board will take it right
+     now. A cell can refuse transiently - a creep is standing on it - so a
+     refusal rotates it to the back to retry rather than abandoning it, and the
+     lap counter stops a cell that would somehow seal from spinning forever. */
+  function foeLayNext(f) {
+    var tries = 0;
+    while (f.planI < f.plan.length && tries < f.plan.length) {
+      var c = f.plan[f.planI];
+      if (f.built[c]) { f.planI++; tries++; continue; }
+      if (foePlace(f, c % COLS, (c / COLS) | 0, TOWERS[0])) { f.planI++; return true; }
+      f.plan.push(f.plan.splice(f.planI, 1)[0]);
+      tries++;
+    }
+    return false;
+  }
+
+  /* BFS out from the drain across the rival's own rock and towers - the twin
+     of bfs() above, kept separate so the player's pathing never reads the
+     wrong grid. stepFrom() needs only the distance field, so it is shared. */
+  function foeBfs(f, out, block) {
+    var i;
+    for (i = 0; i < N; i++) out[i] = -1;
+    var head = 0, tail = 0, g = idx(DRAIN.x, DRAIN.y);
+    if (g === block) return;
+    out[g] = 0; f.q[tail++] = g;
+    while (head < tail) {
+      var c = f.q[head++], cx = c % COLS, cy = (c / COLS) | 0, d = out[c] + 1;
+      for (i = 0; i < 4; i++) {
+        var nx = cx + DIRS[i][0], ny = cy + DIRS[i][1];
+        if (!inGrid(nx, ny)) continue;
+        var nc = idx(nx, ny);
+        if (out[nc] !== -1 || f.rock[nc] || f.built[nc] || nc === block) continue;
+        out[nc] = d; f.q[tail++] = nc;
+      }
+    }
+  }
+  function foeRepath(f) {
+    foeBfs(f, f.field, -1);
+    f.route = [];
+    var c = idx(SPAWN.x, SPAWN.y), guard = 0;
+    if (f.field[c] < 0) return;
+    f.route.push(c);
+    while (guard++ < N) {
+      var nx = stepFrom(f.field, c);
+      if (nx < 0) break;
+      f.route.push(nx); c = nx;
+    }
+  }
+  /* The same placement law the player plays under: inside the zone, on empty
+     ground, affordable, and - the one rule that makes it a maul - it must not
+     seal the route or strand a creep mid-step. */
+  function foeCanBuild(f, x, y, def) {
+    if (x < B0 || x > B1 || y < B0 || y > B1) return false;
+    var c = idx(x, y);
+    if (f.built[c] || f.rock[c] || f.gold < def.cost) return false;
+    var i;
+    for (i = 0; i < f.creeps.length; i++)
+      if (f.creeps[i].cell === c || f.creeps[i].next === c) return false;
+    foeBfs(f, f.scratch, c);
+    if (f.scratch[idx(SPAWN.x, SPAWN.y)] < 0) return false;
+    for (i = 0; i < f.creeps.length; i++)
+      if (f.scratch[f.creeps[i].next] < 0) return false;
+    return true;
+  }
+  function foePlace(f, x, y, def) {
+    if (!foeCanBuild(f, x, y, def)) return false;
+    var c = idx(x, y);
+    f.gold -= def.cost;
+    f.built[c] = { def: def, x: x, y: y, lvl: 1, cd: 0, flash: 0, spent: def.cost,
+                   seed: Math.random() * TAU };
+    foeRepath(f);
+    return true;
+  }
+
+  /* ---- the brain ----
+     It acts on a cadence rather than every frame, so you can watch a decision
+     land instead of a blur, and so a whole game of it costs almost nothing.
+     Each tick it does one thing. While the maze is still going up it mostly
+     lays the next wall - a maul survives on its maze first and its guns second,
+     so a human does the same - but not every tick, so a few early guns go down
+     alongside it. Once the comb is finished the whole budget turns to the
+     damage race: bolt on the best gun it can afford, or lift one already
+     covering the road. */
+  function foeThink(f, dt) {
+    f.buildT -= dt;
+    if (f.buildT > 0) return;
+    f.buildT = 0.4;
+    if (f.planI < f.plan.length && f.gold >= TOWERS[0].cost && Math.random() < 0.7) {
+      if (foeLayNext(f)) return;
+    }
+    foeInvest(f);
+  }
+  function foeInvest(f) {
+    var T = TOWERS, i;
+    /* A cheap lift on a gun already covering the road often beats another cold
+       tower; bias toward it once there are guns to lift. */
+    if (f.gold >= T[1].cost && Math.random() < 0.35) {
+      var lift = null, lo = 99;
+      for (i = 0; i < N; i++) {
+        var t = f.built[i];
+        if (!t || t.def.k === "rime" || t.lvl >= MAX_LVL) continue;
+        if (upCost(t) <= f.gold && t.lvl < lo) { lo = t.lvl; lift = t; }
+      }
+      if (lift) { f.gold -= upCost(lift); lift.spent += upCost(lift); lift.lvl++; return; }
+    }
+    /* Otherwise place the best gun it can afford, on an empty cell beside the
+       road - preferring the cell FURTHEST along it, where a shot buys the most
+       time, the read a decent player has. It has to be a list rather than a
+       single pick: the cell nearest the drain is usually the sole approach to
+       it, so building there would seal the maze and foePlace refuses it. So
+       collect the candidates, best first, and take the first that stands. */
+    var def = f.gold >= T[3].cost ? T[3]
+            : f.gold >= T[2].cost ? T[2]
+            : f.gold >= T[1].cost ? T[1] : null;
+    if (!def) return;
+    var cand = [], seen = {};
+    for (i = 0; i < f.route.length; i++) {
+      var rc = f.route[i], rx = rc % COLS, ry = (rc / COLS) | 0;
+      var along = f.field[rc] < 0 ? 1e8 : f.field[rc];   /* steps to drain */
+      for (var k = 0; k < 4; k++) {
+        var nx = rx + DIRS[k][0], ny = ry + DIRS[k][1];
+        if (nx < B0 || nx > B1 || ny < B0 || ny > B1) continue;
+        var nc = idx(nx, ny);
+        if (f.built[nc] || f.rock[nc] || seen[nc]) continue;
+        seen[nc] = 1;
+        cand.push({ c: nc, score: along });
+      }
+    }
+    cand.sort(function (a, b) { return a.score - b.score; });
+    for (i = 0; i < cand.length; i++) {
+      if (foePlace(f, cand[i].c % COLS, (cand[i].c / COLS) | 0, def)) return;
+    }
+  }
+
+  /* ---- the rival's combat, the twin of the player's ---- */
+  function foeSpawn(f, spec) {
+    var c = idx(SPAWN.x, SPAWN.y);
+    f.creeps.push({ cell: c, next: c, t: 1, spec: spec, hp: spec.hp, max: spec.hp,
+      speed: spec.speed, slowMul: 1, slowT: 0, boss: !!spec.boss, sent: !!spec.sent,
+      seed: Math.random() * TAU });
+  }
+  function foeHurt(f, cr, dmg) {
+    cr.hp -= dmg;
+    if (cr.hp <= 0 && !cr.gone) {
+      cr.gone = true;
+      f.gold += cr.spec.bounty;      /* the rival earns its own bounties */
+      f.puffs.push({ x: creepFX(cr), y: creepFY(cr), t: 0.35, boss: cr.boss });
+      dirty = true;
+    }
+  }
+  function foeFire(f, t, dt) {
+    if (t.flash > 0) t.flash -= dt;
+    t.cd -= dt;
+    if (t.cd > 0) return;
+    var range = lvlRange(t), r2 = range * range, tx = t.x, ty = t.y;
+    var best = null, bestD = 1e9, i;
+    for (i = 0; i < f.creeps.length; i++) {
+      var cr = f.creeps[i];
+      if (cr.gone) continue;
+      var dx = creepFX(cr) - tx, dy = creepFY(cr) - ty;
+      if (dx * dx + dy * dy > r2) continue;
+      var d = f.field[cr.cell] < 0 ? 1e8 : f.field[cr.cell];
+      if (d < bestD) { bestD = d; best = cr; }
+    }
+    if (!best) return;
+    t.cd = 1 / t.def.rate;
+    t.flash = 0.14;
+    var dmg = t.def.dmg * lvlMul(t.lvl);
+    var bx = creepFX(best), by = creepFY(best);
+    f.beams.push({ x1: tx, y1: ty, x2: bx, y2: by, t: 0.14,
+                   h: towerH(t), c: t.def.c, w: t.def.k === "nova" ? 2.4 : 1.4 });
+    if (t.def.splash) {
+      var s2 = t.def.splash * t.def.splash;
+      for (i = 0; i < f.creeps.length; i++) {
+        var o = f.creeps[i];
+        if (o.gone) continue;
+        var ox = creepFX(o) - bx, oy = creepFY(o) - by;
+        if (ox * ox + oy * oy <= s2) foeHurt(f, o, dmg);
+      }
+      f.puffs.push({ x: bx, y: by, t: 0.3, splash: t.def.splash });
+    } else {
+      foeHurt(f, best, dmg);
+    }
+    if (t.def.slow) {
+      var mul = 1 - t.def.slow;
+      if (mul < best.slowMul) best.slowMul = mul;
+      best.slowT = Math.max(best.slowT, t.def.slowT);
+    }
+  }
+  function foeMove(f, cr, dt) {
+    var sp = cr.speed * cr.slowMul;
+    cr.t += sp * dt;
+    while (cr.t >= 1) {
+      cr.t -= 1;
+      cr.cell = cr.next;
+      if (cr.cell === idx(DRAIN.x, DRAIN.y)) {
+        cr.gone = true;
+        f.lives -= cr.spec.cost;
+        note = "RIVAL LEAKED — " + cr.spec.cost + (cr.spec.cost > 1 ? " LIVES" : " LIFE");
+        noteHit = true; dirty = true;
+        if (f.lives <= 0) { f.lives = 0; finish(true); }
+        return;
+      }
+      var nx = stepFrom(f.field, cr.cell);
+      if (nx < 0) { cr.next = cr.cell; cr.t = 0; return; }
+      cr.next = nx;
+    }
+  }
+  /* One rival tick: think, then spawn / move / fire / expire, in the same
+     order the player's update() runs so the two boards resolve alike. */
+  function foeStep(f, dt) {
+    foeThink(f, dt);
+    var i;
+    for (i = f.queue.length - 1; i >= 0; i--) {
+      if (f.queue[i].t <= gameT) { foeSpawn(f, f.queue[i].spec); f.queue.splice(i, 1); }
+    }
+    for (i = 0; i < f.creeps.length; i++) {
+      var cr = f.creeps[i];
+      if (cr.gone) continue;
+      if (cr.slowT > 0) { cr.slowT -= dt; if (cr.slowT <= 0) cr.slowMul = 1; }
+      foeMove(f, cr, dt);
+      if (state !== STATE.PLAY) return;   /* a leak just ended the game */
+    }
+    for (i = 0; i < N; i++) { if (f.built[i]) foeFire(f, f.built[i], dt); }
+    for (i = f.creeps.length - 1; i >= 0; i--) { if (f.creeps[i].gone) f.creeps.splice(i, 1); }
+    for (i = f.beams.length - 1; i >= 0; i--) { f.beams[i].t -= dt; if (f.beams[i].t <= 0) f.beams.splice(i, 1); }
+    for (i = f.puffs.length - 1; i >= 0; i--) { f.puffs[i].t -= dt; if (f.puffs[i].t <= 0) f.puffs.splice(i, 1); }
+  }
+  /* The rival's share of a wave: it faces the same penguins you do, and it
+     banks the same base gold plus an income that climbs with the wave (its
+     stand-in for the sends it never stops throwing at you). Your own sends
+     land on its board the instant you buy them - see foeSendCreeps. */
+  function foeStartWave(f, n) {
+    f.gold += WAVE_GOLD + f.income;
+    f.income = Math.floor(n / 2);
+    var s = waveSpec(n), i;
+    for (i = 0; i < s.count; i++) f.queue.push({ t: gameT + i * s.gap, spec: s });
+  }
+  /* A send, made flesh on the rival's board. The pup is a single quick body,
+     the wolf a brace of tougher ones, the golem one heavy that reads as a
+     boss and costs the rival two lives if it lands. They ride in as `sent`, so
+     the rival's board draws them as the wolves and golem it drew when the roles
+     were reversed - the wars half of the game, now visible from both sides. */
+  function foeSendCreeps(s) {
+    if (!foe) return;
+    var base = waveSpec(wave > 0 ? wave : 1);
+    if (s.k === "golem") {
+      foe.queue.push({ t: gameT, spec: { n: wave, boss: true, sent: true,
+        hp: Math.round(base.hp * 3.2), speed: 2.0,
+        bounty: base.bounty + 8, pts: 0, cost: 2 } });
+    } else {
+      var count = s.k === "wolf" ? 2 : 1;
+      var mul = s.k === "wolf" ? 1.4 : 0.85;
+      for (var i = 0; i < count; i++) {
+        foe.queue.push({ t: gameT + i * 0.5, spec: { n: wave, boss: false, sent: true,
+          hp: Math.round(base.hp * mul), speed: 2.6,
+          bounty: base.bounty + 2, pts: 0, cost: 1 } });
+      }
+    }
+  }
+
   /* ================= the loop ================= */
   function update(dt) {
     if (state !== STATE.PLAY) return;
@@ -5847,6 +6223,8 @@
       puffs[i].t -= dt;
       if (puffs[i].t <= 0) puffs.splice(i, 1);
     }
+    if (foe) foeStep(foe, dt);
+    if (state !== STATE.PLAY) return;   /* the rival may have just lost */
     if (flash) { flash.t -= dt; if (flash.t <= 0) flash = null; }
     if (lives <= 0) { lives = 0; finish(false); }
   }
@@ -6395,8 +6773,9 @@
      for the whole of it is a cost with nothing to show for it. */
   var hudSig = "";
   function syncHud() {
+    var rivalLives = foe ? foe.lives : RIVAL_LIVES;
     var sig = lives + "|" + Math.floor(gold) + "|" + wave + "|" + score + "|" +
-              rival.lives + "|" + note + "|" + noteHit;
+              rivalLives + "|" + note + "|" + noteHit;
     if (sig === hudSig) return;
     hudSig = sig;
     elLives.textContent = Math.max(0, lives);
@@ -6404,11 +6783,11 @@
     elWave.textContent = wave;
     elScore.textContent = score;
     var yf = Math.max(0, lives) / START_LIVES * 100;
-    var rf = Math.max(0, rival.lives) / RIVAL_LIVES * 100;
+    var rf = Math.max(0, rivalLives) / RIVAL_LIVES * 100;
     elYouBar.style.width = yf + "%";
     elRivalBar.style.width = rf + "%";
     elYouLab.textContent = "YOU " + Math.max(0, lives);
-    elRivalLab.textContent = "RIVAL " + Math.max(0, rival.lives);
+    elRivalLab.textContent = "RIVAL " + Math.max(0, rivalLives);
     elNote.textContent = note || "first maze to leak out loses";
     elNote.classList.toggle("is-hit", !!noteHit);
   }
@@ -6450,7 +6829,7 @@
     creeps = []; queue = []; beams = []; puffs = []; route = [];
     lives = START_LIVES; gold = START_GOLD; score = 0; income = 0;
     wave = 0; waveT = FIRST_WAVE; gameT = 0;
-    rival = { lives: RIVAL_LIVES, press: 0 };
+    foe = makeFoe();
     pick = 0; sel = null; flash = null; note = ""; noteHit = false;
     won = false; lastSel = "";
     repath();
@@ -6517,12 +6896,56 @@
     }
   }
 
+  /* ================= the rival minimap =================
+     The rival's whole board, top-down, in the corner panel. Iso would be
+     unreadable at this size; a flat grid of one colour per thing is not. It
+     reads the live foe sim every frame - never a cached copy - so like the 3D
+     view it can only ever agree with what the rival is actually doing. Costs a
+     few hundred rects and runs in both 2D and 3D, which is the point: the one
+     view of the other player you never lose. */
+  var MINI = elMini ? elMini.width / COLS : 12;   /* px per tile in the buffer */
+  var MINI_ROAD = "#1c6f8f";
+  function drawMini() {
+    if (!miniCtx) return;
+    var g = miniCtx, S = MINI, W = COLS * S, H = ROWS * S, i;
+    g.fillStyle = INK; g.fillRect(0, 0, W, H);
+    if (!foe) return;
+    /* Floor tiles under the road, so the lit path stands on something. */
+    for (i = 0; i < foe.route.length; i++) {
+      var rc = foe.route[i];
+      g.fillStyle = MINI_ROAD;
+      g.fillRect((rc % COLS) * S, ((rc / COLS) | 0) * S, S, S);
+    }
+    /* Rock ring and towers - a tower in its own colour, so RIME walls read as
+       the maze and the guns pick out against them exactly as on the big board. */
+    for (i = 0; i < N; i++) {
+      var x = (i % COLS) * S, y = ((i / COLS) | 0) * S;
+      if (foe.rock[i]) { g.fillStyle = ROCK; g.fillRect(x, y, S, S); continue; }
+      var t = foe.built[i];
+      if (t) { g.fillStyle = t.def.c; g.fillRect(x + 1, y + 1, S - 2, S - 2); }
+    }
+    /* Creeps: your sends in the hazard pink, its bosses in gold, its wave in
+       ice white - the same three reads the big board uses. */
+    for (i = 0; i < foe.creeps.length; i++) {
+      var cr = foe.creeps[i];
+      if (cr.gone) continue;
+      g.fillStyle = cr.sent ? DANGER : (cr.boss ? GOLD : CREEP);
+      g.beginPath();
+      g.arc((creepFX(cr) + 0.5) * S, (creepFY(cr) + 0.5) * S, S * 0.36, 0, TAU);
+      g.fill();
+    }
+    /* Gate and drain pips, so the run reads top-to-bottom at a glance. */
+    g.fillStyle = DANGER; g.fillRect(SPAWN.x * S + S * 0.25, 0, S * 0.5, S * 0.6);
+    g.fillStyle = GOLD;   g.fillRect(DRAIN.x * S + S * 0.25, H - S * 0.6, S * 0.5, S * 0.6);
+  }
+
   function frame(now) {
     if (!running) return;
     var dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
     update(dt);
     draw();
+    drawMini();
     if (dirty || state === STATE.PLAY) syncAll();
     raf = requestAnimationFrame(frame);
   }
@@ -6657,6 +7080,7 @@
       gl3d.camera.set(pinch.yaw + (s.mx - pinch.mx) * 0.011,
                       pinch.pitch + (s.my - pinch.my) * 0.007,
                       pinch.dist * (pinch.d / s.d));
+      userCam3d = true;
       dirty = true;
       return;
     }
@@ -6820,6 +7244,7 @@
                         -(ev.clientY - orbitDrag.y) * 0.007);
       orbitDrag.x = ev.clientX;
       orbitDrag.y = ev.clientY;
+      userCam3d = true;
       dirty = true;
       return;
     }
@@ -6878,6 +7303,7 @@
     if (mode3d && gl3d) {
       ev.preventDefault();
       gl3d.camera.zoom(ev.deltaY < 0 ? 0.9 : 1 / 0.9);
+      userCam3d = true;
       dirty = true;
       return;
     }
@@ -6907,7 +7333,10 @@
     var k = b.getAttribute("data-cam");
     if (k === "cw") gl3d.camera.snap(1);
     else if (k === "ccw") gl3d.camera.snap(-1);
-    else gl3d.camera.reset();
+    /* Reset hands the framing back to the viewport-fit, so it also drops the
+       "player owns the camera" flag - the board re-fits on the next resize as
+       if freshly opened. */
+    else { gl3d.camera.reset(); userCam3d = false; }
     dirty = true;
     draw();
   });
@@ -6956,7 +7385,7 @@
         e.preventDefault();
       }
     } else if (k === "r" || k === "R") {
-      if (mode3d && gl3d) { gl3d.camera.reset(); draw(); e.preventDefault(); }
+      if (mode3d && gl3d) { gl3d.camera.reset(); userCam3d = false; draw(); e.preventDefault(); }
     } else if (k === "u" || k === "U") {
       if (sel) { upgrade(sel); syncAll(); }
     } else if (k === "x" || k === "X") {
@@ -6986,8 +7415,10 @@
       elFull.setAttribute("aria-label", on ? "Leave fullscreen" : "Enter fullscreen");
       /* Open on the whole board rather than at whatever zoom a previous
          session left behind: you can't maze what you can't see. Cleared before
-         the resize below, so the fresh view is the one it fits to. */
-      if (on) userZoomed = false;
+         the resize below, so the fresh view is the one it fits to - and both
+         cameras get it, so entering fullscreen re-fits the 3D board to the new
+         viewport's aspect just as it re-fits the flat one's zoom. */
+      if (on) { userZoomed = false; userCam3d = false; }
     },
     onResize: function () {
       if (!running && !immersive) return;
@@ -7025,6 +7456,11 @@
        the smaller cabinet one. A browser without WebGL keeps the 2D board and
        says nothing; the toggle is still there for anyone who wants it back. */
     set3D(true, true);
+    /* A fresh open starts from the default angle, not wherever the last run
+       left the camera - the 3D echo of the flat board opening at identity.
+       reset() re-fits to the current viewport, so this lands framed for
+       whichever way the phone is being held. */
+    if (gl3d) gl3d.camera.reset();
     resize();
     draw();
     raf = requestAnimationFrame(frame);
@@ -7068,6 +7504,7 @@
     step: function (dt, n) {
       for (var i = 0; i < (n || 1); i++) update(dt || 0.016);
       draw();
+      drawMini();
       syncAll();
     },
     build: function (x, y, k) {
@@ -7128,7 +7565,9 @@
       return { state: state, lives: lives, gold: Math.floor(gold), wave: wave,
                score: score, income: income, towers: towers,
                creeps: creeps.length, routeLen: route.length,
-               rival: rival.lives, won: won, note: note,
+               rival: foe ? foe.lives : RIVAL_LIVES,
+               rivalTowers: foe ? foe.built.filter(Boolean).length : 0,
+               rivalCreeps: foe ? foe.creeps.length : 0, won: won, note: note,
                waveIn: Math.max(0, waveT), scores: scores.slice() };
     }
   };

@@ -251,6 +251,13 @@
     if (!ext) return null;          /* caller falls back to the 2D cabinet */
 
     var COLS = world.cols, ROWS = world.rows;
+    /* A static hint, read once: how far the rival's board is planted from the
+       origin, in tiles. The camera uses it to widen its pan clamp and its
+       zoom-out so the second board is reachable; the per-frame contents come
+       through world.getRival(). Absent in any embedding without a rival, which
+       leaves every camera bound exactly where it was. */
+    var RIV = world.rivalOffset || null;
+    var RVX = RIV ? RIV[0] : 0, RVZ = RIV ? RIV[1] : 0;
 
     function link(vs, fs) {
       var p = gl.createProgram();
@@ -406,7 +413,38 @@
       yaw: Math.PI * 0.25, pitch: 0.95, dist: FIT
     };
     var MIN_PITCH = 0.30, MAX_PITCH = 1.45;
-    var MIN_DIST = Math.max(4, FIT * 0.22), MAX_DIST = FIT * 2.6;
+    /* The zoom-out clamp is deliberately far: a phone held portrait has to pull
+       the camera back to nearly four times FIT to hold the whole board, and
+       fitDist() below reaches for exactly that. */
+    /* The far clamp gets the rival's reach added on top of the single-board
+       pull-back, so you can zoom out far enough to hold both mazes in frame at
+       once - without it the second board would sit forever just past the edge. */
+    var MIN_DIST = Math.max(4, FIT * 0.22),
+        MAX_DIST = FIT * 4 + Math.max(Math.abs(RVX), Math.abs(RVZ)) * 2;
+    function clampDist(d) { return Math.max(MIN_DIST, Math.min(MAX_DIST, d)); }
+
+    /* The distance that frames the whole board in a viewport of this aspect,
+       set by two aspects that answer two separate questions.
+
+       FIT was tuned on a landscape phone, where the board's height fills the
+       view and its width has room to spare. Turn the phone portrait and the
+       width becomes the binding edge - the board's diagonal runs off both sides.
+
+       FIT_KNEE is where that turnover happens: at or above it - every desktop,
+       the cabinet, any landscape phone - the board frames at exactly FIT and
+       nothing that already framed well moves. Below it the camera pulls back by
+       FIT_PORTRAIT/aspect. The 1/aspect holds the board the same size however
+       narrow the phone gets; FIT_PORTRAIT sitting a little above the knee is
+       what buys the margin - it leaves the board at about 0.8 of the width with
+       real space down the sides rather than jammed against the edges. The two
+       being different puts a small step between the branches, but it lands at
+       an aspect (~1.55) no device is actually held at, so it is only ever
+       crossed mid-drag on a desktop, where a few percent of zoom is invisible. */
+    var FIT_KNEE = 1.55, FIT_PORTRAIT = 1.70, lastAspect = FIT_KNEE;
+    function fitDist(aspect) {
+      if (!(aspect > 0)) aspect = lastAspect;
+      return aspect >= FIT_KNEE ? FIT : FIT * (FIT_PORTRAIT / aspect);
+    }
 
     var view = new Float32Array(16), proj = new Float32Array(16),
         viewProj = new Float32Array(16);
@@ -419,10 +457,11 @@
               cam.tz + Math.sin(cam.yaw) * cp * cam.dist];
     }
     function updateCamera(w, h) {
+      lastAspect = w / Math.max(1, h);
       var e = eyePos();
       eye[0]=e[0]; eye[1]=e[1]; eye[2]=e[2];
       target[0]=cam.tx; target[1]=0; target[2]=cam.tz;
-      m4perspective(proj, 0.85, w / Math.max(1, h), 0.5, 400);
+      m4perspective(proj, 0.85, lastAspect, 0.5, 400);
       m4lookAt(view, eye, target, UP);
       m4mul(viewProj, proj, view);
     }
@@ -435,10 +474,15 @@
       cam.tz += -dx * c - dz * s;
       clampTarget();
     }
+    /* The pan box spans from the origin board out to the rival board, so a
+       drag can carry the target across to the AI's maze and back. With no
+       rival (RVX = RVZ = 0) it is exactly the old single-board box. */
     function clampTarget() {
       var m = 6;
-      cam.tx = Math.max(-m, Math.min(COLS - 1 + m, cam.tx));
-      cam.tz = Math.max(-m, Math.min(ROWS - 1 + m, cam.tz));
+      var minX = Math.min(0, RVX), maxX = Math.max(0, RVX) + COLS - 1;
+      var minZ = Math.min(0, RVZ), maxZ = Math.max(0, RVZ) + ROWS - 1;
+      cam.tx = Math.max(minX - m, Math.min(maxX + m, cam.tx));
+      cam.tz = Math.max(minZ - m, Math.min(maxZ + m, cam.tz));
     }
     var camera = {
       get yaw() { return cam.yaw; },
@@ -447,7 +491,7 @@
         cam.pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, cam.pitch + dp));
       },
       zoom: function (f) {
-        cam.dist = Math.max(MIN_DIST, Math.min(MAX_DIST, cam.dist * f));
+        cam.dist = clampDist(cam.dist * f);
       },
       /* Absolute, for gestures. A pinch has to work from the pose the fingers
          landed on rather than accumulating deltas, or the drift between what
@@ -456,7 +500,7 @@
       set: function (yaw, pitch, dist) {
         cam.yaw = yaw;
         cam.pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch));
-        cam.dist = Math.max(MIN_DIST, Math.min(MAX_DIST, dist));
+        cam.dist = clampDist(dist);
       },
       pan: pan,
       /* The same move in world axes. Grab-and-drag already has its answer in
@@ -467,6 +511,17 @@
         cam.tz += dz;
         clampTarget();
       },
+      /* Re-fit the framing to the current viewport without touching the angle
+         the player is looking from - so rotating a phone between portrait and
+         landscape reframes the board while an orbit is left standing. Re-centres
+         the target too, which is a no-op until a pan has moved it. The caller
+         decides when this is wanted (it holds the "has the player taken the
+         camera" flag); here it just does the fit. */
+      frame: function (w, h) {
+        lastAspect = w / Math.max(1, h);
+        cam.tx = (COLS - 1) / 2; cam.tz = (ROWS - 1) / 2;
+        cam.dist = clampDist(fitDist(lastAspect));
+      },
       /* Snap to the nearest quarter turn, for a button or a key: a maul is
          built on a square grid and the four corner views are the ones a player
          actually wants to flick between. */
@@ -476,7 +531,8 @@
       },
       reset: function () {
         cam.tx = (COLS - 1) / 2; cam.tz = (ROWS - 1) / 2;
-        cam.yaw = Math.PI * 0.25; cam.pitch = 0.95; cam.dist = FIT;
+        cam.yaw = Math.PI * 0.25; cam.pitch = 0.95;
+        cam.dist = clampDist(fitDist(lastAspect));
       },
       state: function () {
         return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist,
@@ -903,6 +959,148 @@
       }
     }
 
+    /* =================================================================
+       emitSolids / emitFx : one board's worth of instances into the shared
+       buffers, shifted by (ox, oz) tiles in the world. The primary board is
+       emitted at the origin; a rival board, if the game hands one over, is
+       emitted again offset to the side. Everything a board owns - its floor,
+       maze, creeps and effects - flows through these, so a second board costs
+       a second call rather than a second renderer. `primary` gates the things
+       only the player's board has: the build ghost, the selection collar and
+       the range preview all belong to the hand holding the mouse, not to the
+       AI's board across the field.
+       ================================================================= */
+    function emitSolids(W, ox, oz, primary, t) {
+      var route = W.getRoute() || [];
+      var onRoute = {};
+      var i;
+      for (i = 0; i < route.length; i++) onRoute[route[i]] = i;
+      var head = route.length ? (t * 9) % (route.length + 22) : -1;
+
+      var x, y, c;
+      for (y = 0; y < ROWS; y++) {
+        for (x = 0; x < COLS; x++) {
+          c = y * COLS + x;
+          if (W.isRock(x, y)) {
+            var rh = 1.0 + ((x * 7 + y * 13) % 5) * 0.06;
+            push(x + ox, 0, y + oz, 0.98, rh, 0.98, COL.rock);
+            continue;
+          }
+          var ri = onRoute[c];
+          if (ri === undefined) {
+            push(x + ox, 0, y + oz, 0.96, 0.06, 0.96, ((x + y) & 1) ? COL.floorA : COL.floorB, 0);
+          } else {
+            var d = head - ri, glow = (d >= 0 && d < 9) ? (1 - d / 9) : 0;
+            var col = [
+              COL.road[0] + (COL.roadHot[0] - COL.road[0]) * glow,
+              COL.road[1] + (COL.roadHot[1] - COL.road[1]) * glow,
+              COL.road[2] + (COL.roadHot[2] - COL.road[2]) * glow
+            ];
+            push(x + ox, 0, y + oz, 0.96, 0.085 + glow * 0.05, 0.96, col, 0.7 + glow * 0.3);
+          }
+        }
+      }
+
+      var built = W.getBuilt();
+      for (i = 0; i < built.length; i++) {
+        var tw = built[i];
+        if (!tw) continue;
+        var th = towerHeight(tw), s = tw.def.s;
+        push(tw.x + ox, 0, tw.y + oz, s * 0.98, 0.16, s * 0.98, COL.plinth);
+        var bc = towerColour(tw.def.c);
+        if (tw.flash > 0) {
+          var f = Math.min(1, tw.flash / 0.14);
+          bc = [bc[0] + (1 - bc[0]) * f, bc[1] + (1 - bc[1]) * f, bc[2] + (1 - bc[2]) * f];
+        }
+        push(tw.x + ox, 0.16, tw.y + oz, s * 0.82, th, s * 0.82, bc);
+        if (tw.lvl > 1) {
+          push(tw.x + ox, 0.16 + th, tw.y + oz, s * 0.5, 0.10 * (tw.lvl - 1), s * 0.5, COL.sel);
+        }
+      }
+
+      var creeps = W.getCreeps();
+      for (i = 0; i < creeps.length; i++) {
+        var cr = creeps[i];
+        if (cr.gone) continue;
+        var p = W.creepPos(cr);
+        if (cr.boss) drawGolem(cr, p.x + ox, p.y + oz, t, 0.10);
+        else if (cr.sent) drawWolf(cr, p.x + ox, p.y + oz, t, 0.10);
+        else drawPenguin(cr, p.x + ox, p.y + oz, t, 0.10);
+      }
+
+      if (!primary) return;
+      var st = W.getUI();
+      if (st.ghost >= 0) {
+        var gx = st.ghost % COLS, gy = (st.ghost / COLS) | 0;
+        push(gx + ox, 0.06, gy + oz, 0.9, 0.5, 0.9, COL.ghost, 0.65);
+      }
+      if (st.sel) {
+        push(st.sel.x + ox, 0, st.sel.y + oz, 1.06, 0.05, 1.06, COL.sel, 0.9);
+      }
+    }
+
+    function emitFx(W, ox, oz, primary, t) {
+      var i;
+      var beams = W.getBeams();
+      for (i = 0; i < beams.length; i++) {
+        var b = beams[i];
+        var ba = Math.max(0, Math.min(1, b.t / 0.14));
+        var mt = W.towerAt(b.x1, b.y1);
+        var my = mt ? 0.16 + towerHeight(mt) : 0.55;
+        var beamCol = towerColour(b.c);
+        var bw = b.w * 0.055;
+        fxSeg(b.x1 + ox, my, b.y1 + oz, b.x2 + ox, CREEP_Y, b.y2 + oz, bw * 3.4, beamCol, ba * 0.45);
+        fxSeg(b.x1 + ox, my, b.y1 + oz, b.x2 + ox, CREEP_Y, b.y2 + oz, bw, COL.hot, ba * 0.95);
+        fxPoint(b.x1 + ox, my, b.y1 + oz, 0.30 + bw * 2.5, beamCol, ba * 0.85);
+        fxPoint(b.x2 + ox, CREEP_Y, b.y2 + oz, 0.26, COL.hot, ba * 0.7);
+      }
+
+      var puffs = W.getPuffs();
+      for (i = 0; i < puffs.length; i++) {
+        var pf = puffs[i];
+        if (pf.splash) {
+          var sa = Math.max(0, pf.t / 0.3);
+          fxRing(pf.x + ox, pf.y + oz, 0.14, pf.splash * (1.35 - sa * 0.55), 0.075, COL.frost, sa * 0.85);
+          fxPoint(pf.x + ox, 0.22, pf.y + oz, 0.9 * sa, COL.frost, sa * sa * 0.5);
+        } else {
+          var ka = Math.max(0, pf.t / 0.35), age = 1 - ka;
+          var boss = !!pf.boss;
+          var kc = boss ? COL.boss : COL.hot;
+          var seed = (Math.sin(pf.x * 12.9898 + pf.y * 78.233) * 43758.5453) % 1;
+          var n = boss ? 9 : 6;
+          for (var k = 0; k < n; k++) {
+            var ang = seed * TAU + k * (TAU / n);
+            var reach = boss ? 1.05 : 0.65;
+            var d0 = age * reach, d1 = d0 + 0.22;
+            var arc = Math.sin(Math.min(1, age) * Math.PI) *
+                      (0.30 + (k % 3) * 0.14) * (boss ? 1.5 : 1);
+            fxSeg(pf.x + ox + Math.cos(ang) * d0, CREEP_Y + arc, pf.y + oz + Math.sin(ang) * d0,
+                  pf.x + ox + Math.cos(ang) * d1, CREEP_Y + arc * 1.1, pf.y + oz + Math.sin(ang) * d1,
+                  boss ? 0.075 : 0.05, kc, ka * 0.95);
+          }
+          fxPoint(pf.x + ox, CREEP_Y, pf.y + oz, (boss ? 1.3 : 0.8) * ka, kc, ka * ka);
+        }
+      }
+
+      if (primary) {
+        var st = W.getUI();
+        if (st.range) {
+          fxRing(st.range.x + ox, st.range.y + oz, 0.11, st.range.r,
+                 0.055, towerColour(st.range.c), 0.6);
+        }
+      }
+
+      var gate = W.gate, drain = W.drain;
+      if (gate) {
+        fxRing(gate.x + ox, gate.y + oz, 0.10, 0.60 + Math.sin(t * 2.2) * 0.07,
+               0.065, COL.sent, 0.55);
+      }
+      if (drain) {
+        fxRing(drain.x + ox, drain.y + oz, 0.10, 0.60 - Math.sin(t * 2.2) * 0.07,
+               0.075, COL.boss, 0.7);
+      }
+    }
+
     function draw(t) {
       var w = canvas.width, h = canvas.height;
       gl.viewport(0, 0, w, h);
@@ -915,186 +1113,39 @@
       updateCamera(w, h);
       nInst = 0;
 
-      var route = world.getRoute() || [];
-      var onRoute = {};
-      for (var i = 0; i < route.length; i++) onRoute[route[i]] = i;
-      /* The shimmer that runs gate-to-drain, carried over from the 2D board:
-         how long it takes to arrive is the length of your maze, which is the
-         one number a maul player reads constantly. */
-      var head = route.length ? (t * 9) % (route.length + 22) : -1;
+      /* The rival's board, if a game is running: the same accessor bundle as
+         `world`, to be drawn offset to the side. Null between games and in any
+         embedding that never sets getRival, which collapses everything below
+         back to a single board at the origin - the original behaviour, byte
+         for byte. */
+      var rival = world.getRival ? world.getRival() : null;
 
-      reserve(COLS * ROWS + 2048);
+      /* Room for both boards and their creeps' boxes, with headroom. reserve()
+         only ever grows, and only here before the first push of the frame, so
+         a steady-state frame allocates nothing. */
+      reserve(COLS * ROWS * (rival ? 2 : 1) + 8192);
 
-      var x, y, c;
-      for (y = 0; y < ROWS; y++) {
-        for (x = 0; x < COLS; x++) {
-          c = y * COLS + x;
-          if (world.isRock(x, y)) {
-            /* Uneven on purpose, keyed off the tile so it never crawls - a
-               ring of identical blocks reads as a spreadsheet. */
-            var rh = 1.0 + ((x * 7 + y * 13) % 5) * 0.06;
-            push(x, 0, y, 0.98, rh, 0.98, COL.rock);
-            continue;
-          }
-          var ri = onRoute[c];
-          if (ri === undefined) {
-            push(x, 0, y, 0.96, 0.06, 0.96, ((x + y) & 1) ? COL.floorA : COL.floorB, 0);
-          } else {
-            var d = head - ri, glow = (d >= 0 && d < 9) ? (1 - d / 9) : 0;
-            var col = [
-              COL.road[0] + (COL.roadHot[0] - COL.road[0]) * glow,
-              COL.road[1] + (COL.roadHot[1] - COL.road[1]) * glow,
-              COL.road[2] + (COL.roadHot[2] - COL.road[2]) * glow
-            ];
-            /* Emissive, and more so where the shimmer is: the road has to hold
-               its brightness from every camera angle. */
-            push(x, 0, y, 0.96, 0.085 + glow * 0.05, 0.96, col, 0.7 + glow * 0.3);
-          }
-        }
-      }
-
-      /* Towers: plinth then body, the same two-piece silhouette the 2D board
-         uses so a tall spire doesn't look balanced on a point. */
-      var built = world.getBuilt();
-      for (i = 0; i < built.length; i++) {
-        var tw = built[i];
-        if (!tw) continue;
-        var th = towerHeight(tw), s = tw.def.s;
-        push(tw.x, 0, tw.y, s * 0.98, 0.16, s * 0.98, COL.plinth);
-        var bc = towerColour(tw.def.c);
-        if (tw.flash > 0) {
-          var f = Math.min(1, tw.flash / 0.14);
-          bc = [bc[0] + (1 - bc[0]) * f, bc[1] + (1 - bc[1]) * f, bc[2] + (1 - bc[2]) * f];
-        }
-        push(tw.x, 0.16, tw.y, s * 0.82, th, s * 0.82, bc);
-        if (tw.lvl > 1) {
-          push(tw.x, 0.16 + th, tw.y, s * 0.5, 0.10 * (tw.lvl - 1), s * 0.5, COL.sel);
-        }
-      }
-
-      /* Creeps. Three kinds, three bodies: the wave walks penguins, the rival
-         sends wolves, and every fifth wave is a golem. The kinds were told
-         apart by colour alone before, which stopped being enough the moment a
-         creep could be dark - and colour was already carrying the slow. Shape
-         carries the kind now, and colour is left to say slowed. */
-      var creeps = world.getCreeps();
-      for (i = 0; i < creeps.length; i++) {
-        var cr = creeps[i];
-        if (cr.gone) continue;
-        var p = world.creepPos(cr);
-        if (cr.boss) drawGolem(cr, p.x, p.y, t, 0.10);
-        else if (cr.sent) drawWolf(cr, p.x, p.y, t, 0.10);
-        else drawPenguin(cr, p.x, p.y, t, 0.10);
-      }
-
-      /* The ghost of what you're about to build, and the selection ring. */
-      var st = world.getUI();
-      if (st.ghost >= 0) {
-        var gx = st.ghost % COLS, gy = (st.ghost / COLS) | 0;
-        push(gx, 0.06, gy, 0.9, 0.5, 0.9, COL.ghost, 0.65);
-      }
-      if (st.sel) {
-        /* A bright collar around the base rather than a highlight on the tower
-           itself: at a low camera angle the tower's own faces can be entirely
-           hidden behind the wall in front of it, but the ground it stands on
-           is visible from anywhere. */
-        push(st.sel.x, 0, st.sel.y, 1.06, 0.05, 1.06, COL.sel, 0.9);
-      }
+      emitSolids(world, 0, 0, true, t);
+      if (rival) emitSolids(rival, rival.offset[0], rival.offset[1], false, t);
 
       /* ---- effects ----
          Emitted here, drawn in the second pass below. Everything is read from
-         the same beam and puff lists the flat board paints, so a shot that
-         happened is a shot both views show. */
+         the same beam and puff lists the boards paint, so a shot that happened
+         is a shot the view shows - on whichever board fired it. */
       nFx = 0;
-
-      /* Shots. Wide and soft under narrow and white, which is the pair of
-         strokes the flat board uses and for the same reason: one stroke reads
-         as wire, two read as light. */
-      var beams = world.getBeams();
-      for (i = 0; i < beams.length; i++) {
-        var b = beams[i];
-        var ba = Math.max(0, Math.min(1, b.t / 0.14));
-        /* The muzzle is the top of the tower that fired, looked up rather than
-           carried on the beam: a tower can be sold while its last shot is
-           still in the air, and the shot should still leave from where it
-           stood rather than from the floor. */
-        var mt = world.towerAt(b.x1, b.y1);
-        var my = mt ? 0.16 + towerHeight(mt) : 0.55;
-        var beamCol = towerColour(b.c);
-        /* b.w is a 2D line width in pixels; here a tile is one unit. */
-        var bw = b.w * 0.055;
-        fxSeg(b.x1, my, b.y1, b.x2, CREEP_Y, b.y2, bw * 3.4, beamCol, ba * 0.45);
-        fxSeg(b.x1, my, b.y1, b.x2, CREEP_Y, b.y2, bw, COL.hot, ba * 0.95);
-        fxPoint(b.x1, my, b.y1, 0.30 + bw * 2.5, beamCol, ba * 0.85);
-        fxPoint(b.x2, CREEP_Y, b.y2, 0.26, COL.hot, ba * 0.7);
-      }
-
-      /* Hits. A splash leaves a shockwave, a kill leaves embers. */
-      var puffs = world.getPuffs();
-      for (i = 0; i < puffs.length; i++) {
-        var pf = puffs[i];
-        if (pf.splash) {
-          /* Opening as it fades, at the radius the splash actually reached:
-             what you see is what was hit, which is the only way to learn what
-             a splash tower is worth. */
-          var sa = Math.max(0, pf.t / 0.3);
-          fxRing(pf.x, pf.y, 0.14, pf.splash * (1.35 - sa * 0.55),
-                 0.075, COL.frost, sa * 0.85);
-          fxPoint(pf.x, 0.22, pf.y, 0.9 * sa, COL.frost, sa * sa * 0.5);
-        } else {
-          var ka = Math.max(0, pf.t / 0.35), age = 1 - ka;
-          var boss = !!pf.boss;
-          var kc = boss ? COL.boss : COL.hot;
-          /* Directions are hashed off the position, which is fixed for the
-             puff's whole life: a burst that reseeds itself every frame is a
-             burst that flickers instead of flying. */
-          var seed = (Math.sin(pf.x * 12.9898 + pf.y * 78.233) * 43758.5453) % 1;
-          var n = boss ? 9 : 6;
-          for (var k = 0; k < n; k++) {
-            var ang = seed * TAU + k * (TAU / n);
-            var reach = boss ? 1.05 : 0.65;
-            var d0 = age * reach, d1 = d0 + 0.22;
-            /* Thrown up and out, and falling back: an arc costs one sine and
-               is the difference between debris and a flat expanding ring. */
-            var arc = Math.sin(Math.min(1, age) * Math.PI) *
-                      (0.30 + (k % 3) * 0.14) * (boss ? 1.5 : 1);
-            fxSeg(pf.x + Math.cos(ang) * d0, CREEP_Y + arc, pf.y + Math.sin(ang) * d0,
-                  pf.x + Math.cos(ang) * d1, CREEP_Y + arc * 1.1, pf.y + Math.sin(ang) * d1,
-                  boss ? 0.075 : 0.05, kc, ka * 0.95);
-          }
-          fxPoint(pf.x, CREEP_Y, pf.y, (boss ? 1.3 : 0.8) * ka, kc, ka * ka);
-        }
-      }
-
-      /* Range preview. The flat board draws this as an ellipse on the floor;
-         with a free camera it has to be an actual circle in the world, or it
-         stops meaning "this far" the moment you turn. */
-      if (st.range) {
-        fxRing(st.range.x, st.range.y, 0.11, st.range.r,
-               0.055, towerColour(st.range.c), 0.6);
-      }
-
-      /* Both ends of the run. The flat board pools light on these so they are
-         findable without a label, and a player who has just spun the camera
-         needs that more, not less. Counter-phase so they read as two things. */
-      var gate = world.gate, drain = world.drain;
-      if (gate) {
-        fxRing(gate.x, gate.y, 0.10, 0.60 + Math.sin(t * 2.2) * 0.07,
-               0.065, COL.sent, 0.55);
-      }
-      if (drain) {
-        fxRing(drain.x, drain.y, 0.10, 0.60 - Math.sin(t * 2.2) * 0.07,
-               0.075, COL.boss, 0.7);
-      }
+      emitFx(world, 0, 0, true, t);
+      if (rival) emitFx(rival, rival.offset[0], rival.offset[1], false, t);
 
       /* Snow. Last only for reading order - an additive pass that does not
          write depth has no painter's order to get wrong, which is most of why
-         effects are worth separating from the board in the first place. */
+         effects are worth separating from the board in the first place. It
+         follows the camera, not a board, so it is emitted once for the whole
+         scene however many boards are in it. */
       var span = Math.max(9, cam.dist * 0.95), ceil = span * 0.6;
       /* Sized off the view distance so a flake holds its size on screen rather
          than dissolving as you pull back. */
       var flakeS = cam.dist * 0.0032;
-      for (i = 0; i < FLAKES.length; i++) {
+      for (var i = 0; i < FLAKES.length; i++) {
         var f = FLAKES[i];
         /* Driven by the clock rather than by dt, so a paused cabinet holds its
            snow still and a resumed one does not teleport it. */
