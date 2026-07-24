@@ -513,6 +513,159 @@
       touch-action:pan-x;
     }
   }
+
+  /* ---- immersive mode ----
+     The cabinet is the wrong frame for a maul on a phone: a marquee, a hint
+     line and a 220px score aside leave the board a letterbox it has to pan
+     inside. Immersive throws all of it away, hands the whole viewport to the
+     canvas, and floats the controls back on top as overlays.
+
+     Every selector here is `.arcade.is-immersive X` - two classes and an id
+     where the rules it overrides carry one - so it wins on specificity no
+     matter where it sits in the file, including against the 560px block
+     directly above that pins the canvas to 520px. */
+  .arcade.is-immersive{ padding:0; backdrop-filter:none; background:#02101c; }
+  .arcade.is-immersive .arcade__cab{
+    width:100%; max-height:none; height:100%;
+    padding:0; gap:0; border:0; border-radius:0;
+    background:#02101c; box-shadow:none; overflow:hidden;
+    position:relative;
+  }
+  /* The chrome that only makes sense around a cabinet. */
+  .arcade.is-immersive .arcade__marquee,
+  .arcade.is-immersive .arcade__hint,
+  .arcade.is-immersive .arcade__exit,
+  .arcade.is-immersive .arcade__scores h3,
+  .arcade.is-immersive .maul__sub,
+  .arcade.is-immersive .maul__note,
+  .arcade.is-immersive #wm-board{ display:none; }
+
+  .arcade.is-immersive .arcade__body{
+    display:block; position:absolute; inset:0; gap:0;
+  }
+  .arcade.is-immersive .arcade__stage{ display:block; gap:0; }
+  .arcade.is-immersive .arcade__screen{ position:absolute; inset:0; }
+  .arcade.is-immersive .maul__pan{ overflow:hidden; width:100%; height:100%; }
+  .arcade.is-immersive #wm-canvas{
+    width:100%; height:100%; max-width:none;
+    border:0; border-radius:0;
+    /* Own every gesture: one finger builds, two run the camera, and neither
+       may reach the browser as a scroll or a page zoom. */
+    touch-action:none;
+  }
+  .arcade.is-immersive .arcade__screen::after{ border-radius:0; }
+
+  /* Overlays. The safe-area insets keep the readouts clear of a notch and the
+     home indicator when the phone is held in landscape. */
+  .arcade.is-immersive .arcade__hud{
+    position:absolute; z-index:3; justify-content:flex-start; gap:14px;
+    top:calc(8px + env(safe-area-inset-top));
+    left:calc(10px + env(safe-area-inset-left));
+    font-size:.7rem; padding:6px 11px; border-radius:20px;
+    background:rgba(2,16,28,.72); border:1px solid rgba(107,184,221,.35);
+    backdrop-filter:blur(2px); pointer-events:none;
+  }
+  .arcade.is-immersive .arcade__scores{
+    position:absolute; z-index:3; flex:none; min-width:0; width:132px;
+    top:calc(8px + env(safe-area-inset-top));
+    right:calc(52px + env(safe-area-inset-right));
+    padding:6px 9px; border-radius:8px;
+    background:rgba(2,16,28,.72); border:1px solid rgba(107,184,221,.35);
+    backdrop-filter:blur(2px);
+  }
+  .arcade.is-immersive .maul__rival{ font-size:.6rem; }
+  /* Sends go side by side rather than stacked: this panel sits in the top
+     corner of the view, and the shorter it is the less of the board's right
+     edge it reaches down into. */
+  .arcade.is-immersive .maul__sends{ flex-direction:row; margin-top:5px; gap:4px; }
+  .arcade.is-immersive .maul__send{
+    flex:1; flex-direction:column; align-items:center; gap:0;
+    padding:3px 2px; font-size:.5rem; text-align:center;
+  }
+  .arcade.is-immersive .maul__send b{ flex:none; }
+
+  /* The deck rides the bottom edge as one floating bar. Everything on a single
+     line where it fits, because every row it grows is a row of board the
+     camera has to give up - see measureInsets(). It may still wrap on a narrow
+     phone, and the camera measures rather than assumes, so that's fine. */
+  .arcade.is-immersive .maul__deck{
+    position:absolute; z-index:3;
+    flex-direction:row; align-items:center; flex-wrap:wrap;
+    justify-content:center; gap:5px 10px;
+    left:50%; transform:translateX(-50%);
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    /* max-content, not the default shrink-to-fit: an absolutely positioned box
+       offset by left:50% is only offered the half of the line that remains to
+       its right, which is enough to wrap this into three rows and cost the
+       board 100px it didn't need to lose. */
+    width:max-content; max-width:calc(100% - 20px);
+    padding:5px 11px; border-radius:12px;
+    background:rgba(2,16,28,.78); border:1px solid rgba(107,184,221,.35);
+    backdrop-filter:blur(2px);
+  }
+  .arcade.is-immersive .maul__row{ flex-wrap:nowrap; gap:5px; }
+  /* The selection strip leaves the deck entirely and parks under the HUD. It
+     only exists while a tower is selected, so in the deck it would either
+     reserve a permanent empty row or reflow the palette out from under a
+     thumb mid-game - the exact thing the windowed layout spends a min-height
+     avoiding. Up here it can come and go for free. */
+  .arcade.is-immersive .maul__sel{
+    position:absolute; z-index:3;
+    top:calc(46px + env(safe-area-inset-top));
+    left:calc(10px + env(safe-area-inset-left));
+    max-width:min(320px, calc(100% - 20px)); justify-content:flex-start;
+    padding:5px 10px; border-radius:10px;
+    background:rgba(2,16,28,.72); border:1px solid rgba(107,184,221,.35);
+    backdrop-filter:blur(2px);
+  }
+  /* Still a thumb target, just a tighter one - the chips are the control you
+     reach for constantly, so they keep more height than the readouts do. */
+  .arcade.is-immersive .maul__pick{ padding:7px 9px; font-size:.62rem; }
+  .arcade.is-immersive .maul__act{ padding:6px 9px; font-size:.6rem; }
+  .arcade.is-immersive .maul__call{ padding:6px 10px; font-size:.6rem; }
+  .arcade.is-immersive .maul__wave{ min-height:0; font-size:.6rem; gap:6px; }
+  .arcade.is-immersive .maul__sel{ min-height:0; font-size:.6rem; gap:6px; }
+  .arcade.is-immersive .maul__sel:empty{ display:none; }
+
+  /* Enter/leave. The enter button lives beside EXIT TO LOUNGE on the cabinet;
+     the leave button is the only chrome immersive keeps, parked in the corner
+     where a fullscreen control is expected. */
+  .arcade__full{
+    font:inherit; font-size:.7rem; letter-spacing:2px; color:#eafcff;
+    padding:7px 12px; border-radius:6px; cursor:pointer;
+    background:linear-gradient(180deg,#155a82,#0a3350);
+    border:2px outset #4bb4d8; text-shadow:0 1px 0 #02101c;
+  }
+  .arcade__full:hover{ filter:brightness(1.25); }
+  .arcade__full:active{ border-style:inset; }
+  .arcade__full:focus-visible{ outline:2px solid #38e6ff; outline-offset:2px; }
+  .arcade.is-immersive .arcade__full{
+    position:absolute; z-index:4; padding:0; width:34px; height:34px;
+    font-size:.9rem; line-height:1; border-radius:8px;
+    top:calc(8px + env(safe-area-inset-top));
+    right:calc(10px + env(safe-area-inset-right));
+  }
+  /* The cabinet's own row for the two buttons, so EXIT keeps its width. */
+  .arcade__foot{ display:flex; gap:8px; }
+  .arcade__foot .arcade__exit{ flex:1; }
+  .arcade.is-immersive .arcade__foot{ display:contents; }
+
+  /* Held portrait, a 17-wide iso board is all letterbox however you frame it,
+     so immersive asks for the rotation rather than pretending. Purely an
+     overlay - the game underneath keeps running and keeps its state. */
+  .arcade__rotate{
+    position:absolute; inset:0; z-index:5; display:none;
+    flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    background:rgba(2,16,28,.94); color:#b8ecff;
+    font-size:.8rem; letter-spacing:2px; text-align:center; padding:24px;
+  }
+  .arcade__rotate span{ font-size:2rem; }
+  @media (orientation:portrait){
+    .arcade.is-immersive .arcade__rotate{ display:flex; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .arcade__rotate span{ animation:none; }
+  }
 </style>
 
 <a class="back" href="index.html">&#127968; BACK TO THE SITE</a>
@@ -722,7 +875,8 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
         </div>
         <p class="arcade__hint">tap or drag the grid to build &middot; 1-4 picks a
           tower &middot; tap a tower to upgrade or sell &middot; SPACE calls the
-          next wave &middot; ESC to exit</p>
+          next wave &middot; ESC to exit &middot; <b>FULLSCREEN</b> for the whole
+          board &mdash; pinch to zoom, two fingers to pan</p>
       </div>
       <aside class="arcade__scores">
         <h3>&#9876; THE RACE</h3>
@@ -741,7 +895,15 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
         <ol id="wm-board"></ol>
       </aside>
     </div>
-    <button type="button" class="arcade__exit" id="wm-exit">&#10005; EXIT TO LOUNGE</button>
+    <div class="arcade__foot">
+      <button type="button" class="arcade__exit" id="wm-exit">&#10005; EXIT TO LOUNGE</button>
+      <button type="button" class="arcade__full" id="wm-full"
+              aria-pressed="false">&#9974; FULLSCREEN</button>
+    </div>
+    <div class="arcade__rotate" aria-hidden="true">
+      <span>&#128241;</span>
+      <p>TURN THE PHONE SIDEWAYS</p>
+    </div>
   </div>
 </div>
 
@@ -4759,6 +4921,120 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   function inGrid(x, y) { return x >= 0 && y >= 0 && x < COLS && y < ROWS; }
   function isoX(fx, fy) { return OX + (fx - fy) * (TW / 2); }
   function isoY(fx, fy) { return OY + (fx + fy) * (TH / 2); }
+
+  /* ---- camera ----
+     Every drawing routine below is written in world units and knows nothing
+     about this; the camera is one setTransform in draw() and one inverse in
+     clientToWorld(). That's deliberate - it means panning and zooming cost
+     nothing to maintain as the board art changes.
+
+     The windowed cabinet is the identity case: zoom 1, camera at the origin,
+     DPR pinned to SCALE and the backing buffer left at its authored size, so
+     the transform works out to exactly the setTransform(2,0,0,2,0,0) this
+     file has always used and the cabinet renders pixel-for-pixel as before.
+     Only immersive mode moves the camera. */
+  var immersive = false;
+  var DPR = SCALE, viewW = VW, viewH = VH;
+  var zoom = 1, camX = 0, camY = 0;
+  /* Set the moment a pinch or a wheel moves the zoom, and the difference
+     between "the camera is wherever it landed" and "the player chose this" -
+     see resize(). */
+  var userZoomed = false;
+  /* Zoomed all the way in a floor tile is ~96 CSS px across - about where a
+     maul stops being a diagram and starts being a place, and still coarse
+     enough that a fingertip covers one tile rather than four. */
+  var MAX_ZOOM = 3.2;
+
+  /* How much of the viewport the floating deck covers along the bottom edge.
+     The HUD and the rival panel sit in the top corners of the view, which are
+     the corners of an iso diamond and therefore empty, so they cost nothing.
+     The deck can't have a corner: it's wide, and the bottom-centre of the
+     board is the DRAIN - the one tile a player watches. So the deck is the one
+     overlay the camera has to work around.
+
+     Measured rather than assumed, which is what lets the deck wrap to two rows
+     on a narrow phone without the board ending up underneath it. */
+  var insetB = 0;
+  var elDeck = overlay.querySelector(".maul__deck");
+  function measureInsets() {
+    insetB = 0;
+    if (!immersive || !elDeck) return;
+    var r = cv.getBoundingClientRect(), d = elDeck.getBoundingClientRect();
+    if (!d.height) return;
+    /* Capped: a deck that somehow grew to eat the view should cost the board
+       some room, never all of it. */
+    insetB = Math.max(0, Math.min(viewH * 0.45, r.bottom - d.top + 10));
+  }
+
+  /* The board's world box. The art was authored to very nearly fill VWxVH
+     (see the note on those constants), so the canvas rect doubles as the
+     board extent and the camera has one less thing to recompute. */
+  function fitZoom() {
+    return Math.min(viewW / VW, Math.max(1, viewH - insetB) / VH);
+  }
+  /* Pan is clamped to the board, and an axis with room to spare centres
+     instead of clamping - otherwise fitting the board leaves it jammed into
+     a corner with all the slack on one side. Vertically the box being centred
+     in is the viewport minus the deck, so "fit" means fit *above the deck* and
+     the drain is never the thing hiding under it. */
+  function clampCam() {
+    var wv = viewW / zoom;
+    camX = wv >= VW ? (VW - wv) / 2 : Math.max(0, Math.min(VW - wv, camX));
+    var freeH = Math.max(1, viewH - insetB), fh = freeH / zoom;
+    camY = fh >= VH ? VH / 2 - (freeH / 2) / zoom
+                    : Math.max(0, Math.min(VH - fh, camY));
+  }
+  /* Backing pixels for a client point, honouring the content box the way
+     cellAt always has: the canvas wears a 3px ridge in the cabinet, and
+     mapping through the border box puts every tap a couple of pixels off. */
+  function clientPx(cx, cy) {
+    var r = cv.getBoundingClientRect();
+    var bx = (r.width - cv.clientWidth) / 2, by = (r.height - cv.clientHeight) / 2;
+    return { x: (cx - r.left - bx) * (cv.width / cv.clientWidth),
+             y: (cy - r.top - by) * (cv.height / cv.clientHeight) };
+  }
+  function clientToWorld(cx, cy) {
+    var p = clientPx(cx, cy);
+    return { x: camX + p.x / (DPR * zoom), y: camY + p.y / (DPR * zoom) };
+  }
+  /* Zoom about a fixed client point, so a pinch grows the board around the
+     spot between your fingers rather than around the corner of the screen. */
+  function zoomAt(z, cx, cy) {
+    var w = clientToWorld(cx, cy);
+    userZoomed = true;
+    zoom = Math.max(fitZoom(), Math.min(MAX_ZOOM, z));
+    var p = clientPx(cx, cy);
+    camX = w.x - p.x / (DPR * zoom);
+    camY = w.y - p.y / (DPR * zoom);
+    clampCam();
+  }
+  function resize() {
+    if (!immersive) {
+      DPR = SCALE; viewW = VW; viewH = VH; zoom = 1; camX = 0; camY = 0;
+      if (cv.width !== VW * SCALE) { cv.width = VW * SCALE; cv.height = VH * SCALE; }
+      /* Clears the inset too. Leaving it at whatever the deck last measured
+         would leave fitZoom() reporting a windowed cabinet as needing to shrink
+         for an overlay that isn't on screen. */
+      measureInsets();
+      return;
+    }
+    /* Capped at 2 on purpose. This renderer is draw-call bound, not fill
+       bound, but a 3x phone panel fullscreen is ~2.4x the pixels of a 2x one
+       for no visible gain on art this chunky - and that is fill you'd pay for
+       every frame. */
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    viewW = Math.max(1, cv.clientWidth);
+    viewH = Math.max(1, cv.clientHeight);
+    var bw = Math.round(viewW * DPR), bh = Math.round(viewH * DPR);
+    if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+    measureInsets();
+    /* An untouched camera re-fits on every resize, so rotating the phone
+       reframes the board instead of leaving it at the old orientation's zoom.
+       Once the player has pinched, that's their framing to keep - it's only
+       pulled back if the new viewport can't show that much. */
+    zoom = userZoomed ? Math.max(fitZoom(), Math.min(MAX_ZOOM, zoom)) : fitZoom();
+    clampCam();
+  }
   /* Tinting runs to a few hundred calls a frame across a full maze, and the
      inputs are a handful of fixed palette entries, so the results are worth
      keeping rather than re-parsing the same six hex strings sixty times a
@@ -5342,10 +5618,14 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   }
 
   function draw() {
-    ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-    ctx.clearRect(0, 0, VW, VH);
+    /* The one place the camera exists. Everything below draws in world units
+       and is completely unaware of it. */
+    var k = DPR * zoom;
+    ctx.setTransform(k, 0, 0, k, -camX * k, -camY * k);
+    var vw = viewW / zoom, vh = viewH / zoom;
+    ctx.clearRect(camX, camY, vw, vh);
     ctx.fillStyle = INK;
-    ctx.fillRect(0, 0, VW, VH);
+    ctx.fillRect(camX, camY, vw, vh);
     /* A cold light behind the arena. Without it an iso board is a diamond
        floating in a black rectangle; with it the empty corners read as depth
        rather than as canvas nobody used. */
@@ -5357,7 +5637,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       bg.addColorStop(1, INK);
     }
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, VW, VH);
+    ctx.fillRect(camX, camY, vw, vh);
     drawFloor();
     drawSolids();
     drawEffects();
@@ -5714,13 +5994,18 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   })();
   function drawSnow() {
     ctx.save();
+    /* Screen space, not world: snow falls in front of the camera, so it must
+       not pan with the board or swell when you zoom in. Flakes are authored
+       across VWxVH and stretched to the viewport, which keeps the density the
+       cabinet has instead of leaving a fullscreen board nearly bare. */
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.fillStyle = "#eafcff";
     for (var i = 0; i < FLAKES.length; i++) {
       var f = FLAKES[i];
       /* Driven by the clock rather than by dt, so a paused cabinet holds its
          snow still and a resumed one doesn't teleport it. */
-      var y = (f.y + gameT * f.v) % (VH + 8);
-      var x = f.x + Math.sin(gameT * 0.6 + f.drift) * 6;
+      var y = (f.y + gameT * f.v) % (viewH + 8);
+      var x = (f.x / VW) * viewW + Math.sin(gameT * 0.6 + f.drift) * 6;
       ctx.globalAlpha = 0.16 + f.r * 0.14;
       ctx.beginPath();
       ctx.arc(x, y, f.r, 0, TAU);
@@ -5924,13 +6209,10 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
      fall back to inverting the projection for the bare floor. Same problem the
      room solves for its cabinets, one grid larger. */
   function cellAt(ev) {
-    var r = cv.getBoundingClientRect();
-    /* Measure against the content box, not the border box: the canvas wears a
-       3px ridge, and mapping through the outer width puts every click a couple
-       of pixels off - which on a 15px tile is most of a tile. */
-    var bx = (r.width - cv.clientWidth) / 2, by = (r.height - cv.clientHeight) / 2;
-    var mx = (ev.clientX - r.left - bx) * (VW / cv.clientWidth);
-    var my = (ev.clientY - r.top - by) * (VH / cv.clientHeight);
+    /* Through the camera, so hit-testing follows the pan and zoom for free -
+       the two passes below never learn that the view can move. */
+    var w = clientToWorld(ev.clientX, ev.clientY);
+    var mx = w.x, my = w.y;
     var x, y, c;
     for (var d = (COLS - 1) + (ROWS - 1); d >= 0; d--) {
       for (x = Math.min(d, COLS - 1); x >= 0; x--) {
@@ -5953,7 +6235,86 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     return inGrid(x, y) ? idx(x, y) : -1;
   }
   var painting = false, paintFrom = -1;
+  /* Tiles laid by the stroke in progress. A pinch always begins with one
+     finger landing alone, which at that instant is indistinguishable from the
+     start of a drag-paint. Rather than delay every build to wait and see -
+     which would put lag on the one action a maul is made of - the board builds
+     immediately and rolls the whole stroke back the moment a second finger
+     lands. Refunded at cost, not at REFUND: this build never happened. */
+  var stroke = [];
+  function undoStroke() {
+    if (!stroke.length) return;
+    for (var i = 0; i < stroke.length; i++) {
+      var t = built[stroke[i]];
+      if (!t) continue;
+      gold += t.spent;
+      built[stroke[i]] = undefined;
+      if (sel === t) sel = null;
+    }
+    stroke.length = 0;
+    repath();
+    dirty = true;
+  }
+  function lay(c) {
+    if (place(c % COLS, (c / COLS) | 0, TOWERS[pick])) stroke.push(c);
+  }
+
+  /* ---- camera gestures ----
+     One finger builds, two move the camera. That split is the right way round
+     for a maul specifically: drag-painting a wall is the core verb and must
+     stay on the cheapest gesture, so the camera pays the two-finger tax.
+     Immersive only - the cabinet has no camera to move. */
+  var ptrs = [], pinch = null;
+  function ptrAt(id) {
+    for (var i = 0; i < ptrs.length; i++) if (ptrs[i].id === id) return ptrs[i];
+    return null;
+  }
+  function dropPtr(id) {
+    var i = ptrs.length;
+    while (i--) if (ptrs[i].id === id) ptrs.splice(i, 1);
+    if (ptrs.length < 2) pinch = null;
+  }
+  function pinchSpan() {
+    var dx = ptrs[0].x - ptrs[1].x, dy = ptrs[0].y - ptrs[1].y;
+    return { d: Math.max(1, Math.sqrt(dx * dx + dy * dy)),
+             mx: (ptrs[0].x + ptrs[1].x) / 2, my: (ptrs[0].y + ptrs[1].y) / 2 };
+  }
+  function startPinch() {
+    var s = pinchSpan();
+    /* Anchored on the world point between the fingers, so a pinch grows the
+       board around what you're looking at and a two-finger slide drags that
+       same point along with you - the whole gesture in one equation. */
+    pinch = { d: s.d, z: zoom, w: clientToWorld(s.mx, s.my) };
+    undoStroke();
+    endPaint();
+  }
+  function movePinch() {
+    var s = pinchSpan();
+    userZoomed = true;
+    zoom = Math.max(fitZoom(), Math.min(MAX_ZOOM, pinch.z * (s.d / pinch.d)));
+    var p = clientPx(s.mx, s.my);
+    camX = pinch.w.x - p.x / (DPR * zoom);
+    camY = pinch.w.y - p.y / (DPR * zoom);
+    clampCam();
+  }
+  function isTouch(ev) { return immersive && ev.pointerType === "touch"; }
+
   cv.addEventListener("pointerdown", function (ev) {
+    if (isTouch(ev)) {
+      if (!ptrAt(ev.pointerId)) {
+        ptrs.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+      }
+      if (ptrs.length === 2) { startPinch(); ev.preventDefault(); return; }
+      if (ptrs.length > 2) return;
+    }
+    /* Desktop immersive: the middle and right buttons drag the view, since
+       there's no second finger to spare and the left button is building. */
+    if (immersive && (ev.button === 1 || ev.button === 2)) {
+      pinch = { drag: true, w: clientToWorld(ev.clientX, ev.clientY) };
+      ev.preventDefault();
+      if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (e) {} }
+      return;
+    }
     if (state === STATE.IDLE || state === STATE.OVER || state === STATE.PAUSED) {
       pressStart();
       return;
@@ -5974,24 +6335,59 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     note = "";
     painting = true;
     paintFrom = c;
-    place(c % COLS, (c / COLS) | 0, TOWERS[pick]);
+    lay(c);
     dirty = true;
     if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (e) {} }
   });
   cv.addEventListener("pointermove", function (ev) {
+    if (isTouch(ev)) {
+      var p = ptrAt(ev.pointerId);
+      if (p) { p.x = ev.clientX; p.y = ev.clientY; }
+      if (pinch && ptrs.length >= 2) { movePinch(); ev.preventDefault(); return; }
+      /* A third finger, or the leftover of a lifted pinch: neither builds. */
+      if (ptrs.length > 1) return;
+    }
+    if (pinch && pinch.drag) {
+      var q = clientPx(ev.clientX, ev.clientY);
+      camX = pinch.w.x - q.x / (DPR * zoom);
+      camY = pinch.w.y - q.y / (DPR * zoom);
+      clampCam();
+      return;
+    }
     var c = cellAt(ev);
     hoverCell = c;
     if (!painting || c < 0 || c === paintFrom) return;
     paintFrom = c;
     /* Drag lays a wall. It never selects and never sells, so sweeping a line of
        rime across the floor can't tip into an action you didn't ask for. */
-    if (!built[c]) place(c % COLS, (c / COLS) | 0, TOWERS[pick]);
+    if (!built[c]) lay(c);
     dirty = true;
   });
-  function endPaint() { painting = false; paintFrom = -1; }
-  cv.addEventListener("pointerup", endPaint);
-  cv.addEventListener("pointercancel", endPaint);
-  cv.addEventListener("pointerleave", function () { endPaint(); hoverCell = -1; });
+  function endPaint() { painting = false; paintFrom = -1; stroke.length = 0; }
+  cv.addEventListener("pointerup", function (ev) {
+    dropPtr(ev.pointerId);
+    if (pinch && pinch.drag) pinch = null;
+    endPaint();
+  });
+  cv.addEventListener("pointercancel", function (ev) {
+    dropPtr(ev.pointerId);
+    if (pinch && pinch.drag) pinch = null;
+    endPaint();
+  });
+  cv.addEventListener("pointerleave", function (ev) {
+    dropPtr(ev.pointerId);
+    endPaint();
+    hoverCell = -1;
+  });
+  /* Right-drag is a pan here, so the context menu would land on every one. */
+  cv.addEventListener("contextmenu", function (ev) {
+    if (immersive) ev.preventDefault();
+  });
+  cv.addEventListener("wheel", function (ev) {
+    if (!immersive) return;
+    ev.preventDefault();
+    zoomAt(zoom * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX, ev.clientY);
+  }, { passive: false });
 
   elTowers.addEventListener("click", function (ev) {
     var b = ev.target.closest ? ev.target.closest(".maul__pick") : null;
@@ -6033,9 +6429,118 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     } else if (k === " " || k === "Spacebar") {
       if (state !== STATE.ENTER) { pressStart(); e.preventDefault(); }
     } else if (k === "Escape") {
-      close();
+      /* One step at a time: ESC backs out of immersive first and only closes
+         the cabinet from the windowed view, so leaving fullscreen can't dump
+         you all the way to the lounge and lose the maze. (In real fullscreen
+         the browser usually eats ESC itself and we hear about it through
+         fullscreenchange instead - both paths land in leaveImmersive.) */
+      if (immersive) leaveImmersive(); else close();
     }
   }
+
+  /* ================= immersive =================
+     Fullscreen is best-effort by design. iPhone Safari has no element
+     fullscreen and no orientation lock, so every capability below is asked
+     for and never assumed - and when they're all refused you still get the
+     thing that mattered most, which is the whole viewport handed to the board
+     with the cabinet chrome out of the way. */
+  var elFull = document.getElementById("wm-full");
+  var wake = null;
+
+  function fsElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function requestFS() {
+    var el = overlay, fn = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!fn) return Promise.reject();
+    try { return Promise.resolve(fn.call(el, { navigationUI: "hide" })); }
+    catch (e) { return Promise.reject(e); }
+  }
+  function exitFS() {
+    if (!fsElement()) return;
+    var fn = document.exitFullscreen || document.webkitExitFullscreen;
+    if (fn) { try { fn.call(document); } catch (e) {} }
+  }
+  /* A maul has long stretches with no input at all - a wave clock ticking
+     while you watch is exactly what a screen blank must not interrupt. */
+  function acquireWake() {
+    if (!navigator.wakeLock || wake) return;
+    navigator.wakeLock.request("screen").then(function (w) {
+      wake = w;
+      w.addEventListener("release", function () { wake = null; });
+    }, function () {});
+  }
+  function releaseWake() {
+    if (!wake) return;
+    try { wake.release(); } catch (e) {}
+    wake = null;
+  }
+  function lockLandscape() {
+    var so = window.screen && window.screen.orientation;
+    if (!so || !so.lock) return;
+    try {
+      var p = so.lock("landscape");
+      if (p && p["catch"]) p["catch"](function () {});
+    } catch (e) {}
+  }
+  function unlockOrientation() {
+    var so = window.screen && window.screen.orientation;
+    if (so && so.unlock) { try { so.unlock(); } catch (e) {} }
+  }
+
+  /* View state only - the capability requests live in enter/leave below. */
+  function setImmersive(on) {
+    if (immersive === on) return;
+    immersive = on;
+    overlay.classList.toggle("is-immersive", on);
+    elFull.setAttribute("aria-pressed", String(on));
+    elFull.innerHTML = on ? "&#10005;" : "&#9974; FULLSCREEN";
+    elFull.setAttribute("aria-label", on ? "Leave fullscreen" : "Enter fullscreen");
+    if (on) {
+      /* Open on the whole board rather than at whatever zoom a previous
+         session left behind: you can't maze what you can't see. Cleared
+         before resize() so the fresh view is the one it fits to. */
+      userZoomed = false;
+    }
+    resize();
+    draw();
+  }
+  function enterImmersive() {
+    setImmersive(true);
+    acquireWake();
+    requestFS().then(function () {
+      /* Only a fullscreen document may hold an orientation lock, so this waits
+         for the transition rather than racing it. */
+      lockLandscape();
+      resize();
+      draw();
+    }, function () {});
+  }
+  function leaveImmersive() {
+    exitFS();
+    unlockOrientation();
+    releaseWake();
+    setImmersive(false);
+  }
+  elFull.addEventListener("click", function () {
+    if (immersive) leaveImmersive(); else enterImmersive();
+  });
+  /* Leaving fullscreen by the browser's own affordance - ESC, a system back
+     gesture, a swipe down - has to drop immersive with it, or the overlay is
+     left claiming a viewport it no longer owns. */
+  function onFsChange() {
+    if (immersive && !fsElement()) leaveImmersive();
+    else if (running) { resize(); draw(); }
+  }
+  document.addEventListener("fullscreenchange", onFsChange);
+  document.addEventListener("webkitfullscreenchange", onFsChange);
+  function onResize() {
+    if (!running) return;
+    resize();
+    draw();
+  }
+  window.addEventListener("resize", onResize);
+  window.addEventListener("orientationchange", onResize);
 
   /* ================= open / close ================= */
   var lastFocus = null;
@@ -6052,6 +6557,7 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
     lastT = performance.now();
     buildDeck();
     newGame();
+    resize();
     draw();
     raf = requestAnimationFrame(frame);
     /* Focus the dialog itself rather than a control inside it: SPACE is the
@@ -6062,6 +6568,10 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
   }
   function close() {
     if (!running) return;
+    /* Hand the viewport back before the overlay goes away - a fullscreen
+       element that gets hidden leaves the document stuck in fullscreen with
+       nothing in it. */
+    if (immersive) leaveImmersive();
     running = false;
     if (raf) cancelAnimationFrame(raf);
     document.removeEventListener("keydown", onKeyDown);
@@ -6078,6 +6588,10 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       state = STATE.PAUSED;
       showMsg('<b>PAUSED</b><small class="blink">CLICK OR PRESS SPACE</small>');
     }
+    /* The system drops a wake lock whenever the page is backgrounded and does
+       not give it back on return, so coming back to an immersive cabinet has
+       to ask again. */
+    if (!document.hidden && immersive) acquireWake();
   });
 
   /* Exposed for the same reason the room and the other cabinets expose theirs:
@@ -6103,6 +6617,30 @@ take the doors to the <b>BAR</b> and the <b>RECORD ROOM</b></p>
       }
     },
     give: function (g) { gold += g; dirty = true; },   /* checks only */
+    immersive: function (on) { if (on) enterImmersive(); else leaveImmersive(); },
+    camera: function () {
+      return { on: immersive, zoom: zoom, camX: camX, camY: camY,
+               viewW: viewW, viewH: viewH, dpr: DPR, fit: fitZoom(),
+               bw: cv.width, bh: cv.height };
+    },
+    /* The camera's inverse, addressable from a check: build a tower, ask what
+       cell its own screen position maps to, and the answer has to be the tile
+       you built on at every zoom the camera allows. */
+    cellAtPoint: function (cx, cy) { return cellAt({ clientX: cx, clientY: cy }); },
+    worldToClient: function (wx, wy) {
+      var r = cv.getBoundingClientRect();
+      var bx = (r.width - cv.clientWidth) / 2, by = (r.height - cv.clientHeight) / 2;
+      return { x: r.left + bx + (wx - camX) * zoom * DPR * (cv.clientWidth / cv.width),
+               y: r.top + by + (wy - camY) * zoom * DPR * (cv.clientHeight / cv.height) };
+    },
+    tileClient: function (x, y) {
+      return window.FrostMaul.worldToClient(isoX(x, y), isoY(x, y));
+    },
+    setZoom: function (z) {
+      userZoomed = true;
+      zoom = Math.max(fitZoom(), Math.min(MAX_ZOOM, z));
+      clampCam(); draw();
+    },
     peek: function () {
       var towers = 0;
       for (var i = 0; i < N; i++) if (built[i]) towers++;
