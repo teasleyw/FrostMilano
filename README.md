@@ -106,6 +106,100 @@ To embed a real Spotify player, replace a track's links with an embed, e.g.:
 All colors live at the top of `css/style.css` under `:root` (the `--ice-*`
 variables). Change those and the whole site updates.
 
+## 🕹 The arcade (Brick Smash)
+
+The lounge's cabinet lives in `lounge.html`. **Every level is two waves:** smash
+the wall, then the paddle becomes a ship and a squadron flies in — Breakout and
+Galaga back to back, sharing one score, one life count and one set of capsules.
+Clearing the wall calls the squadron in; clearing *both* moves the level counter.
+
+Everything worth tuning is in the `---- tuning ----`, `---- power-ups ----` and
+`---- the squadron half ----` blocks at the top of its script — no other file is
+involved.
+
+| Knob | Now | What it does |
+|---|---|---|
+| `BASE_SPEED` | `300` | Ball speed on level 1, px/sec. The single dial for "too slow / too fast". |
+| `LEVEL_MULT` | `1.11` | Speed multiplier per level cleared. |
+| `MAX_SPEED` | `620` | Ceiling on the ramp, hit around level 8. Remove the `Math.min` in `nextLevel` to let it climb forever. |
+| `PADDLE_KEYS` | `640` | Arrow-key paddle speed. Keep it above the ball or keyboard play gets unfair. |
+| `DROP_CHANCE` | `0.16` | Odds a smashed brick drops a capsule. |
+| `PU` | 7 entries | The capsule table: `w` is its drop weight, `t` its duration in seconds. |
+| `EN_COLS` | `7` | Squadron width. Rows go 3 → 4 from level 3 (`buildWave`). |
+| `DIVE_TIME` | `2.4` | Seconds a dive run takes. Dive frequency tightens with the level in `triggerDives`. |
+| `FIRE_GAP` | `0.18` | Seconds between shots. Hold the button/SPACE to auto-fire. |
+| `SHIP_RATIO` | `0.45` | Ship width as a fraction of the paddle — which is why WIDE is a trade in the squadron half. |
+
+Smash a brick or shoot an enemy and it may drop a capsule; catch it on the
+paddle to fire it.
+
+| | Capsule | In the wall | In the squadron |
+|---|---|---|---|
+| **W** | wide | paddle 62 → 92px, 14s | a second cannon (and a fatter target) |
+| **M** | multiball | balls split in three, up to 8 | — doesn't drop |
+| **S** | slow | ball ×0.7, 10s | the swarm and its bombs ×0.7 |
+| **C** | catch | ball sticks to the paddle; press to serve | — doesn't drop |
+| **+** | extra ball | one more life | one more life |
+| **N** | narrow | paddle 62 → 40px, 10s — hazard | a smaller ship — hazard |
+| **F** | speed up | ball ×1.3, 8s — hazard | the swarm ×1.3 — hazard |
+
+Roughly three quarters of what drops helps you. Opposites cancel (catching WIDE
+clears NARROW), timed effects stack seconds rather than strength, and losing a
+ball, a ship, or clearing a level wipes every active effect. Effect clocks
+*do* carry across the wall → squadron switch, so a WIDE earned on the last brick
+arrives as a second cannon.
+
+Scoring: bricks 10–50 by row, enemies 40–120 by rank (**doubled** while diving —
+the shot that's actually hard), plus `250 + 100 × level` for clearing a squadron.
+
+## ❄ Winter Maul (the third cabinet)
+
+A maze tower defence in the vein of the Warcraft III "maul" maps, on the wall
+between the decks and Brick Smash. Its whole script is one block in
+`lounge.html`; it's drawn in the room's own isometric projection at half tile
+size, so the board looks like it belongs to the lounge.
+
+**The one rule that makes it a maul:** your towers *are* the walls. Creeps take
+the shortest open route from the gate to the drain, so every tower you drop is
+both a gun and a detour — and a placement that would seal the route completely
+is refused (`THAT WOULD SEAL THE MAZE`). A bare board routes in 17 steps; a
+tight switchback pushes the same run past 110. The lit channel on the floor is
+that route, and the shimmer running down it is how long a creep now has to walk.
+
+**The "wars" half** is the rival: a second maze you never see, racing the same
+wave clock. A **send** costs gold and buys two things at once — pressure that
+makes the rival leak, and income that pays you on every wave from then on. Both
+sides start on 20 lives and the run ends the moment one of them empties, so
+"build more maze or buy more economy" is a real question every wave. The rival
+also sends creeps back; they arrive in your maze wearing a hot rim.
+
+Everything worth tuning is in the `---- towers ----`, `---- sends ----` and
+`---- tuning ----` blocks at the top of its script.
+
+| Knob | Now | What it does |
+|---|---|---|
+| `START_GOLD` / `START_LIVES` | `90` / `20` | The opening hand. Lives are also the loss condition. |
+| `WAVE_EVERY` | `24` | Seconds between waves. The clock does **not** wait for a wave to die, which is what caps a run at 6–8 minutes. |
+| `FIRST_WAVE` | `22` | The opening build phase, before wave 1. |
+| `WAVE_GOLD` | `20` | Base payout per wave, before income. |
+| `CALL_BONUS` | `2` | Gold per whole second skipped by calling a wave early. |
+| `waveSpec()` | `1.27^n` | Creep HP growth. The single dial for "too easy / too hard". |
+| `BOSS_EVERY` | `5` | Every fifth wave is three big ones; a leaked boss costs 3 lives. |
+| `resolveRival()` | `(n-6)*0.42` | How fast the rival's own maze cracks. Left alone it dies around wave 16 — tune this against how long *you* can hold. |
+| `TOWERS` | 4 entries | Cost, damage, rate, range — plus `s`/`h`, the footprint and rise it's drawn at. |
+| `SENDS` | 3 entries | `cost`, `inc` (income bought) and `press` (damage done to the rival). |
+
+| Tower | Cost | Does |
+|---|---|---|
+| **RIME** | 5g | The maze brick. Tiny damage, but it slows — you'll own eighty. |
+| **SHARD** | 24g | Straight single-target damage. |
+| **BLIZZARD** | 58g | Splash, slow rate. |
+| **NOVA** | 120g | Long range, heavy, slow. |
+
+Each upgrades twice (×1.8 damage a step) and sells back at 70% of what went
+into it. Scoring: `4 + wave` per kill (×6 on bosses), `40 × wave` per wave
+survived, `40` per life left at the end, and `2500` for outlasting the rival.
+
 ## 📬 The forms + counter (real, via Cloudflare KV)
 
 The **Ice List signup**, the **guestbook**, the **visitor counter**, and the
@@ -120,7 +214,7 @@ behaviour, so the site never looks broken.
 | `functions/api/visits.js` | Shared hit counter. POST bumps it, GET reads it; the page counts once per session. |
 | `functions/api/subscribe.js` | Stores each Ice List email in KV as `sub:<email>` (duplicates collapse). |
 | `functions/api/guestbook.js` | The shared guestbook: GET lists it, POST adds to it (length caps, a bot honeypot, and a 60s-per-IP cooldown). |
-| `functions/api/scores.js` | Shared high-score boards for the lounge's two arcade cabinets. `GET ?game=bricksmash\|snake` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
+| `functions/api/scores.js` | Shared high-score boards for the lounge's three arcade cabinets. `GET ?game=bricksmash\|snake\|wintermaul` reads a board, POST submits one (per-game score ceiling, honeypot, 60s-per-IP cooldown). Stored one key per game as `scores:<game>`. |
 
 ### One-time setup: bind the KV namespace
 The Functions look for a binding named **`FrostMilanoKV`** (a **`FROST_KV`**
@@ -144,7 +238,8 @@ return 503 and the site uses the local fallback.
   `sub:` prefix, or from a terminal:
   `wrangler kv key list --namespace-id ee9fcf13dac5479787cc42f9089246e6 --prefix "sub:"`
 - **Guestbook:** it renders on the site; the raw JSON is the `guestbook` key.
-- **High scores:** the raw JSON lives under `scores:bricksmash` and `scores:snake`.
+- **High scores:** the raw JSON lives under `scores:bricksmash`, `scores:snake`
+  and `scores:wintermaul`.
 
 ### Want signups emailed to you instead?
 KV storage is the no-extra-service option. To also get an email on each signup,
