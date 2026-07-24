@@ -654,12 +654,13 @@ code{ font-family:var(--type); background:rgba(232,178,72,.12); color:var(--crea
 .rail{ position:relative; padding:20px 0 8px; }
 .rail__line{ position:absolute; left:0; right:0; top:38px; height:3px; background:var(--gold); opacity:.4; }
 .rail__years{
-  /* safe center: centre the year chips when they fit (they don't fill the rail,
-     so flush-left left a wide dead gap on the right), but fall back to flex-start
-     when the row overflows on a narrow screen so the first year is never clipped
-     out of reach behind the scroll. */
-  display:flex; gap:10px; justify-content:safe center;
-  overflow-x:auto; padding:6px 2px 14px; scroll-snap-type:x proximity;
+  /* Wrap into centred rows rather than a horizontal scroll strip. On a wide
+     screen the nine years sit on one centred line under the rail; on a narrow
+     one they wrap to two or three centred rows, so there's never a cut-off row
+     hiding behind a scrollbar. (The single rail line and the ticks down to it
+     only read on the one-row layout, so the phone breakpoint drops them.) */
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
+  padding:6px 2px 14px;
 }
 .year{
   flex:0 0 auto; scroll-snap-align:center; cursor:pointer;
@@ -978,10 +979,12 @@ code{ font-family:var(--type); background:rgba(232,178,72,.12); color:var(--crea
   .head::before,.head::after{ display:none; }
   .head span{ padding:0; }
 
-  /* The filing tabs become one swipeable row instead of a five-deep block. */
-  .tabs{ flex-wrap:nowrap; justify-content:flex-start; overflow-x:auto;
-    -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; padding:0 4px 2px; }
-  .tab{ flex:0 0 auto; scroll-snap-align:start; }
+  /* The filing tabs stay a wrapped, centred block (the base .tabs behaviour) on a
+     phone too, rather than a cut-off swipe row wearing a scrollbar. The timeline
+     wraps the same way, so its single rail line and the ticks down to it - which
+     only line up on the one-row desktop layout - are dropped here. */
+  .rail__line{ display:none; }
+  .year::before{ display:none; }
 
   /* Tighter liner notes so the auto-sized flip cards aren't a mile tall. */
   .facts{ font-size:.82rem; }
